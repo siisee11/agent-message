@@ -49,7 +49,7 @@ Not found (noted once): `ARCHITECTURE.md`, `docs/PLANS.md`.
   - Add `POST /api/upload` for multipart uploads with 20 MB cap and safe file naming, returning `{ "url": "..." }`.
   - Add `UPLOAD_DIR` config (default `./uploads`) and serve `/static/uploads/` from that directory.
 
-- [ ] M6. Add/extend tests and run validation for full Phase 2 completion (status: not started)
+- [x] M6. Add/extend tests and run validation for full Phase 2 completion (status: completed)
   - Add store and API tests covering happy paths and key authorization/validation failures for each Phase 2 endpoint.
   - Run `go test ./...` in `server/` and resolve failures until green.
 
@@ -168,6 +168,24 @@ Not found (noted once): `ARCHITECTURE.md`, `docs/PLANS.md`.
     - `server/api/auth_test.go` test-router helper now isolates uploads in a temp directory.
     - `server/main_test.go` added config coverage for `UPLOAD_DIR`.
   - Validation: `cd server && go test ./...` passes.
+- M6 completed:
+  - Expanded API validation/authorization test coverage:
+    - `server/api/users_conversations_test.go`
+      - self-exclusion in user search results
+      - conversation list invalid `limit` handling
+      - conversation detail not-found handling.
+    - `server/api/messages_test.go`
+      - messages list invalid `limit` handling
+      - invalid message payload content/content-type handling
+      - message edit/delete not-found handling.
+    - `server/api/upload_test.go`
+      - upload missing-file validation
+      - upload oversized-file (`>20MB`) rejection.
+  - Tightened message list limit parsing behavior in `server/api/messages.go`:
+    - explicit non-positive `limit` now returns `400` instead of silently defaulting.
+  - Full Phase 2 validation run:
+    - `cd server && go test ./...` passes.
+  - Phase 2 milestone set is now complete (M1-M6 all done).
 
 ## Key decisions
 - Keep scope strictly bounded to Phase 2 endpoints and upload/static serving requirements.
@@ -191,7 +209,7 @@ Not found (noted once): `ARCHITECTURE.md`, `docs/PLANS.md`.
 - Chose permissive upload type handling for Phase 2: any file under 20 MB is accepted, with attachment class inferred from request content type (`image/*` => `image`, else `file`).
 
 ## Remaining issues / open questions
-- No M5 blockers.
+- No remaining Phase 2 blockers.
 
 ## Links to related documents
 - `AGENTS.md`

@@ -25,6 +25,49 @@ func TestUploadEndpointAndStaticServing(t *testing.T) {
 		}
 	})
 
+	t.Run("rejects missing file", func(t *testing.T) {
+		var body bytes.Buffer
+		writer := multipart.NewWriter(&body)
+		if err := writer.Close(); err != nil {
+			t.Fatalf("close multipart writer: %v", err)
+		}
+
+		req := httptest.NewRequest(http.MethodPost, "/api/upload", &body)
+		req.Header.Set("Authorization", "Bearer "+alice.Token)
+		req.Header.Set("Content-Type", writer.FormDataContentType())
+		resp := httptest.NewRecorder()
+		router.ServeHTTP(resp, req)
+
+		if resp.Code != http.StatusBadRequest {
+			t.Fatalf("expected %d, got %d", http.StatusBadRequest, resp.Code)
+		}
+	})
+
+	t.Run("rejects oversized file", func(t *testing.T) {
+		var body bytes.Buffer
+		writer := multipart.NewWriter(&body)
+		part, err := writer.CreateFormFile("file", "too-large.bin")
+		if err != nil {
+			t.Fatalf("create file form part: %v", err)
+		}
+		if _, err := part.Write(bytes.Repeat([]byte("a"), maxUploadBytes+1)); err != nil {
+			t.Fatalf("write upload payload: %v", err)
+		}
+		if err := writer.Close(); err != nil {
+			t.Fatalf("close multipart writer: %v", err)
+		}
+
+		req := httptest.NewRequest(http.MethodPost, "/api/upload", &body)
+		req.Header.Set("Authorization", "Bearer "+alice.Token)
+		req.Header.Set("Content-Type", writer.FormDataContentType())
+		resp := httptest.NewRecorder()
+		router.ServeHTTP(resp, req)
+
+		if resp.Code != http.StatusRequestEntityTooLarge {
+			t.Fatalf("expected %d, got %d", http.StatusRequestEntityTooLarge, resp.Code)
+		}
+	})
+
 	t.Run("uploads file and serves statically", func(t *testing.T) {
 		var body bytes.Buffer
 		writer := multipart.NewWriter(&body)

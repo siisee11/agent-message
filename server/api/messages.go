@@ -321,14 +321,14 @@ func parseMessageLimit(raw string) (int, error) {
 	if err != nil {
 		return 0, errors.New("limit must be a positive integer")
 	}
+	if limit < 1 {
+		return 0, errors.New("limit must be a positive integer")
+	}
+	if limit > models.MaxMessagePageLimit {
+		return 0, models.ErrPageLimitOutOfRange
+	}
 
-	query := models.ListMessagesQuery{
-		Limit: limit,
-	}
-	if err := query.Normalize(); err != nil {
-		return 0, err
-	}
-	return query.Limit, nil
+	return limit, nil
 }
 
 func conversationMessagesPath(path string) (string, bool) {

@@ -80,6 +80,41 @@ func TestMessagesEndpoints(t *testing.T) {
 		}
 	})
 
+	t.Run("list messages validates limit", func(t *testing.T) {
+		req := httptest.NewRequest(http.MethodGet, "/api/conversations/"+conversationID+"/messages?limit=0", nil)
+		req.Header.Set("Authorization", "Bearer "+alice.Token)
+		resp := httptest.NewRecorder()
+		router.ServeHTTP(resp, req)
+
+		if resp.Code != http.StatusBadRequest {
+			t.Fatalf("expected %d, got %d", http.StatusBadRequest, resp.Code)
+		}
+	})
+
+	t.Run("reject json message with empty content", func(t *testing.T) {
+		req := httptest.NewRequest(http.MethodPost, "/api/conversations/"+conversationID+"/messages", bytes.NewBufferString(`{"content":"   "}`))
+		req.Header.Set("Authorization", "Bearer "+alice.Token)
+		req.Header.Set("Content-Type", "application/json")
+		resp := httptest.NewRecorder()
+		router.ServeHTTP(resp, req)
+
+		if resp.Code != http.StatusBadRequest {
+			t.Fatalf("expected %d, got %d", http.StatusBadRequest, resp.Code)
+		}
+	})
+
+	t.Run("reject unsupported content type", func(t *testing.T) {
+		req := httptest.NewRequest(http.MethodPost, "/api/conversations/"+conversationID+"/messages", bytes.NewBufferString("hello"))
+		req.Header.Set("Authorization", "Bearer "+alice.Token)
+		req.Header.Set("Content-Type", "text/plain")
+		resp := httptest.NewRecorder()
+		router.ServeHTTP(resp, req)
+
+		if resp.Code != http.StatusBadRequest {
+			t.Fatalf("expected %d, got %d", http.StatusBadRequest, resp.Code)
+		}
+	})
+
 	t.Run("edit own message", func(t *testing.T) {
 		req := httptest.NewRequest(http.MethodPatch, "/api/messages/"+msg1.ID, bytes.NewBufferString(`{"content":"hello edited"}`))
 		req.Header.Set("Authorization", "Bearer "+alice.Token)
@@ -139,6 +174,29 @@ func TestMessagesEndpoints(t *testing.T) {
 
 		if resp.Code != http.StatusForbidden {
 			t.Fatalf("expected %d, got %d", http.StatusForbidden, resp.Code)
+		}
+	})
+
+	t.Run("edit not found message", func(t *testing.T) {
+		req := httptest.NewRequest(http.MethodPatch, "/api/messages/does-not-exist", bytes.NewBufferString(`{"content":"x"}`))
+		req.Header.Set("Authorization", "Bearer "+alice.Token)
+		req.Header.Set("Content-Type", "application/json")
+		resp := httptest.NewRecorder()
+		router.ServeHTTP(resp, req)
+
+		if resp.Code != http.StatusNotFound {
+			t.Fatalf("expected %d, got %d", http.StatusNotFound, resp.Code)
+		}
+	})
+
+	t.Run("delete not found message", func(t *testing.T) {
+		req := httptest.NewRequest(http.MethodDelete, "/api/messages/does-not-exist", nil)
+		req.Header.Set("Authorization", "Bearer "+alice.Token)
+		resp := httptest.NewRecorder()
+		router.ServeHTTP(resp, req)
+
+		if resp.Code != http.StatusNotFound {
+			t.Fatalf("expected %d, got %d", http.StatusNotFound, resp.Code)
 		}
 	})
 }

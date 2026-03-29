@@ -75,6 +75,25 @@ func TestUsersEndpoints(t *testing.T) {
 			t.Fatalf("expected %d, got %d", http.StatusBadRequest, resp.Code)
 		}
 	})
+
+	t.Run("search users excludes self", func(t *testing.T) {
+		req := httptest.NewRequest(http.MethodGet, "/api/users?username=ali", nil)
+		req.Header.Set("Authorization", "Bearer "+alice.Token)
+		resp := httptest.NewRecorder()
+		router.ServeHTTP(resp, req)
+
+		if resp.Code != http.StatusOK {
+			t.Fatalf("expected %d, got %d body=%s", http.StatusOK, resp.Code, resp.Body.String())
+		}
+
+		var profiles []models.UserProfile
+		if err := json.NewDecoder(resp.Body).Decode(&profiles); err != nil {
+			t.Fatalf("decode users response: %v", err)
+		}
+		if len(profiles) != 0 {
+			t.Fatalf("expected no results after self-filtering, got %+v", profiles)
+		}
+	})
 }
 
 func TestConversationsEndpoints(t *testing.T) {
@@ -177,6 +196,22 @@ func TestConversationsEndpoints(t *testing.T) {
 	router.ServeHTTP(respSelf, reqSelf)
 	if respSelf.Code != http.StatusBadRequest {
 		t.Fatalf("expected bad request status %d, got %d", http.StatusBadRequest, respSelf.Code)
+	}
+
+	reqListInvalidLimit := httptest.NewRequest(http.MethodGet, "/api/conversations?limit=0", nil)
+	reqListInvalidLimit.Header.Set("Authorization", "Bearer "+alice.Token)
+	respListInvalidLimit := httptest.NewRecorder()
+	router.ServeHTTP(respListInvalidLimit, reqListInvalidLimit)
+	if respListInvalidLimit.Code != http.StatusBadRequest {
+		t.Fatalf("expected bad request status %d for invalid limit, got %d", http.StatusBadRequest, respListInvalidLimit.Code)
+	}
+
+	reqNotFound := httptest.NewRequest(http.MethodGet, "/api/conversations/does-not-exist", nil)
+	reqNotFound.Header.Set("Authorization", "Bearer "+alice.Token)
+	respNotFound := httptest.NewRecorder()
+	router.ServeHTTP(respNotFound, reqNotFound)
+	if respNotFound.Code != http.StatusNotFound {
+		t.Fatalf("expected not found status %d, got %d", http.StatusNotFound, respNotFound.Code)
 	}
 }
 

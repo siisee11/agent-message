@@ -30,6 +30,8 @@ type Store interface {
 	CreateMessage(ctx context.Context, params models.CreateMessageParams) (models.Message, error)
 	UpdateMessage(ctx context.Context, params models.UpdateMessageParams) (models.Message, error)
 	SoftDeleteMessage(ctx context.Context, params models.SoftDeleteMessageParams) (models.Message, error)
+	ToggleMessageReaction(ctx context.Context, params models.ToggleMessageReactionParams) (models.ToggleReactionResult, error)
+	RemoveMessageReaction(ctx context.Context, params models.RemoveMessageReactionParams) (models.Reaction, error)
 }
 
 type NoopStore struct{}
@@ -100,4 +102,12 @@ func (s *NoopStore) UpdateMessage(_ context.Context, _ models.UpdateMessageParam
 
 func (s *NoopStore) SoftDeleteMessage(_ context.Context, _ models.SoftDeleteMessageParams) (models.Message, error) {
 	return models.Message{}, ErrNotImplemented
+}
+
+func (s *NoopStore) ToggleMessageReaction(_ context.Context, _ models.ToggleMessageReactionParams) (models.ToggleReactionResult, error) {
+	return models.ToggleReactionResult{}, ErrNotImplemented
+}
+
+func (s *NoopStore) RemoveMessageReaction(_ context.Context, _ models.RemoveMessageReactionParams) (models.Reaction, error) {
+	return models.Reaction{}, ErrNotImplemented
 }

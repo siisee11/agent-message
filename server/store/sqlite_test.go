@@ -366,6 +366,189 @@ func TestSQLiteStorePhase2CoreOperations(t *testing.T) {
 	}
 }
 
+func TestSQLiteStoreReactionPersistence(t *testing.T) {
+	ctx := context.Background()
+	dbPath := filepath.Join(t.TempDir(), "reactions.sqlite")
+
+	s, err := NewSQLiteStore(ctx, dbPath)
+	if err != nil {
+		t.Fatalf("NewSQLiteStore() error = %v", err)
+	}
+	t.Cleanup(func() {
+		_ = s.Close()
+	})
+
+	base := time.Now().UTC().Truncate(time.Microsecond)
+
+	alice := mustCreateUser(t, ctx, s, models.CreateUserParams{
+		ID:        "user-alice",
+		Username:  "alice",
+		PINHash:   "hash",
+		CreatedAt: base,
+	})
+	bob := mustCreateUser(t, ctx, s, models.CreateUserParams{
+		ID:        "user-bob",
+		Username:  "bob",
+		PINHash:   "hash",
+		CreatedAt: base.Add(time.Second),
+	})
+	charlie := mustCreateUser(t, ctx, s, models.CreateUserParams{
+		ID:        "user-charlie",
+		Username:  "charlie",
+		PINHash:   "hash",
+		CreatedAt: base.Add(2 * time.Second),
+	})
+
+	conversationAB, err := s.GetOrCreateDirectConversation(ctx, models.GetOrCreateDirectConversationParams{
+		ConversationID: "conv-ab",
+		CurrentUserID:  alice.ID,
+		TargetUserID:   bob.ID,
+		CreatedAt:      base.Add(3 * time.Second),
+	})
+	if err != nil {
+		t.Fatalf("GetOrCreateDirectConversation() error = %v", err)
+	}
+
+	message, err := s.CreateMessage(ctx, models.CreateMessageParams{
+		ID:             "msg-1",
+		ConversationID: conversationAB.ID,
+		SenderID:       alice.ID,
+		Content:        stringPtr("hello"),
+		CreatedAt:      base.Add(4 * time.Second),
+		UpdatedAt:      base.Add(4 * time.Second),
+	})
+	if err != nil {
+		t.Fatalf("CreateMessage() error = %v", err)
+	}
+
+	firstToggle, err := s.ToggleMessageReaction(ctx, models.ToggleMessageReactionParams{
+		ReactionID:  "rxn-1",
+		MessageID:   message.ID,
+		ActorUserID: alice.ID,
+		Emoji:       "👍",
+		CreatedAt:   base.Add(5 * time.Second),
+	})
+	if err != nil {
+		t.Fatalf("ToggleMessageReaction(add) error = %v", err)
+	}
+	if firstToggle.Action != models.ReactionMutationAdded {
+		t.Fatalf("expected add action, got %q", firstToggle.Action)
+	}
+	if firstToggle.Reaction.ID != "rxn-1" || firstToggle.Reaction.MessageID != message.ID || firstToggle.Reaction.UserID != alice.ID || firstToggle.Reaction.Emoji != "👍" {
+		t.Fatalf("unexpected added reaction: %+v", firstToggle.Reaction)
+	}
+
+	secondToggle, err := s.ToggleMessageReaction(ctx, models.ToggleMessageReactionParams{
+		ReactionID:  "rxn-2",
+		MessageID:   message.ID,
+		ActorUserID: alice.ID,
+		Emoji:       "👍",
+		CreatedAt:   base.Add(6 * time.Second),
+	})
+	if err != nil {
+		t.Fatalf("ToggleMessageReaction(remove) error = %v", err)
+	}
+	if secondToggle.Action != models.ReactionMutationRemoved {
+		t.Fatalf("expected remove action, got %q", secondToggle.Action)
+	}
+	if secondToggle.Reaction.ID != "rxn-1" || secondToggle.Reaction.UserID != alice.ID || secondToggle.Reaction.Emoji != "👍" {
+		t.Fatalf("unexpected removed reaction payload: %+v", secondToggle.Reaction)
+	}
+
+	if _, err := s.ToggleMessageReaction(ctx, models.ToggleMessageReactionParams{
+		ReactionID:  "rxn-3",
+		MessageID:   message.ID,
+		ActorUserID: alice.ID,
+		Emoji:       "😄",
+		CreatedAt:   base.Add(7 * time.Second),
+	}); err != nil {
+		t.Fatalf("ToggleMessageReaction(add second emoji) error = %v", err)
+	}
+
+	bobToggle, err := s.ToggleMessageReaction(ctx, models.ToggleMessageReactionParams{
+		ReactionID:  "rxn-4",
+		MessageID:   message.ID,
+		ActorUserID: bob.ID,
+		Emoji:       "👍",
+		CreatedAt:   base.Add(8 * time.Second),
+	})
+	if err != nil {
+		t.Fatalf("ToggleMessageReaction(add by bob) error = %v", err)
+	}
+	if bobToggle.Action != models.ReactionMutationAdded || bobToggle.Reaction.ID != "rxn-4" {
+		t.Fatalf("unexpected bob toggle result: %+v", bobToggle)
+	}
+
+	var reactionCount int
+	if err := s.db.QueryRowContext(ctx, `SELECT COUNT(*) FROM reactions WHERE message_id = ?`, message.ID).Scan(&reactionCount); err != nil {
+		t.Fatalf("count reactions: %v", err)
+	}
+	if reactionCount != 2 {
+		t.Fatalf("expected 2 reactions after toggles, got %d", reactionCount)
+	}
+
+	removed, err := s.RemoveMessageReaction(ctx, models.RemoveMessageReactionParams{
+		MessageID:   message.ID,
+		ActorUserID: bob.ID,
+		Emoji:       "👍",
+	})
+	if err != nil {
+		t.Fatalf("RemoveMessageReaction() error = %v", err)
+	}
+	if removed.ID != "rxn-4" || removed.UserID != bob.ID || removed.Emoji != "👍" {
+		t.Fatalf("unexpected removed reaction: %+v", removed)
+	}
+
+	_, err = s.RemoveMessageReaction(ctx, models.RemoveMessageReactionParams{
+		MessageID:   message.ID,
+		ActorUserID: bob.ID,
+		Emoji:       "👍",
+	})
+	if !errors.Is(err, ErrNotFound) {
+		t.Fatalf("expected ErrNotFound for removing non-existent own reaction, got %v", err)
+	}
+
+	_, err = s.ToggleMessageReaction(ctx, models.ToggleMessageReactionParams{
+		ReactionID:  "rxn-5",
+		MessageID:   message.ID,
+		ActorUserID: charlie.ID,
+		Emoji:       "🔥",
+		CreatedAt:   base.Add(9 * time.Second),
+	})
+	if !errors.Is(err, ErrForbidden) {
+		t.Fatalf("expected ErrForbidden for outsider toggle, got %v", err)
+	}
+
+	_, err = s.RemoveMessageReaction(ctx, models.RemoveMessageReactionParams{
+		MessageID:   message.ID,
+		ActorUserID: charlie.ID,
+		Emoji:       "😄",
+	})
+	if !errors.Is(err, ErrForbidden) {
+		t.Fatalf("expected ErrForbidden for outsider remove, got %v", err)
+	}
+
+	_, err = s.ToggleMessageReaction(ctx, models.ToggleMessageReactionParams{
+		ReactionID:  "rxn-6",
+		MessageID:   "missing-message",
+		ActorUserID: alice.ID,
+		Emoji:       "🔥",
+		CreatedAt:   base.Add(10 * time.Second),
+	})
+	if !errors.Is(err, ErrNotFound) {
+		t.Fatalf("expected ErrNotFound for missing message toggle, got %v", err)
+	}
+
+	_, err = s.RemoveMessageReaction(ctx, models.RemoveMessageReactionParams{
+		MessageID:   "missing-message",
+		ActorUserID: alice.ID,
+		Emoji:       "🔥",
+	})
+	if !errors.Is(err, ErrNotFound) {
+		t.Fatalf("expected ErrNotFound for missing message remove, got %v", err)
+	}
+}
+
 func mustCreateUser(t *testing.T, ctx context.Context, s *SQLiteStore, params models.CreateUserParams) models.User {
 	t.Helper()
 	user, err := s.CreateUser(ctx, params)

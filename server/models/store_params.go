@@ -77,3 +77,19 @@ type SoftDeleteMessageParams struct {
 	ActorUserID string
 	UpdatedAt   time.Time
 }
+
+// ToggleMessageReactionParams defines add/toggle behavior for message reactions.
+type ToggleMessageReactionParams struct {
+	ReactionID  string
+	MessageID   string
+	ActorUserID string
+	Emoji       string
+	CreatedAt   time.Time
+}
+
+// RemoveMessageReactionParams defines explicit removal of caller-owned reactions.
+type RemoveMessageReactionParams struct {
+	MessageID   string
+	ActorUserID string
+	Emoji       string
+}

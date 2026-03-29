@@ -10,3 +10,16 @@ type Reaction struct {
 	Emoji     string    `json:"emoji" db:"emoji"`
 	CreatedAt time.Time `json:"created_at" db:"created_at"`
 }
+
+type ReactionMutationAction string
+
+const (
+	ReactionMutationAdded   ReactionMutationAction = "added"
+	ReactionMutationRemoved ReactionMutationAction = "removed"
+)
+
+// ToggleReactionResult describes whether a toggle added or removed a reaction.
+type ToggleReactionResult struct {
+	Action   ReactionMutationAction `json:"action"`
+	Reaction Reaction               `json:"reaction"`
+}

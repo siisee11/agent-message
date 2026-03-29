@@ -651,6 +651,108 @@ func (s *SQLiteStore) SoftDeleteMessage(ctx context.Context, params models.SoftD
 	return s.getMessageByID(ctx, params.MessageID)
 }
 
+func (s *SQLiteStore) ToggleMessageReaction(ctx context.Context, params models.ToggleMessageReactionParams) (models.ToggleReactionResult, error) {
+	message, err := s.getMessageByID(ctx, params.MessageID)
+	if err != nil {
+		return models.ToggleReactionResult{}, err
+	}
+	if err := s.ensureConversationParticipant(ctx, message.ConversationID, params.ActorUserID); err != nil {
+		return models.ToggleReactionResult{}, err
+	}
+
+	reactionID := strings.TrimSpace(params.ReactionID)
+	emoji := strings.TrimSpace(params.Emoji)
+
+	tx, err := s.db.BeginTx(ctx, nil)
+	if err != nil {
+		return models.ToggleReactionResult{}, fmt.Errorf("begin toggle reaction tx: %w", err)
+	}
+	defer func() {
+		_ = tx.Rollback()
+	}()
+
+	existing, err := getReactionByMessageUserEmojiTx(ctx, tx, params.MessageID, params.ActorUserID, emoji)
+	if err == nil {
+		if err := deleteReactionByIDTx(ctx, tx, existing.ID); err != nil {
+			return models.ToggleReactionResult{}, err
+		}
+		if err := tx.Commit(); err != nil {
+			return models.ToggleReactionResult{}, fmt.Errorf("commit toggle remove reaction tx: %w", err)
+		}
+		return models.ToggleReactionResult{
+			Action:   models.ReactionMutationRemoved,
+			Reaction: existing,
+		}, nil
+	}
+	if !errors.Is(err, ErrNotFound) {
+		return models.ToggleReactionResult{}, err
+	}
+
+	const insertQuery = `
+		INSERT INTO reactions (id, message_id, user_id, emoji, created_at)
+		VALUES (?, ?, ?, ?, ?)
+	`
+	_, err = tx.ExecContext(
+		ctx,
+		insertQuery,
+		reactionID,
+		params.MessageID,
+		params.ActorUserID,
+		emoji,
+		formatTime(params.CreatedAt),
+	)
+	if err != nil {
+		return models.ToggleReactionResult{}, fmt.Errorf("insert reaction: %w", err)
+	}
+
+	addedReaction, err := getReactionByIDTx(ctx, tx, reactionID)
+	if err != nil {
+		return models.ToggleReactionResult{}, err
+	}
+
+	if err := tx.Commit(); err != nil {
+		return models.ToggleReactionResult{}, fmt.Errorf("commit toggle add reaction tx: %w", err)
+	}
+
+	return models.ToggleReactionResult{
+		Action:   models.ReactionMutationAdded,
+		Reaction: addedReaction,
+	}, nil
+}
+
+func (s *SQLiteStore) RemoveMessageReaction(ctx context.Context, params models.RemoveMessageReactionParams) (models.Reaction, error) {
+	message, err := s.getMessageByID(ctx, params.MessageID)
+	if err != nil {
+		return models.Reaction{}, err
+	}
+	if err := s.ensureConversationParticipant(ctx, message.ConversationID, params.ActorUserID); err != nil {
+		return models.Reaction{}, err
+	}
+
+	emoji := strings.TrimSpace(params.Emoji)
+	tx, err := s.db.BeginTx(ctx, nil)
+	if err != nil {
+		return models.Reaction{}, fmt.Errorf("begin remove reaction tx: %w", err)
+	}
+	defer func() {
+		_ = tx.Rollback()
+	}()
+
+	reaction, err := getReactionByMessageUserEmojiTx(ctx, tx, params.MessageID, params.ActorUserID, emoji)
+	if err != nil {
+		return models.Reaction{}, err
+	}
+	if err := deleteReactionByIDTx(ctx, tx, reaction.ID); err != nil {
+		return models.Reaction{}, err
+	}
+
+	if err := tx.Commit(); err != nil {
+		return models.Reaction{}, fmt.Errorf("commit remove reaction tx: %w", err)
+	}
+
+	return reaction, nil
+}
+
 func (s *SQLiteStore) configure(ctx context.Context) error {
 	const query = `PRAGMA foreign_keys = ON`
 	if _, err := s.db.ExecContext(ctx, query); err != nil {
@@ -767,6 +869,38 @@ func getConversationByIDTx(ctx context.Context, tx *sql.Tx, conversationID strin
 	`, conversationID))
 }
 
+func getReactionByIDTx(ctx context.Context, tx *sql.Tx, reactionID string) (models.Reaction, error) {
+	return getReactionByQueryRow(tx.QueryRowContext(ctx, `
+		SELECT id, message_id, user_id, emoji, created_at
+		FROM reactions
+		WHERE id = ?
+	`, reactionID))
+}
+
+func getReactionByMessageUserEmojiTx(ctx context.Context, tx *sql.Tx, messageID, userID, emoji string) (models.Reaction, error) {
+	return getReactionByQueryRow(tx.QueryRowContext(ctx, `
+		SELECT id, message_id, user_id, emoji, created_at
+		FROM reactions
+		WHERE message_id = ? AND user_id = ? AND emoji = ?
+	`, messageID, userID, emoji))
+}
+
+func deleteReactionByIDTx(ctx context.Context, tx *sql.Tx, reactionID string) error {
+	res, err := tx.ExecContext(ctx, `DELETE FROM reactions WHERE id = ?`, reactionID)
+	if err != nil {
+		return fmt.Errorf("delete reaction: %w", err)
+	}
+
+	rowsAffected, err := res.RowsAffected()
+	if err != nil {
+		return fmt.Errorf("delete reaction rows affected: %w", err)
+	}
+	if rowsAffected == 0 {
+		return ErrNotFound
+	}
+	return nil
+}
+
 func getConversationByIDQuery(_ context.Context, row *sql.Row) (models.Conversation, error) {
 	var (
 		conversation  models.Conversation
@@ -806,6 +940,33 @@ func nullStringPointer(v sql.NullString) *string {
 	}
 	s := v.String
 	return &s
+}
+
+func getReactionByQueryRow(row *sql.Row) (models.Reaction, error) {
+	var (
+		reaction      models.Reaction
+		createdAtText string
+	)
+	if err := row.Scan(
+		&reaction.ID,
+		&reaction.MessageID,
+		&reaction.UserID,
+		&reaction.Emoji,
+		&createdAtText,
+	); err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return models.Reaction{}, ErrNotFound
+		}
+		return models.Reaction{}, fmt.Errorf("scan reaction: %w", err)
+	}
+
+	createdAt, err := parseStoredTime(createdAtText)
+	if err != nil {
+		return models.Reaction{}, fmt.Errorf("parse reaction created_at: %w", err)
+	}
+	reaction.CreatedAt = createdAt
+
+	return reaction, nil
 }
 
 func nullableMessageToModel(

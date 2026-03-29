@@ -23,7 +23,7 @@ Not found (noted once): `ARCHITECTURE.md`, `docs/PLANS.md`.
 ## Milestones
 - [x] M1. Build conversation-aware WebSocket hub primitives in `server/ws/` (register/unregister clients, track user identity + subscribed conversation IDs, and broadcast typed events) (status: completed)
 - [x] M2. Add authenticated WebSocket upgrade endpoint (`GET /ws?token=<token>`) and wire it into server routing, including token validation and connection lifecycle management (status: completed)
-- [ ] M3. Add reaction persistence contract + SQLite implementation for add/toggle/remove reaction behavior constrained to participants and caller ownership semantics (status: not started)
+- [x] M3. Add reaction persistence contract + SQLite implementation for add/toggle/remove reaction behavior constrained to participants and caller ownership semantics (status: completed)
 - [ ] M4. Implement reaction REST handlers/routes (`POST /api/messages/:id/reactions`, `DELETE /api/messages/:id/reactions/:emoji`) with validation/error mapping aligned to existing API conventions (status: not started)
 - [ ] M5. Integrate real-time event emission from message/reaction mutations and implement client `read` event ingestion path in the WebSocket server loop (status: not started)
 - [ ] M6. Add and run Phase 3 test coverage (hub behavior, WebSocket auth/upgrade flow, message/reaction broadcast events, reaction endpoint rules), then verify `cd server && go test ./...` (status: not started)
@@ -54,6 +54,28 @@ Not found (noted once): `ARCHITECTURE.md`, `docs/PLANS.md`.
   - Missing/invalid token auth failures
   - Missing upgrade header validation failure
 - Verification run: `cd server && go test ./...` passed after M2 changes.
+- Added reaction persistence contract in store/model boundaries:
+  - New store methods in `server/store/store.go`:
+    - `ToggleMessageReaction(ctx, params)` returning `models.ToggleReactionResult`
+    - `RemoveMessageReaction(ctx, params)` returning the removed `models.Reaction`
+  - New param shapes in `server/models/store_params.go`:
+    - `ToggleMessageReactionParams`
+    - `RemoveMessageReactionParams`
+  - New toggle outcome model in `server/models/reaction.go`:
+    - `ReactionMutationAction` (`added`, `removed`)
+    - `ToggleReactionResult`
+- Implemented SQLite reaction behavior in `server/store/sqlite.go`:
+  - Toggle semantics for `message_id + user_id + emoji` uniqueness (add when absent, remove when present)
+  - Explicit remove semantics for caller-owned reaction (`message_id + user_id + emoji`)
+  - Participant gating enforced through message conversation membership checks
+  - Correct domain errors:
+    - `ErrNotFound` for missing message/reaction
+    - `ErrForbidden` for non-participant actor
+- Added store-level reaction tests in `server/store/sqlite_test.go`:
+  - Add/toggle/remove flow and action assertions
+  - One-per-emoji-per-user behavior verification
+  - Participant/ownership and missing-resource error cases
+- Verification run: `cd server && go test ./...` passed after M3 changes.
 
 ## Key decisions
 - Keep implementation strictly bounded to Phase 3 deliverables from `PLAN.md`.
@@ -65,9 +87,10 @@ Not found (noted once): `ARCHITECTURE.md`, `docs/PLANS.md`.
 - Hub does not close client channels on unregister; connection lifecycle ownership remains with the WebSocket endpoint loop planned in M2.
 - M2 adopts query-token auth exactly as specified (`/ws?token=<token>`) and keeps WebSocket endpoint outside bearer middleware to avoid header-based/session-context coupling.
 - Initial M2 connection registration does not pre-subscribe conversation IDs; subscriptions remain empty until event-path integration in M5.
+- Reaction persistence contract now returns explicit mutation action (`added`/`removed`) from toggle to support M4 HTTP payload mapping and M5 websocket event emission without re-querying state.
 
 ## Remaining issues / open questions
-- Confirm desired response payload for toggled-off `POST /api/messages/:id/reactions` (explicit removed indicator vs returning current aggregate state).
+- Confirm desired HTTP response payload shape for toggled-off `POST /api/messages/:id/reactions` in M4 (echoing `action=removed` vs reaction-only response contract).
 - M5 implementation detail pending: parse websocket text frames for client `read` events and write outbound server events as framed websocket messages (currently M2 keeps transport connection/lifecycle only).
 
 ## Links to related documents

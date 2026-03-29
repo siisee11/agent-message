@@ -21,6 +21,7 @@ func NewRouter(deps Dependencies) http.Handler {
 	authHandler := newAuthHandler(deps.Store)
 	usersHandler := newUsersHandler(deps.Store)
 	conversationsHandler := newConversationsHandler(deps.Store)
+	messagesHandler := newMessagesHandler(deps.Store)
 	authRequired := BearerAuthMiddleware(deps.Store)
 
 	mux.HandleFunc("/api/auth/register", authHandler.handleRegister)
@@ -31,7 +32,15 @@ func NewRouter(deps Dependencies) http.Handler {
 	mux.Handle("/api/users/me", authRequired(http.HandlerFunc(usersHandler.handleMe)))
 
 	mux.Handle("/api/conversations", authRequired(http.HandlerFunc(conversationsHandler.handleConversationsCollection)))
-	mux.Handle("/api/conversations/", authRequired(http.HandlerFunc(conversationsHandler.handleConversationDetail)))
+	mux.Handle("/api/conversations/", authRequired(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if _, isMessagesPath := conversationMessagesPath(r.URL.Path); isMessagesPath {
+			messagesHandler.handleConversationMessages(w, r)
+			return
+		}
+		conversationsHandler.handleConversationDetail(w, r)
+	})))
+
+	mux.Handle("/api/messages/", authRequired(http.HandlerFunc(messagesHandler.handleMessageByID)))
 
 	return CORSMiddleware(deps.CORSAllowedOrigins)(mux)
 }

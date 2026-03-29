@@ -41,7 +41,7 @@ Not found (noted once): `ARCHITECTURE.md`, `docs/PLANS.md`.
   - Add authenticated handlers for `/api/users`, `/api/users/me`, `/api/conversations` (GET/POST), and `/api/conversations/:id`.
   - Enforce validation, authorization, and consistent JSON error responses aligned with existing API behavior.
 
-- [ ] M4. Implement messages REST handlers/routes with ownership rules (status: not started)
+- [x] M4. Implement messages REST handlers/routes with ownership rules (status: completed)
   - Add handlers for `GET /api/conversations/:id/messages`, `POST /api/conversations/:id/messages`, `PATCH /api/messages/:id`, and `DELETE /api/messages/:id`.
   - Support JSON text sends and multipart attachment sends; enforce own-message edit/delete rules and soft-delete semantics.
 
@@ -122,6 +122,29 @@ Not found (noted once): `ARCHITECTURE.md`, `docs/PLANS.md`.
     - idempotent DM get-or-create behavior
     - forbidden and validation error paths
   - Validation: `cd server && go test ./...` passes.
+- M4 completed:
+  - Added message REST handlers in `server/api/messages.go`:
+    - `GET /api/conversations/:id/messages`
+      - supports cursor pagination with `before` and `limit` (default 20, max enforced by model validation).
+    - `POST /api/conversations/:id/messages`
+      - supports JSON text payloads (`application/json`, body `{ "content": "..." }`)
+      - supports multipart attachment payloads (`multipart/form-data`, fields: `content`, file field `attachment`)
+      - also supports multipart `attachment_url` + `attachment_type` fallback fields
+      - enforces 20 MB max attachment size for multipart file uploads.
+    - `PATCH /api/messages/:id`
+      - edits only caller-owned messages.
+    - `DELETE /api/messages/:id`
+      - soft-deletes only caller-owned messages and returns updated message payload.
+  - Added route wiring in `server/api/router.go`:
+    - dispatch for `/api/conversations/:id/messages` under existing bearer auth middleware
+    - `PATCH/DELETE` routing for `/api/messages/:id`.
+  - Updated CORS allow-methods in `server/api/middleware.go` to include `PATCH`.
+  - Added API tests in `server/api/messages_test.go`:
+    - message create/list/paginate flows
+    - multipart attachment message send
+    - own-message edit/delete authorization constraints
+    - forbidden access for non-participants.
+  - Validation: `cd server && go test ./...` passes.
 
 ## Key decisions
 - Keep scope strictly bounded to Phase 2 endpoints and upload/static serving requirements.
@@ -135,9 +158,12 @@ Not found (noted once): `ARCHITECTURE.md`, `docs/PLANS.md`.
 - Canonicalize DM participant ordering in persistence (`participant_a`, `participant_b`) to enforce stable get-or-create behavior backed by a unique index.
 - Implement message pagination using `before=<message_id>` translated into an internal `(created_at, id)` seek condition for deterministic ordering.
 - Keep users and conversations routes mounted under the existing bearer middleware and resolve current user identity directly from auth context for `/api/users/me` and actor-scoped conversation operations.
+- Standardized message multipart field naming for Phase 2 implementation:
+  - message text: `content`
+  - attachment file: `attachment`
+  - optional fallback fields: `attachment_url`, `attachment_type`.
 
 ## Remaining issues / open questions
-- Confirm exact multipart field names for attachment upload in `POST /api/conversations/:id/messages` and `POST /api/upload` (to be standardized and tested during implementation).
 - Decide whether upload MIME/type validation should be permissive (any file under 20 MB) or restricted to a known allowlist for clearer behavior.
 
 ## Links to related documents

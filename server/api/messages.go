@@ -4,6 +4,7 @@ import (
 	"errors"
 	"mime"
 	"net/http"
+	"net/url"
 	"strconv"
 	"strings"
 	"time"
@@ -41,6 +42,15 @@ func (h *messagesHandler) handleConversationMessages(w http.ResponseWriter, r *h
 }
 
 func (h *messagesHandler) handleMessageByID(w http.ResponseWriter, r *http.Request) {
+	if _, isReactionsPath := messageReactionsPath(r.URL.Path); isReactionsPath {
+		h.handleMessageReactions(w, r)
+		return
+	}
+	if _, _, isReactionByEmojiPath := messageReactionByEmojiPath(r.URL.Path); isReactionByEmojiPath {
+		h.handleMessageReactionByEmoji(w, r)
+		return
+	}
+
 	switch r.Method {
 	case http.MethodPatch:
 		h.handleEditMessage(w, r)
@@ -50,6 +60,94 @@ func (h *messagesHandler) handleMessageByID(w http.ResponseWriter, r *http.Reque
 		w.Header().Set("Allow", "PATCH, DELETE")
 		writeError(w, http.StatusMethodNotAllowed, "method not allowed")
 	}
+}
+
+func (h *messagesHandler) handleMessageReactions(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		writeMethodNotAllowed(w, http.MethodPost)
+		return
+	}
+
+	user, ok := userFromContext(r.Context())
+	if !ok {
+		writeError(w, http.StatusUnauthorized, "missing or invalid bearer token")
+		return
+	}
+
+	messageID, valid := messageReactionsPath(r.URL.Path)
+	if !valid {
+		http.NotFound(w, r)
+		return
+	}
+
+	var req models.ToggleReactionRequest
+	if err := decodeJSONBody(r, &req); err != nil {
+		writeError(w, http.StatusBadRequest, "invalid JSON body")
+		return
+	}
+	if err := req.Validate(); err != nil {
+		writeError(w, http.StatusBadRequest, err.Error())
+		return
+	}
+
+	result, err := h.store.ToggleMessageReaction(r.Context(), models.ToggleMessageReactionParams{
+		ReactionID:  uuid.NewString(),
+		MessageID:   messageID,
+		ActorUserID: user.ID,
+		Emoji:       strings.TrimSpace(req.Emoji),
+		CreatedAt:   h.nowFn().UTC(),
+	})
+	if err != nil {
+		switch {
+		case errors.Is(err, store.ErrForbidden):
+			writeError(w, http.StatusForbidden, "forbidden")
+		case errors.Is(err, store.ErrNotFound):
+			writeError(w, http.StatusNotFound, "message not found")
+		default:
+			writeError(w, http.StatusInternalServerError, "failed to toggle reaction")
+		}
+		return
+	}
+
+	writeJSON(w, http.StatusOK, result)
+}
+
+func (h *messagesHandler) handleMessageReactionByEmoji(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodDelete {
+		writeMethodNotAllowed(w, http.MethodDelete)
+		return
+	}
+
+	user, ok := userFromContext(r.Context())
+	if !ok {
+		writeError(w, http.StatusUnauthorized, "missing or invalid bearer token")
+		return
+	}
+
+	messageID, emoji, valid := messageReactionByEmojiPath(r.URL.Path)
+	if !valid {
+		http.NotFound(w, r)
+		return
+	}
+
+	reaction, err := h.store.RemoveMessageReaction(r.Context(), models.RemoveMessageReactionParams{
+		MessageID:   messageID,
+		ActorUserID: user.ID,
+		Emoji:       emoji,
+	})
+	if err != nil {
+		switch {
+		case errors.Is(err, store.ErrForbidden):
+			writeError(w, http.StatusForbidden, "forbidden")
+		case errors.Is(err, store.ErrNotFound):
+			writeError(w, http.StatusNotFound, "reaction or message not found")
+		default:
+			writeError(w, http.StatusInternalServerError, "failed to remove reaction")
+		}
+		return
+	}
+
+	writeJSON(w, http.StatusOK, reaction)
 }
 
 func (h *messagesHandler) handleListMessages(w http.ResponseWriter, r *http.Request) {
@@ -359,4 +457,48 @@ func messageIDFromPath(path string) (string, bool) {
 		return "", false
 	}
 	return trimmed, true
+}
+
+func messageReactionsPath(path string) (string, bool) {
+	const (
+		prefix = "/api/messages/"
+		suffix = "/reactions"
+	)
+
+	if !strings.HasPrefix(path, prefix) || !strings.HasSuffix(path, suffix) {
+		return "", false
+	}
+
+	messageID := strings.TrimSpace(strings.TrimSuffix(strings.TrimPrefix(path, prefix), suffix))
+	if messageID == "" || strings.Contains(messageID, "/") {
+		return "", false
+	}
+	return messageID, true
+}
+
+func messageReactionByEmojiPath(path string) (string, string, bool) {
+	const (
+		prefix = "/api/messages/"
+		infix  = "/reactions/"
+	)
+
+	if !strings.HasPrefix(path, prefix) {
+		return "", "", false
+	}
+
+	rest := strings.TrimSpace(strings.TrimPrefix(path, prefix))
+	messageID, encodedEmoji, found := strings.Cut(rest, infix)
+	if !found || messageID == "" || encodedEmoji == "" || strings.Contains(messageID, "/") || strings.Contains(encodedEmoji, "/") {
+		return "", "", false
+	}
+
+	emoji, err := url.PathUnescape(encodedEmoji)
+	if err != nil {
+		return "", "", false
+	}
+	emoji = strings.TrimSpace(emoji)
+	if emoji == "" {
+		return "", "", false
+	}
+	return messageID, emoji, true
 }

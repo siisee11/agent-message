@@ -14,6 +14,7 @@ const (
 
 var (
 	ErrMessageContentRequired = errors.New("message content is required")
+	ErrReactionEmojiRequired  = errors.New("emoji is required")
 	ErrPageLimitOutOfRange    = errors.New("limit must be between 1 and 100")
 )
 
@@ -49,6 +50,18 @@ type EditMessageRequest struct {
 func (r EditMessageRequest) Validate() error {
 	if strings.TrimSpace(r.Content) == "" {
 		return ErrMessageContentRequired
+	}
+	return nil
+}
+
+// ToggleReactionRequest is the JSON body for POST /api/messages/:id/reactions.
+type ToggleReactionRequest struct {
+	Emoji string `json:"emoji"`
+}
+
+func (r ToggleReactionRequest) Validate() error {
+	if strings.TrimSpace(r.Emoji) == "" {
+		return ErrReactionEmojiRequired
 	}
 	return nil
 }

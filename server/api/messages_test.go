@@ -6,6 +6,7 @@ import (
 	"mime/multipart"
 	"net/http"
 	"net/http/httptest"
+	"net/url"
 	"testing"
 
 	"agent-messenger/server/models"
@@ -112,6 +113,113 @@ func TestMessagesEndpoints(t *testing.T) {
 
 		if resp.Code != http.StatusBadRequest {
 			t.Fatalf("expected %d, got %d", http.StatusBadRequest, resp.Code)
+		}
+	})
+
+	t.Run("toggle reaction add then remove", func(t *testing.T) {
+		req := httptest.NewRequest(http.MethodPost, "/api/messages/"+msg1.ID+"/reactions", bytes.NewBufferString(`{"emoji":"👍"}`))
+		req.Header.Set("Authorization", "Bearer "+alice.Token)
+		req.Header.Set("Content-Type", "application/json")
+		resp := httptest.NewRecorder()
+		router.ServeHTTP(resp, req)
+
+		if resp.Code != http.StatusOK {
+			t.Fatalf("expected %d, got %d body=%s", http.StatusOK, resp.Code, resp.Body.String())
+		}
+
+		var addResult models.ToggleReactionResult
+		if err := json.NewDecoder(resp.Body).Decode(&addResult); err != nil {
+			t.Fatalf("decode toggle add response: %v", err)
+		}
+		if addResult.Action != models.ReactionMutationAdded {
+			t.Fatalf("expected add action, got %q", addResult.Action)
+		}
+		if addResult.Reaction.MessageID != msg1.ID || addResult.Reaction.UserID != alice.User.ID || addResult.Reaction.Emoji != "👍" {
+			t.Fatalf("unexpected add reaction payload: %+v", addResult.Reaction)
+		}
+
+		req = httptest.NewRequest(http.MethodPost, "/api/messages/"+msg1.ID+"/reactions", bytes.NewBufferString(`{"emoji":"👍"}`))
+		req.Header.Set("Authorization", "Bearer "+alice.Token)
+		req.Header.Set("Content-Type", "application/json")
+		resp = httptest.NewRecorder()
+		router.ServeHTTP(resp, req)
+
+		if resp.Code != http.StatusOK {
+			t.Fatalf("expected %d, got %d body=%s", http.StatusOK, resp.Code, resp.Body.String())
+		}
+
+		var removeResult models.ToggleReactionResult
+		if err := json.NewDecoder(resp.Body).Decode(&removeResult); err != nil {
+			t.Fatalf("decode toggle remove response: %v", err)
+		}
+		if removeResult.Action != models.ReactionMutationRemoved {
+			t.Fatalf("expected remove action, got %q", removeResult.Action)
+		}
+		if removeResult.Reaction.MessageID != msg1.ID || removeResult.Reaction.UserID != alice.User.ID || removeResult.Reaction.Emoji != "👍" {
+			t.Fatalf("unexpected remove reaction payload: %+v", removeResult.Reaction)
+		}
+	})
+
+	t.Run("remove reaction by emoji path", func(t *testing.T) {
+		req := httptest.NewRequest(http.MethodPost, "/api/messages/"+msg1.ID+"/reactions", bytes.NewBufferString(`{"emoji":"🔥"}`))
+		req.Header.Set("Authorization", "Bearer "+alice.Token)
+		req.Header.Set("Content-Type", "application/json")
+		resp := httptest.NewRecorder()
+		router.ServeHTTP(resp, req)
+		if resp.Code != http.StatusOK {
+			t.Fatalf("expected %d, got %d body=%s", http.StatusOK, resp.Code, resp.Body.String())
+		}
+
+		req = httptest.NewRequest(http.MethodDelete, "/api/messages/"+msg1.ID+"/reactions/"+url.PathEscape("🔥"), nil)
+		req.Header.Set("Authorization", "Bearer "+alice.Token)
+		resp = httptest.NewRecorder()
+		router.ServeHTTP(resp, req)
+
+		if resp.Code != http.StatusOK {
+			t.Fatalf("expected %d, got %d body=%s", http.StatusOK, resp.Code, resp.Body.String())
+		}
+
+		var removed models.Reaction
+		if err := json.NewDecoder(resp.Body).Decode(&removed); err != nil {
+			t.Fatalf("decode removed reaction: %v", err)
+		}
+		if removed.MessageID != msg1.ID || removed.UserID != alice.User.ID || removed.Emoji != "🔥" {
+			t.Fatalf("unexpected removed reaction payload: %+v", removed)
+		}
+	})
+
+	t.Run("reject reaction with empty emoji", func(t *testing.T) {
+		req := httptest.NewRequest(http.MethodPost, "/api/messages/"+msg1.ID+"/reactions", bytes.NewBufferString(`{"emoji":"   "}`))
+		req.Header.Set("Authorization", "Bearer "+alice.Token)
+		req.Header.Set("Content-Type", "application/json")
+		resp := httptest.NewRecorder()
+		router.ServeHTTP(resp, req)
+
+		if resp.Code != http.StatusBadRequest {
+			t.Fatalf("expected %d, got %d", http.StatusBadRequest, resp.Code)
+		}
+	})
+
+	t.Run("reject reaction toggle by outsider", func(t *testing.T) {
+		req := httptest.NewRequest(http.MethodPost, "/api/messages/"+msg1.ID+"/reactions", bytes.NewBufferString(`{"emoji":"🔥"}`))
+		req.Header.Set("Authorization", "Bearer "+charlie.Token)
+		req.Header.Set("Content-Type", "application/json")
+		resp := httptest.NewRecorder()
+		router.ServeHTTP(resp, req)
+
+		if resp.Code != http.StatusForbidden {
+			t.Fatalf("expected %d, got %d", http.StatusForbidden, resp.Code)
+		}
+	})
+
+	t.Run("remove reaction missing returns not found", func(t *testing.T) {
+		req := httptest.NewRequest(http.MethodDelete, "/api/messages/"+msg1.ID+"/reactions/"+url.PathEscape("💥"), nil)
+		req.Header.Set("Authorization", "Bearer "+alice.Token)
+		resp := httptest.NewRecorder()
+		router.ServeHTTP(resp, req)
+
+		if resp.Code != http.StatusNotFound {
+			t.Fatalf("expected %d, got %d", http.StatusNotFound, resp.Code)
 		}
 	})
 

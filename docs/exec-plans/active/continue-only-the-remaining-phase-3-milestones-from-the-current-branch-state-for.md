@@ -34,7 +34,7 @@ Referenced but missing (noted once):
 - `docs/PLANS.md`
 
 ## Milestones
-- [ ] M4. Implement reaction API surface (`POST /api/messages/:id/reactions`, `DELETE /api/messages/:id/reactions/:emoji`) with validation and route wiring, reusing existing store reaction methods (status: not started)
+- [x] M4. Implement reaction API surface (`POST /api/messages/:id/reactions`, `DELETE /api/messages/:id/reactions/:emoji`) with validation and route wiring, reusing existing store reaction methods (status: completed)
 - [ ] M5. Implement WebSocket session runtime: register client with conversation subscriptions, pump hub events to socket, and parse client frames for `read` events with conversation subscription updates (status: not started)
 - [ ] M6. Emit `message.new`, `message.edited`, and `message.deleted` events from message mutation handlers to the conversation via hub broadcast (status: not started)
 - [ ] M7. Emit `reaction.added` and `reaction.removed` events from reaction handlers with payloads aligned to `SPEC.md` event contracts (status: not started)
@@ -53,8 +53,13 @@ Referenced but missing (noted once):
   - WebSocket hub primitives are present (`server/ws/hub.go`, tests)
   - Authenticated websocket upgrade endpoint exists (`server/api/websocket.go`, route wiring)
   - Reaction persistence/store contracts and SQLite implementation exist (`server/models/reaction.go`, `server/models/store_params.go`, `server/store/store.go`, `server/store/sqlite.go`)
-- Confirmed remaining gap areas by inspection:
-  - No reaction API endpoints are wired under `/api/messages/:id/reactions...`
+- Completed M4 reaction API surface:
+  - Added `POST /api/messages/:id/reactions` handler using `ToggleMessageReaction`, with JSON body validation via `models.ToggleReactionRequest` (`emoji` required).
+  - Added `DELETE /api/messages/:id/reactions/:emoji` handler using `RemoveMessageReaction`, including URL-path emoji decoding and ownership-scoped removal behavior via store boundary.
+  - Extended `/api/messages/...` dispatch to route reaction paths and preserve existing `PATCH/DELETE` message mutation behavior.
+  - Added API coverage in `server/api/messages_test.go` for reaction toggle add/remove, explicit delete by emoji path, validation, forbidden actor, and not-found removal.
+  - Verified with `cd server && go test ./api` (pass).
+- Remaining gap areas by inspection:
   - Message handlers do not yet broadcast websocket mutation events
   - WebSocket handler currently upgrades/authenticates but does not process JSON events or flush hub events to clients
 
@@ -63,10 +68,11 @@ Referenced but missing (noted once):
 - Treat this as a continuation plan that starts at remaining work (`M4`-`M9`) only.
 - Keep event names/payload shapes aligned with `SPEC.md` to prevent contract drift.
 - Keep each milestone scoped for one coding-loop iteration.
+- `POST /api/messages/:id/reactions` returns `models.ToggleReactionResult` (includes `action` + `reaction`) to preserve store-level toggle semantics (`added` / `removed`) for upcoming websocket emission in M7.
+- `DELETE /api/messages/:id/reactions/:emoji` returns the removed `models.Reaction` payload on success (`200 OK`) for deterministic client reconciliation.
 
 ## Remaining issues / open questions
 - Decide exact behavior for `read` events in Phase 3: subscription-only transport behavior vs additional persistence side effects (no persistence requirement currently defined in `PLAN.md`).
-- Confirm whether `POST /api/messages/:id/reactions` should return toggle action metadata (`added`/`removed`) or reaction object only; current store boundary returns action.
 
 ## Links to related documents
 - `AGENTS.md`

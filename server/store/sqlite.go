@@ -553,6 +553,17 @@ func (s *SQLiteStore) ListMessagesByConversation(ctx context.Context, params mod
 	return messages, nil
 }
 
+func (s *SQLiteStore) GetMessageByIDForUser(ctx context.Context, params models.GetMessageForUserParams) (models.Message, error) {
+	message, err := s.getMessageByID(ctx, params.MessageID)
+	if err != nil {
+		return models.Message{}, err
+	}
+	if err := s.ensureConversationParticipant(ctx, message.ConversationID, params.UserID); err != nil {
+		return models.Message{}, err
+	}
+	return message, nil
+}
+
 func (s *SQLiteStore) CreateMessage(ctx context.Context, params models.CreateMessageParams) (models.Message, error) {
 	if err := s.ensureConversationParticipant(ctx, params.ConversationID, params.SenderID); err != nil {
 		return models.Message{}, err

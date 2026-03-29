@@ -51,6 +51,12 @@ type ListConversationMessagesParams struct {
 	Limit           int
 }
 
+// GetMessageForUserParams defines participant-scoped message lookup by ID.
+type GetMessageForUserParams struct {
+	MessageID string
+	UserID    string
+}
+
 // CreateMessageParams is the persistence boundary for creating a message.
 type CreateMessageParams struct {
 	ID             string

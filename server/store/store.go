@@ -27,6 +27,7 @@ type Store interface {
 	GetOrCreateDirectConversation(ctx context.Context, params models.GetOrCreateDirectConversationParams) (models.Conversation, error)
 	GetConversationByIDForUser(ctx context.Context, params models.GetConversationForUserParams) (models.ConversationDetails, error)
 	ListMessagesByConversation(ctx context.Context, params models.ListConversationMessagesParams) ([]models.MessageDetails, error)
+	GetMessageByIDForUser(ctx context.Context, params models.GetMessageForUserParams) (models.Message, error)
 	CreateMessage(ctx context.Context, params models.CreateMessageParams) (models.Message, error)
 	UpdateMessage(ctx context.Context, params models.UpdateMessageParams) (models.Message, error)
 	SoftDeleteMessage(ctx context.Context, params models.SoftDeleteMessageParams) (models.Message, error)
@@ -90,6 +91,10 @@ func (s *NoopStore) GetConversationByIDForUser(_ context.Context, _ models.GetCo
 
 func (s *NoopStore) ListMessagesByConversation(_ context.Context, _ models.ListConversationMessagesParams) ([]models.MessageDetails, error) {
 	return nil, ErrNotImplemented
+}
+
+func (s *NoopStore) GetMessageByIDForUser(_ context.Context, _ models.GetMessageForUserParams) (models.Message, error) {
+	return models.Message{}, ErrNotImplemented
 }
 
 func (s *NoopStore) CreateMessage(_ context.Context, _ models.CreateMessageParams) (models.Message, error) {

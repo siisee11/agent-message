@@ -112,6 +112,13 @@ func (h *messagesHandler) handleMessageReactions(w http.ResponseWriter, r *http.
 		return
 	}
 
+	switch result.Action {
+	case models.ReactionMutationAdded:
+		h.broadcastReactionEventForMessage(r, user.ID, messageID, ws.EventTypeReactionAdded, result.Reaction)
+	case models.ReactionMutationRemoved:
+		h.broadcastReactionEventForMessage(r, user.ID, messageID, ws.EventTypeReactionRemoved, reactionRemovedEventData(result.Reaction))
+	}
+
 	writeJSON(w, http.StatusOK, result)
 }
 
@@ -150,6 +157,7 @@ func (h *messagesHandler) handleMessageReactionByEmoji(w http.ResponseWriter, r 
 		return
 	}
 
+	h.broadcastReactionEventForMessage(r, user.ID, messageID, ws.EventTypeReactionRemoved, reactionRemovedEventData(reaction))
 	writeJSON(w, http.StatusOK, reaction)
 }
 
@@ -341,6 +349,29 @@ func (h *messagesHandler) broadcastConversationEvent(conversationID, eventType s
 		Type: eventType,
 		Data: data,
 	})
+}
+
+func (h *messagesHandler) broadcastReactionEventForMessage(r *http.Request, userID, messageID, eventType string, data any) {
+	if h.hub == nil {
+		return
+	}
+
+	message, err := h.store.GetMessageByIDForUser(r.Context(), models.GetMessageForUserParams{
+		MessageID: messageID,
+		UserID:    userID,
+	})
+	if err != nil {
+		return
+	}
+	h.broadcastConversationEvent(message.ConversationID, eventType, data)
+}
+
+func reactionRemovedEventData(reaction models.Reaction) map[string]string {
+	return map[string]string{
+		"message_id": reaction.MessageID,
+		"emoji":      reaction.Emoji,
+		"user_id":    reaction.UserID,
+	}
 }
 
 func (h *messagesHandler) parseCreateMessagePayload(w http.ResponseWriter, r *http.Request) (*string, *string, *models.AttachmentType, error) {

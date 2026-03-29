@@ -81,6 +81,7 @@ type appServerClient struct {
 	logMu         sync.Mutex
 	logFile       *os.File
 	telemetry     *ralphTelemetry
+	requestFn     func(ctx context.Context, method string, params map[string]any) (map[string]any, error)
 }
 
 type ioWriteCloser interface {
@@ -149,6 +150,22 @@ func newAppServerClient(logPath string) (codexClient, error) {
 	return client, nil
 }
 
+var turnInactivityTimeoutFn = defaultTurnInactivityTimeout
+
+func defaultTurnInactivityTimeout(turnTimeout time.Duration) time.Duration {
+	if turnTimeout <= 0 {
+		turnTimeout = 2 * time.Hour
+	}
+	idleTimeout := 5 * time.Minute
+	if turnTimeout > 0 && turnTimeout < 20*time.Minute {
+		idleTimeout = turnTimeout / 4
+	}
+	if idleTimeout < time.Minute {
+		idleTimeout = time.Minute
+	}
+	return idleTimeout
+}
+
 func (client *appServerClient) SetNotificationHandler(handler func(jsonRPCNotification)) {
 	client.notification = handler
 }
@@ -157,7 +174,7 @@ func (client *appServerClient) Initialize(ctx context.Context) error {
 	span := client.startSpan("ralph_loop.codex.initialize", nil)
 	client.logDiagnostic("initialize request sent")
 	client.incrementMetric("ralph_loop_codex_initialize_total", 1)
-	if _, err := client.request(ctx, "initialize", map[string]any{
+	if _, err := client.callRequest(ctx, "initialize", map[string]any{
 		"clientInfo": map[string]any{
 			"name":    "ralph_loop",
 			"title":   "Ralph Loop",
@@ -186,7 +203,7 @@ func (client *appServerClient) StartThread(ctx context.Context, options startThr
 	})
 	client.logDiagnostic("thread/start request cwd=%s approval=%s", strings.TrimSpace(options.Cwd), strings.TrimSpace(options.ApprovalPolicy))
 	client.incrementMetric("ralph_loop_codex_thread_start_total", 1)
-	result, err := client.request(ctx, "thread/start", map[string]any{
+	result, err := client.callRequest(ctx, "thread/start", map[string]any{
 		"model":          options.Model,
 		"cwd":            options.Cwd,
 		"approvalPolicy": options.ApprovalPolicy,
@@ -250,7 +267,7 @@ func (client *appServerClient) RunTurn(ctx context.Context, options runTurnOptio
 	})
 	client.logDiagnostic("turn/start request thread_id=%s timeout=%s", options.ThreadID, timeout)
 	client.incrementMetric("ralph_loop_codex_turn_start_total", 1)
-	startResult, err := client.request(requestCtx, "turn/start", startPayload)
+	startResult, err := client.callRequest(requestCtx, "turn/start", startPayload)
 	if err != nil {
 		client.logDiagnostic("turn/start request failed thread_id=%s error=%v", options.ThreadID, err)
 		endSpan(span, "error", err, nil)
@@ -261,6 +278,9 @@ func (client *appServerClient) RunTurn(ctx context.Context, options runTurnOptio
 	client.logDiagnostic("turn/start acknowledged thread_id=%s turn_id=%s", options.ThreadID, activeTurnID)
 	client.setMetric("ralph_loop_last_turn_id", activeTurnID)
 	agentChunks := make([]string, 0, 8)
+	idleTimeout := turnInactivityTimeoutFn(timeout)
+	idleTimer := time.NewTimer(idleTimeout)
+	defer stopTimer(idleTimer)
 
 	for {
 		select {
@@ -275,6 +295,21 @@ func (client *appServerClient) RunTurn(ctx context.Context, options runTurnOptio
 			}
 			err := fmt.Errorf("turn/start timed out after %s", timeout)
 			endSpan(span, "timeout", err, map[string]any{"turn_id": activeTurnID})
+			return turnResult{}, err
+		case <-idleTimer.C:
+			client.logDiagnostic("turn wait became inactive thread_id=%s turn_id=%s idle_timeout=%s", options.ThreadID, activeTurnID, idleTimeout)
+			client.incrementMetric("ralph_loop_codex_turn_inactivity_timeout_total", 1)
+			if strings.TrimSpace(activeTurnID) != "" {
+				_, _ = client.callRequest(context.Background(), "turn/interrupt", map[string]any{
+					"threadId": options.ThreadID,
+					"turnId":   activeTurnID,
+				})
+			}
+			err := fmt.Errorf("turn became inactive after %s", idleTimeout)
+			endSpan(span, "timeout", err, map[string]any{
+				"turn_id":      activeTurnID,
+				"idle_timeout": idleTimeout.String(),
+			})
 			return turnResult{}, err
 		case waitErr := <-client.waitResult:
 			client.logDiagnostic("app-server process exited while waiting thread_id=%s turn_id=%s err=%v", options.ThreadID, activeTurnID, waitErr)
@@ -296,6 +331,7 @@ func (client *appServerClient) RunTurn(ctx context.Context, options runTurnOptio
 			endSpan(span, "error", err, map[string]any{"turn_id": activeTurnID})
 			return turnResult{}, err
 		case notification := <-client.notifications:
+			resetTimer(idleTimer, idleTimeout)
 			if client.notification != nil {
 				client.notification(notification)
 			}
@@ -354,9 +390,16 @@ func (client *appServerClient) RunTurn(ctx context.Context, options runTurnOptio
 
 func (client *appServerClient) CompactThread(ctx context.Context, threadID string) error {
 	span := client.startSpan("ralph_loop.codex.thread_compact", map[string]any{"thread_id": strings.TrimSpace(threadID)})
-	_, err := client.request(ctx, "thread/compact/start", map[string]any{"threadId": threadID})
+	_, err := client.callRequest(ctx, "thread/compact/start", map[string]any{"threadId": threadID})
 	endSpan(span, statusFromError(err), err, map[string]any{"thread_id": strings.TrimSpace(threadID)})
 	return err
+}
+
+func (client *appServerClient) callRequest(ctx context.Context, method string, params map[string]any) (map[string]any, error) {
+	if client.requestFn != nil {
+		return client.requestFn(ctx, method, params)
+	}
+	return client.request(ctx, method, params)
 }
 
 func (client *appServerClient) Close() error {
@@ -408,6 +451,26 @@ func (client *appServerClient) request(ctx context.Context, method string, param
 		}
 		return result, nil
 	}
+}
+
+func stopTimer(timer *time.Timer) {
+	if timer == nil {
+		return
+	}
+	if !timer.Stop() {
+		select {
+		case <-timer.C:
+		default:
+		}
+	}
+}
+
+func resetTimer(timer *time.Timer, duration time.Duration) {
+	if timer == nil {
+		return
+	}
+	stopTimer(timer)
+	timer.Reset(duration)
 }
 
 func (client *appServerClient) notify(method string, params map[string]any) error {

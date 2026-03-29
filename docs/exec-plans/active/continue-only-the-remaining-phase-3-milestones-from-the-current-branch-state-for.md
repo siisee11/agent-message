@@ -39,7 +39,7 @@ Referenced but missing (noted once):
 - [x] M6. Emit `message.new`, `message.edited`, and `message.deleted` events from message mutation handlers to the conversation via hub broadcast (status: completed)
 - [x] M7. Emit `reaction.added` and `reaction.removed` events from reaction handlers with payloads aligned to `SPEC.md` event contracts (status: completed)
 - [x] M8. Add/expand tests for reaction endpoints, websocket read handling/subscription behavior, and message/reaction broadcast integration (status: completed)
-- [ ] M9. Run `cd server && go test ./...`, resolve regressions, and verify Phase 3 deliverable completeness from current state only (status: not started)
+- [x] M9. Run `cd server && go test ./...`, resolve regressions, and verify Phase 3 deliverable completeness from current state only (status: completed)
 
 ## Current progress
 - Verified worktree setup using:
@@ -93,8 +93,12 @@ Referenced but missing (noted once):
   - Added websocket read/subscription negative-path coverage:
     - `read` event with a conversation the caller is not a participant of does not subscribe and does not deliver broadcast events.
   - Verified with `cd server && go test ./api` (pass).
+- Completed M9 final validation:
+  - Ran full server test suite from current branch state only: `cd server && go test ./...`.
+  - Result: all packages pass (`server`, `api`, `models`, `store`, `ws`) with no regressions.
+  - Verified that continuation-only Phase 3 milestones (`M4`-`M9`) are complete while preserving prior committed milestones (`M1`-`M3`) unchanged.
 - Remaining gap areas by inspection:
-  - Full repository test sweep and final Phase 3 validation remain (tracked in M9)
+  - None blocking for Phase 3 continuation scope.
 
 ## Key decisions
 - Preserve existing Phase 3 commits and continue from their current behavior; do not refactor completed milestone surfaces unless required for compatibility.
@@ -107,6 +111,7 @@ Referenced but missing (noted once):
 - Message mutation broadcast failures are currently best-effort/non-blocking for REST success paths (mutation responses are not failed if websocket delivery cannot be enqueued).
 - Reaction mutation broadcast failures are also best-effort/non-blocking for REST success paths, matching message mutation semantics.
 - Integration test assertions for reaction websocket payloads now explicitly enforce `SPEC.md` contracts for both add and remove events.
+- Phase 3 continuation deliverable is considered complete when all server package tests pass from this branch state and all milestones in this plan are checked.
 
 ## Remaining issues / open questions
 - Bootstrap conversation subscription currently loads a single bounded page (`Limit=1000`) at connect-time; if higher conversation cardinality appears later, pagination strategy can be revisited without changing the runtime contract introduced in M5.

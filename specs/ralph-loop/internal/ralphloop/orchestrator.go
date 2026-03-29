@@ -297,6 +297,20 @@ func runMain(ctx context.Context, repoRoot string, options MainOptions, stdout i
 	_ = codingClient.Close()
 	codingClient = nil
 
+	if options.SkipPR {
+		if telemetry != nil {
+			telemetry.SetMetric("ralph_loop_active_phase", "")
+			telemetry.Log("info", "pr phase skipped", map[string]any{
+				"phase": "pr",
+			})
+		}
+		_, _ = fmt.Fprintln(stdout, "Phase 3/3: PR agent skipped")
+		_, _ = fmt.Fprintln(stdout, "Ralph Loop completed.")
+		result.FinalStatus = "completed"
+		result.Completed = true
+		return result, nil
+	}
+
 	_, _ = fmt.Fprintln(stdout, "Phase 3/3: PR agent")
 	var prSpan *ralphTelemetrySpan
 	if telemetry != nil {

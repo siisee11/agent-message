@@ -22,14 +22,17 @@ func executeMainCommand(runCtx runContext) int {
 		"approval_policy":   runCtx.command.MainOptions.ApprovalPolicy,
 		"sandbox":           runCtx.command.MainOptions.Sandbox,
 		"preserve_worktree": runCtx.command.MainOptions.PreserveWorktree,
+		"skip_pr":           runCtx.command.MainOptions.SkipPR,
 		"dry_run":           runCtx.command.MainOptions.DryRun,
 	}
 	sideEffects := []string{
 		"create or reuse a worktree",
 		"run the setup agent",
 		"iterate the coding loop until completion",
-		"run the PR agent",
 		"write logs under .worktree/<id>/logs/ralph-loop.log",
+	}
+	if !runCtx.command.MainOptions.SkipPR {
+		sideEffects = append(sideEffects, "run the PR agent")
 	}
 	if runCtx.command.MainOptions.DryRun {
 		return writeDryRun(runCtx, request, sideEffects)

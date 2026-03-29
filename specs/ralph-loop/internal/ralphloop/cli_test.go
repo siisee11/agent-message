@@ -6,7 +6,7 @@ import (
 )
 
 func TestParseMainCommandFromFlags(t *testing.T) {
-	command, err := ParseCommand([]string{"implement the feature", "--max-iterations", "5"}, strings.NewReader(""), OutputJSON)
+	command, err := ParseCommand([]string{"implement the feature", "--max-iterations", "5", "--skip-pr"}, strings.NewReader(""), OutputJSON)
 	if err != nil {
 		t.Fatalf("ParseCommand() error = %v", err)
 	}
@@ -18,6 +18,9 @@ func TestParseMainCommandFromFlags(t *testing.T) {
 	}
 	if command.MainOptions.MaxIterations != 5 {
 		t.Fatalf("max iterations = %d", command.MainOptions.MaxIterations)
+	}
+	if !command.MainOptions.SkipPR {
+		t.Fatal("expected skip_pr to be true")
 	}
 }
 

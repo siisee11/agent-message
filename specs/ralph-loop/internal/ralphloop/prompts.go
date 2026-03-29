@@ -74,7 +74,7 @@ Prepared environment:
 Do the following steps in order:
 
 1. Run ./ralph-loop init --base-branch %s --work-branch %s and verify the JSON output shows the same worktree path and branch.
-2. Read AGENTS.md, ARCHITECTURE.md, docs/PLANS.md, and any other relevant repository docs needed to understand the task.
+2. Read the repository docs that actually exist and are relevant to the task. Prioritize AGENTS.md, PLAN.md, SPEC.md, ARCHITECTURE.md, docs/PLANS.md, and any phase-specific specs or implementation docs you find.
 3. Create an execution plan at %s using the checked-in plan structure:
    - Goal / scope
    - Background

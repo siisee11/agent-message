@@ -57,6 +57,7 @@ type MainOptions struct {
 	ApprovalPolicy     string `json:"approval_policy"`
 	Sandbox            string `json:"sandbox"`
 	PreserveWorktree   bool   `json:"preserve_worktree"`
+	SkipPR             bool   `json:"skip_pr"`
 	DryRun             bool   `json:"dry_run"`
 }
 
@@ -287,6 +288,8 @@ func parseMainCommand(args []string, stdin io.Reader, defaultOutput OutputFormat
 			command.MainOptions.Sandbox = value
 		case "--preserve-worktree":
 			command.MainOptions.PreserveWorktree = true
+		case "--skip-pr":
+			command.MainOptions.SkipPR = true
 		case "--dry-run":
 			command.MainOptions.DryRun = true
 		default:

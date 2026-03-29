@@ -36,7 +36,7 @@ func commandSchemas() []commandSchema {
 	return []commandSchema{
 		{
 			Command:        "main",
-			Description:    "Run the Ralph loop through setup, coding, and PR phases",
+			Description:    "Run the Ralph loop through setup, coding, and optional PR phases",
 			MutatesState:   true,
 			SupportsDryRun: true,
 			Positionals: []schemaField{
@@ -51,6 +51,7 @@ func commandSchemas() []commandSchema {
 				schemaField{Name: "approval_policy", Description: "Codex approval policy", Type: "string", Default: "never"},
 				schemaField{Name: "sandbox", Description: "Codex sandbox policy", Type: "string", Default: "workspace-write"},
 				schemaField{Name: "preserve_worktree", Description: "Keep the generated worktree", Type: "boolean", Default: false},
+				schemaField{Name: "skip_pr", Description: "Stop after the coding loop without running the PR agent", Type: "boolean", Default: false},
 				schemaField{Name: "dry_run", Description: "Validate and describe the request", Type: "boolean", Default: false},
 			),
 			RawPayload: []schemaField{
@@ -64,6 +65,7 @@ func commandSchemas() []commandSchema {
 				{Name: "approval_policy", Description: "Codex approval policy", Type: "string", Default: "never"},
 				{Name: "sandbox", Description: "Codex sandbox policy", Type: "string", Default: "workspace-write"},
 				{Name: "preserve_worktree", Description: "Keep the generated worktree", Type: "boolean", Default: false},
+				{Name: "skip_pr", Description: "Stop after the coding loop without running the PR agent", Type: "boolean", Default: false},
 				{Name: "dry_run", Description: "Validate and describe the request", Type: "boolean", Default: false},
 				{Name: "output", Description: "Output format", Type: "string", Enum: []string{"text", "json", "ndjson"}},
 			},

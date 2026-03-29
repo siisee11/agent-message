@@ -18,7 +18,7 @@ Out of scope: all Phase 2+ API, WebSocket behaviors, web client work, CLI work, 
 
 ## Milestones
 - [x] M1. Scaffold `server/` Go module, package directories (`api/`, `ws/`, `store/`, `models/`), and baseline wiring (status: completed)
-- [ ] M2. Implement core model structs and validation-friendly request/response shapes needed by Phase 1 auth and store boundaries (status: not started)
+- [x] M2. Implement core model structs and validation-friendly request/response shapes needed by Phase 1 auth and store boundaries (status: completed)
 - [ ] M3. Build SQLite store layer with schema migrations for users, conversations, messages, reactions, and sessions; add repository/data-access methods needed by auth flow (status: not started)
 - [ ] M4. Implement auth application flow and HTTP handlers for `POST /api/auth/register`, `POST /api/auth/login`, and `DELETE /api/auth/logout` with bcrypt PIN hashing and opaque token issuance/revocation (status: not started)
 - [ ] M5. Add bearer auth middleware, CORS middleware, env-driven config, and `main.go` startup path; run Phase 1 smoke checks (status: not started)
@@ -37,6 +37,21 @@ Out of scope: all Phase 2+ API, WebSocket behaviors, web client work, CLI work, 
     - `server/ws/hub.go` defines initial hub placeholder and constructor.
     - `server/models/doc.go` initializes models package.
   - Validation: `cd server && go test ./...` passes.
+- M2 completed:
+  - Added Phase 1 domain models aligned with `SPEC.md`:
+    - `server/models/user.go` (`User`, `UserProfile`)
+    - `server/models/conversation.go` (`Conversation`)
+    - `server/models/message.go` (`Message`, `AttachmentType`)
+    - `server/models/reaction.go` (`Reaction`)
+    - `server/models/session.go` (`Session`)
+  - Added auth request/response DTOs with validation for auth boundary:
+    - `server/models/auth.go` (`RegisterRequest`, `LoginRequest`, `AuthResponse`)
+    - Validation enforces non-empty username and 4-6 digit numeric PIN.
+  - Added store-boundary parameter DTOs for upcoming auth persistence:
+    - `server/models/store_params.go` (`CreateUserParams`, `CreateSessionParams`)
+  - Added validation tests:
+    - `server/models/auth_test.go`
+  - Validation: `cd server && go test ./...` passes.
 
 ## Key decisions
 - Enforce strict phase boundary: only Phase 1 deliverables are implemented.
@@ -45,12 +60,14 @@ Out of scope: all Phase 2+ API, WebSocket behaviors, web client work, CLI work, 
 - Keep middleware minimal and production-safe: bearer auth extraction/validation and configurable CORS policy.
 - Keep startup configuration environment-driven with sane defaults for local execution.
 - For M1 scaffolding, keep runtime wiring intentionally minimal (health route + placeholder dependencies) so later milestones can layer auth/store logic without restructuring.
+- Keep model tags explicit for both JSON and DB mapping to reduce translation glue in SQLite repository methods.
+- Keep auth payload validation centralized in model DTOs so handlers can reuse shared rules when implemented in M4.
 
 ## Remaining issues / open questions
 - Confirm final env var names and defaults during implementation (aligning with repo conventions if discovered).
 - Decide migration application strategy (startup auto-migrate vs explicit migration call) while staying inside Phase 1 scope.
 - Determine the minimal store interface surface needed now vs deferred for Phase 2.
-- Next milestone is M2: concrete domain models and DTO shapes for Phase 1 auth/store boundaries.
+- Next milestone is M3: SQLite schema/migrations and repository methods required for auth/session flows.
 
 ## Links to related documents
 - `AGENTS.md`

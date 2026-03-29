@@ -22,7 +22,7 @@ Not found (noted once): `ARCHITECTURE.md`, `docs/PLANS.md`.
 
 ## Milestones
 - [x] M1. Build conversation-aware WebSocket hub primitives in `server/ws/` (register/unregister clients, track user identity + subscribed conversation IDs, and broadcast typed events) (status: completed)
-- [ ] M2. Add authenticated WebSocket upgrade endpoint (`GET /ws?token=<token>`) and wire it into server routing, including token validation and connection lifecycle management (status: not started)
+- [x] M2. Add authenticated WebSocket upgrade endpoint (`GET /ws?token=<token>`) and wire it into server routing, including token validation and connection lifecycle management (status: completed)
 - [ ] M3. Add reaction persistence contract + SQLite implementation for add/toggle/remove reaction behavior constrained to participants and caller ownership semantics (status: not started)
 - [ ] M4. Implement reaction REST handlers/routes (`POST /api/messages/:id/reactions`, `DELETE /api/messages/:id/reactions/:emoji`) with validation/error mapping aligned to existing API conventions (status: not started)
 - [ ] M5. Integrate real-time event emission from message/reaction mutations and implement client `read` event ingestion path in the WebSocket server loop (status: not started)
@@ -44,6 +44,16 @@ Not found (noted once): `ARCHITECTURE.md`, `docs/PLANS.md`.
   - Conversation subscription mutation behavior
   - Validation errors and drop semantics for blocked client channels
 - Verification run: `cd server && go test ./...` passed.
+- Implemented authenticated WebSocket endpoint for Phase 3 in `server/api/websocket.go` and wired route `/ws` in `server/api/router.go`:
+  - `GET /ws?token=<token>` token lookup via `GetUserBySessionToken`
+  - Error mapping aligned with existing auth conventions (`missing or invalid bearer token`, `invalid session token`)
+  - Upgrade + connection lifecycle: successful upgrade registers hub client and unregisters on disconnect
+- Added lightweight HTTP upgrade support in `server/ws/upgrade.go` (RFC6455 handshake validation for upgrade headers, key, version; hijack + `101 Switching Protocols` response).
+- Added endpoint tests in `server/api/websocket_test.go`:
+  - Successful auth + upgrade handshake and hub connection lifecycle
+  - Missing/invalid token auth failures
+  - Missing upgrade header validation failure
+- Verification run: `cd server && go test ./...` passed after M2 changes.
 
 ## Key decisions
 - Keep implementation strictly bounded to Phase 3 deliverables from `PLAN.md`.
@@ -53,10 +63,12 @@ Not found (noted once): `ARCHITECTURE.md`, `docs/PLANS.md`.
 - Prioritize deterministic, testable hub behavior over premature optimization.
 - Hub broadcast is intentionally non-blocking per recipient (`Dropped` count recorded) to prevent a single slow client from stalling conversation fan-out.
 - Hub does not close client channels on unregister; connection lifecycle ownership remains with the WebSocket endpoint loop planned in M2.
+- M2 adopts query-token auth exactly as specified (`/ws?token=<token>`) and keeps WebSocket endpoint outside bearer middleware to avoid header-based/session-context coupling.
+- Initial M2 connection registration does not pre-subscribe conversation IDs; subscriptions remain empty until event-path integration in M5.
 
 ## Remaining issues / open questions
-- Decide M2 connection bootstrap behavior: pre-load all user conversation subscriptions on connect vs start empty and update dynamically. M1 supports either model.
 - Confirm desired response payload for toggled-off `POST /api/messages/:id/reactions` (explicit removed indicator vs returning current aggregate state).
+- M5 implementation detail pending: parse websocket text frames for client `read` events and write outbound server events as framed websocket messages (currently M2 keeps transport connection/lifecycle only).
 
 ## Links to related documents
 - `AGENTS.md`

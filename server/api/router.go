@@ -29,6 +29,7 @@ func NewRouter(deps Dependencies) http.Handler {
 	usersHandler := newUsersHandler(deps.Store)
 	conversationsHandler := newConversationsHandler(deps.Store)
 	messagesHandler := newMessagesHandler(deps.Store)
+	websocketHandler := newWebSocketHandler(deps.Store, deps.Hub)
 	messagesHandler.uploadDir = uploadDir
 	uploadHandler := newUploadHandler(uploadDir)
 	authRequired := BearerAuthMiddleware(deps.Store)
@@ -52,6 +53,7 @@ func NewRouter(deps Dependencies) http.Handler {
 	mux.Handle("/api/messages/", authRequired(http.HandlerFunc(messagesHandler.handleMessageByID)))
 	mux.Handle("/api/upload", authRequired(http.HandlerFunc(uploadHandler.handleUpload)))
 	mux.Handle("/static/uploads/", http.StripPrefix(staticUploadsPrefix, http.FileServer(http.Dir(uploadDir))))
+	mux.HandleFunc("/ws", websocketHandler.handleWebSocket)
 
 	return CORSMiddleware(deps.CORSAllowedOrigins)(mux)
 }

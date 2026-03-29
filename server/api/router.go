@@ -9,8 +9,9 @@ import (
 )
 
 type Dependencies struct {
-	Store store.Store
-	Hub   *ws.Hub
+	Store              store.Store
+	Hub                *ws.Hub
+	CORSAllowedOrigins []string
 }
 
 func NewRouter(deps Dependencies) http.Handler {
@@ -20,9 +21,9 @@ func NewRouter(deps Dependencies) http.Handler {
 	authHandler := newAuthHandler(deps.Store)
 	mux.HandleFunc("/api/auth/register", authHandler.handleRegister)
 	mux.HandleFunc("/api/auth/login", authHandler.handleLogin)
-	mux.HandleFunc("/api/auth/logout", authHandler.handleLogout)
+	mux.Handle("/api/auth/logout", BearerAuthMiddleware(deps.Store)(http.HandlerFunc(authHandler.handleLogout)))
 
-	return mux
+	return CORSMiddleware(deps.CORSAllowedOrigins)(mux)
 }
 
 func healthHandler(w http.ResponseWriter, _ *http.Request) {

@@ -21,7 +21,7 @@ Out of scope: all Phase 2+ API, WebSocket behaviors, web client work, CLI work, 
 - [x] M2. Implement core model structs and validation-friendly request/response shapes needed by Phase 1 auth and store boundaries (status: completed)
 - [x] M3. Build SQLite store layer with schema migrations for users, conversations, messages, reactions, and sessions; add repository/data-access methods needed by auth flow (status: completed)
 - [x] M4. Implement auth application flow and HTTP handlers for `POST /api/auth/register`, `POST /api/auth/login`, and `DELETE /api/auth/logout` with bcrypt PIN hashing and opaque token issuance/revocation (status: completed)
-- [ ] M5. Add bearer auth middleware, CORS middleware, env-driven config, and `main.go` startup path; run Phase 1 smoke checks (status: not started)
+- [x] M5. Add bearer auth middleware, CORS middleware, env-driven config, and `main.go` startup path; run Phase 1 smoke checks (status: completed)
 
 ## Current progress
 - Worktree and branch verified via `./ralph-loop init --base-branch main --work-branch ralph-phase1-go-server-auth-data --output json`.
@@ -84,7 +84,7 @@ Out of scope: all Phase 2+ API, WebSocket behaviors, web client work, CLI work, 
     - `DELETE /api/auth/logout`
       - Parses bearer token from `Authorization` header
       - Revokes token by deleting session row
-      - Returns `204 No Content` (idempotent when token is already absent)
+      - Returns `204 No Content` on successful token revocation (later protected by bearer middleware in M5)
   - Added secure opaque token generation with `crypto/rand` (32-byte random payload, URL-safe base64 encoding).
   - Added shared HTTP response helpers in `server/api/http.go` for JSON/error/method responses.
   - Wired routes in `server/api/router.go` for all auth endpoints.
@@ -96,6 +96,31 @@ Out of scope: all Phase 2+ API, WebSocket behaviors, web client work, CLI work, 
     - request validation failure
   - Added auth dependency in module manifest: `golang.org/x/crypto`.
   - Validation: `cd server && go test ./...` passes.
+- M5 completed:
+  - Added bearer token auth middleware in `server/api/middleware.go`:
+    - Extracts `Authorization: Bearer <token>`.
+    - Validates active session token via `store.GetUserBySessionToken`.
+    - Injects authenticated user and token into request context for downstream handlers.
+  - Added CORS middleware in `server/api/middleware.go`:
+    - Supports configurable allowed origins list with `*` wildcard mode.
+    - Handles preflight `OPTIONS` with allow-method and allow-header responses.
+  - Added request auth context helpers in `server/api/context.go`.
+  - Router wiring updates in `server/api/router.go`:
+    - `/api/auth/logout` is now protected by bearer middleware.
+    - Entire router wrapped with CORS middleware.
+  - Updated logout handler in `server/api/auth.go`:
+    - Reads bearer token from middleware context.
+    - Revokes session token using store layer.
+  - Added middleware-focused tests:
+    - `server/api/middleware_test.go` (CORS preflight and bearer protection behavior).
+    - Updated `server/api/auth_test.go` for middleware-enforced logout semantics.
+  - Implemented env-configured startup in `server/main.go`:
+    - `SERVER_ADDR` (default `:8080`)
+    - `SQLITE_DSN` (default `./agent_messenger.sqlite`)
+    - `CORS_ALLOWED_ORIGINS` (default `*`, CSV supported)
+    - Startup now initializes `store.NewSQLiteStore` (with migration auto-apply) instead of noop store.
+  - Added config parser tests in `server/main_test.go`.
+  - Phase 1 smoke check: `cd server && go test ./...` passes.
 
 ## Key decisions
 - Enforce strict phase boundary: only Phase 1 deliverables are implemented.
@@ -108,13 +133,14 @@ Out of scope: all Phase 2+ API, WebSocket behaviors, web client work, CLI work, 
 - Keep auth payload validation centralized in model DTOs so handlers can reuse shared rules when implemented in M4.
 - Use pure-Go SQLite driver `modernc.org/sqlite` to avoid CGO/toolchain coupling for local and CI execution.
 - Apply migrations during SQLite store initialization so Phase 1 server startup can guarantee schema readiness.
-- Return `204` for logout even if the token no longer exists to keep logout idempotent and avoid leaking token existence via status codes.
+- With bearer middleware in place, logout now requires an active session token and returns `401` when token validation fails.
 - Keep credential failures generic (`invalid credentials`) to avoid revealing whether username or PIN was incorrect.
+- Enforce bearer middleware on protected routes (currently logout) so revoked or unknown tokens are rejected before handler execution.
+- Use environment-driven server/bootstrap configuration to keep local defaults simple while enabling deployment overrides.
 
 ## Remaining issues / open questions
-- Confirm final env var names and defaults during implementation (aligning with repo conventions if discovered).
-- Determine the minimal store interface surface needed now vs deferred for Phase 2.
-- Next milestone is M5: bearer-token auth middleware, CORS middleware, and env-configured `main.go` startup path with Phase 1 smoke checks.
+- No open Phase 1 blockers remain.
+- Phase 1 from `PLAN.md` is complete.
 
 ## Links to related documents
 - `AGENTS.md`

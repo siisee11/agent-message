@@ -97,8 +97,8 @@ func TestAuthRegisterLoginLogoutFlow(t *testing.T) {
 	logoutAgainReq.Header.Set("Authorization", "Bearer "+loginResult.Token)
 	logoutAgainResp := httptest.NewRecorder()
 	router.ServeHTTP(logoutAgainResp, logoutAgainReq)
-	if logoutAgainResp.Code != http.StatusNoContent {
-		t.Fatalf("expected idempotent logout status %d, got %d", http.StatusNoContent, logoutAgainResp.Code)
+	if logoutAgainResp.Code != http.StatusUnauthorized {
+		t.Fatalf("expected second logout status %d, got %d", http.StatusUnauthorized, logoutAgainResp.Code)
 	}
 }
 

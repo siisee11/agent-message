@@ -138,8 +138,8 @@ func (h *authHandler) handleLogout(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	token, err := parseBearerToken(r.Header.Get("Authorization"))
-	if err != nil {
+	token, ok := tokenFromContext(r.Context())
+	if !ok || token == "" {
 		writeError(w, http.StatusUnauthorized, "missing or invalid bearer token")
 		return
 	}

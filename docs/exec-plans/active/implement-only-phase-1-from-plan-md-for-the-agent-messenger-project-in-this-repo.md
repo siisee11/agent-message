@@ -17,7 +17,7 @@ Out of scope: all Phase 2+ API, WebSocket behaviors, web client work, CLI work, 
 `AGENTS.md` provides operational guardrails for the local `ralph-loop` workflow.
 
 ## Milestones
-- [ ] M1. Scaffold `server/` Go module, package directories (`api/`, `ws/`, `store/`, `models/`), and baseline wiring (status: not started)
+- [x] M1. Scaffold `server/` Go module, package directories (`api/`, `ws/`, `store/`, `models/`), and baseline wiring (status: completed)
 - [ ] M2. Implement core model structs and validation-friendly request/response shapes needed by Phase 1 auth and store boundaries (status: not started)
 - [ ] M3. Build SQLite store layer with schema migrations for users, conversations, messages, reactions, and sessions; add repository/data-access methods needed by auth flow (status: not started)
 - [ ] M4. Implement auth application flow and HTTP handlers for `POST /api/auth/register`, `POST /api/auth/login`, and `DELETE /api/auth/logout` with bcrypt PIN hashing and opaque token issuance/revocation (status: not started)
@@ -27,7 +27,16 @@ Out of scope: all Phase 2+ API, WebSocket behaviors, web client work, CLI work, 
 - Worktree and branch verified via `./ralph-loop init --base-branch main --work-branch ralph-phase1-go-server-auth-data --output json`.
 - Relevant docs reviewed: `AGENTS.md`, `PLAN.md`, `SPEC.md`.
 - Not found: `ARCHITECTURE.md`, `docs/PLANS.md`.
-- Phase 1 implementation work has not started yet.
+- M1 completed:
+  - Added `server/go.mod` with module `agent-messenger/server`.
+  - Added baseline package structure: `server/api/`, `server/ws/`, `server/store/`, `server/models/`.
+  - Added compile-safe wiring:
+    - `server/main.go` bootstraps HTTP server on `:8080` with router dependencies.
+    - `server/api/router.go` defines dependency container and `/healthz` handler.
+    - `server/store/store.go` defines initial store interface and noop store implementation.
+    - `server/ws/hub.go` defines initial hub placeholder and constructor.
+    - `server/models/doc.go` initializes models package.
+  - Validation: `cd server && go test ./...` passes.
 
 ## Key decisions
 - Enforce strict phase boundary: only Phase 1 deliverables are implemented.
@@ -35,11 +44,13 @@ Out of scope: all Phase 2+ API, WebSocket behaviors, web client work, CLI work, 
 - Use bcrypt for PIN storage and cryptographically secure opaque tokens for sessions.
 - Keep middleware minimal and production-safe: bearer auth extraction/validation and configurable CORS policy.
 - Keep startup configuration environment-driven with sane defaults for local execution.
+- For M1 scaffolding, keep runtime wiring intentionally minimal (health route + placeholder dependencies) so later milestones can layer auth/store logic without restructuring.
 
 ## Remaining issues / open questions
 - Confirm final env var names and defaults during implementation (aligning with repo conventions if discovered).
 - Decide migration application strategy (startup auto-migrate vs explicit migration call) while staying inside Phase 1 scope.
 - Determine the minimal store interface surface needed now vs deferred for Phase 2.
+- Next milestone is M2: concrete domain models and DTO shapes for Phase 1 auth/store boundaries.
 
 ## Links to related documents
 - `AGENTS.md`

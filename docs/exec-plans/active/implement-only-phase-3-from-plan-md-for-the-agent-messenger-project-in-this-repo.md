@@ -21,7 +21,7 @@ Reviewed docs: `AGENTS.md`, `PLAN.md`, `SPEC.md`, `docs/exec-plans/active/implem
 Not found (noted once): `ARCHITECTURE.md`, `docs/PLANS.md`.
 
 ## Milestones
-- [ ] M1. Build conversation-aware WebSocket hub primitives in `server/ws/` (register/unregister clients, track user identity + subscribed conversation IDs, and broadcast typed events) (status: not started)
+- [x] M1. Build conversation-aware WebSocket hub primitives in `server/ws/` (register/unregister clients, track user identity + subscribed conversation IDs, and broadcast typed events) (status: completed)
 - [ ] M2. Add authenticated WebSocket upgrade endpoint (`GET /ws?token=<token>`) and wire it into server routing, including token validation and connection lifecycle management (status: not started)
 - [ ] M3. Add reaction persistence contract + SQLite implementation for add/toggle/remove reaction behavior constrained to participants and caller ownership semantics (status: not started)
 - [ ] M4. Implement reaction REST handlers/routes (`POST /api/messages/:id/reactions`, `DELETE /api/messages/:id/reactions/:emoji`) with validation/error mapping aligned to existing API conventions (status: not started)
@@ -33,7 +33,17 @@ Not found (noted once): `ARCHITECTURE.md`, `docs/PLANS.md`.
   - `./ralph-loop init --base-branch main --work-branch ralph-phase-3-websocket-reactions --output json`
   - Verified JSON fields: `worktree_path=/Users/dev/git/agent-messenger/.worktrees/phase-3-websocket-reactions`, `work_branch=ralph-phase-3-websocket-reactions`, `base_branch=main`, `worktree_id=phase-3-websocket-reactions-b4cb9be5`.
 - Required/relevant docs reviewed and scoped for Phase 3 implementation.
-- Milestones M1-M6 are defined and all currently not started.
+- Implemented `server/ws/hub.go` hub primitives for Phase 3:
+  - Client registration/unregistration with user identity tracking
+  - Conversation subscription management (`Subscribe`, `Unsubscribe`, `SetConversations`)
+  - Typed event payload model and constants for `message.*` / `reaction.*` events
+  - Conversation-targeted broadcasting with non-blocking fan-out and delivery/drop counters
+  - Introspection helpers used by tests (`ConnectionCount`, `ConnectionsForUser`, `ConversationIDs`)
+- Added `server/ws/hub_test.go` with coverage for:
+  - Register/broadcast/unregister lifecycle
+  - Conversation subscription mutation behavior
+  - Validation errors and drop semantics for blocked client channels
+- Verification run: `cd server && go test ./...` passed.
 
 ## Key decisions
 - Keep implementation strictly bounded to Phase 3 deliverables from `PLAN.md`.
@@ -41,9 +51,11 @@ Not found (noted once): `ARCHITECTURE.md`, `docs/PLANS.md`.
 - Preserve event names/payload contracts from `SPEC.md` so downstream web/CLI phases can consume them without schema drift.
 - Implement reaction toggling at API/store boundary in an idempotent way (existing same-emoji reaction by same user should be removable via add endpoint behavior).
 - Prioritize deterministic, testable hub behavior over premature optimization.
+- Hub broadcast is intentionally non-blocking per recipient (`Dropped` count recorded) to prevent a single slow client from stalling conversation fan-out.
+- Hub does not close client channels on unregister; connection lifecycle ownership remains with the WebSocket endpoint loop planned in M2.
 
 ## Remaining issues / open questions
-- Clarify whether WebSocket clients should auto-subscribe to all user conversations on connect or subscribe dynamically via traffic-triggered association; default plan is conversation-targeted delivery based on known conversation IDs from mutation events.
+- Decide M2 connection bootstrap behavior: pre-load all user conversation subscriptions on connect vs start empty and update dynamically. M1 supports either model.
 - Confirm desired response payload for toggled-off `POST /api/messages/:id/reactions` (explicit removed indicator vs returning current aggregate state).
 
 ## Links to related documents

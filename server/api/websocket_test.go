@@ -173,6 +173,124 @@ func TestWebSocketRuntimeBroadcastsMessageMutations(t *testing.T) {
 	}
 }
 
+func TestWebSocketRuntimeBroadcastsReactionMutations(t *testing.T) {
+	server, _ := newWebSocketTestServer(t)
+	alice := registerAndLoginUser(t, server.Config.Handler, "alice", "1234")
+	bob := registerAndLoginUser(t, server.Config.Handler, "bob", "1234")
+	conversationID := mustStartConversation(t, server.Config.Handler, alice.Token, "bob")
+	created := mustSendJSONMessage(t, server.Config.Handler, alice.Token, conversationID, `{"content":"react to me"}`)
+
+	conn, resp := performWebSocketRequest(t, server.URL, http.MethodGet, bob.Token, true)
+	defer conn.Close()
+	defer resp.Body.Close()
+	if resp.StatusCode != http.StatusSwitchingProtocols {
+		t.Fatalf("expected status %d, got %d", http.StatusSwitchingProtocols, resp.StatusCode)
+	}
+
+	firstToggleReq := httptest.NewRequest(http.MethodPost, "/api/messages/"+created.ID+"/reactions", bytes.NewBufferString(`{"emoji":"👍"}`))
+	firstToggleReq.Header.Set("Authorization", "Bearer "+bob.Token)
+	firstToggleReq.Header.Set("Content-Type", "application/json")
+	firstToggleResp := httptest.NewRecorder()
+	server.Config.Handler.ServeHTTP(firstToggleResp, firstToggleReq)
+	if firstToggleResp.Code != http.StatusOK {
+		t.Fatalf("first reaction toggle expected %d, got %d body=%s", http.StatusOK, firstToggleResp.Code, firstToggleResp.Body.String())
+	}
+
+	addedEvent, err := readServerEventWithin(conn, 2*time.Second)
+	if err != nil {
+		t.Fatalf("read reaction.added event: %v", err)
+	}
+	if addedEvent.Type != ws.EventTypeReactionAdded {
+		t.Fatalf("expected event type %q, got %q", ws.EventTypeReactionAdded, addedEvent.Type)
+	}
+	addedData, ok := addedEvent.Data.(map[string]any)
+	if !ok {
+		t.Fatalf("expected reaction.added data map, got %T", addedEvent.Data)
+	}
+	if got, _ := addedData["message_id"].(string); got != created.ID {
+		t.Fatalf("expected reaction.added message_id %q, got %v", created.ID, addedData["message_id"])
+	}
+	if got, _ := addedData["emoji"].(string); got != "👍" {
+		t.Fatalf("expected reaction.added emoji 👍, got %v", addedData["emoji"])
+	}
+	if got, _ := addedData["user_id"].(string); got != bob.User.ID {
+		t.Fatalf("expected reaction.added user_id %q, got %v", bob.User.ID, addedData["user_id"])
+	}
+
+	secondToggleReq := httptest.NewRequest(http.MethodPost, "/api/messages/"+created.ID+"/reactions", bytes.NewBufferString(`{"emoji":"👍"}`))
+	secondToggleReq.Header.Set("Authorization", "Bearer "+bob.Token)
+	secondToggleReq.Header.Set("Content-Type", "application/json")
+	secondToggleResp := httptest.NewRecorder()
+	server.Config.Handler.ServeHTTP(secondToggleResp, secondToggleReq)
+	if secondToggleResp.Code != http.StatusOK {
+		t.Fatalf("second reaction toggle expected %d, got %d body=%s", http.StatusOK, secondToggleResp.Code, secondToggleResp.Body.String())
+	}
+
+	removedByToggleEvent, err := readServerEventWithin(conn, 2*time.Second)
+	if err != nil {
+		t.Fatalf("read reaction.removed (toggle) event: %v", err)
+	}
+	if removedByToggleEvent.Type != ws.EventTypeReactionRemoved {
+		t.Fatalf("expected event type %q, got %q", ws.EventTypeReactionRemoved, removedByToggleEvent.Type)
+	}
+	removedByToggleData, ok := removedByToggleEvent.Data.(map[string]any)
+	if !ok {
+		t.Fatalf("expected reaction.removed(toggle) data map, got %T", removedByToggleEvent.Data)
+	}
+	if got, _ := removedByToggleData["message_id"].(string); got != created.ID {
+		t.Fatalf("expected reaction.removed(toggle) message_id %q, got %v", created.ID, removedByToggleData["message_id"])
+	}
+	if got, _ := removedByToggleData["emoji"].(string); got != "👍" {
+		t.Fatalf("expected reaction.removed(toggle) emoji 👍, got %v", removedByToggleData["emoji"])
+	}
+	if got, _ := removedByToggleData["user_id"].(string); got != bob.User.ID {
+		t.Fatalf("expected reaction.removed(toggle) user_id %q, got %v", bob.User.ID, removedByToggleData["user_id"])
+	}
+
+	addForDeleteReq := httptest.NewRequest(http.MethodPost, "/api/messages/"+created.ID+"/reactions", bytes.NewBufferString(`{"emoji":"🔥"}`))
+	addForDeleteReq.Header.Set("Authorization", "Bearer "+bob.Token)
+	addForDeleteReq.Header.Set("Content-Type", "application/json")
+	addForDeleteResp := httptest.NewRecorder()
+	server.Config.Handler.ServeHTTP(addForDeleteResp, addForDeleteReq)
+	if addForDeleteResp.Code != http.StatusOK {
+		t.Fatalf("reaction add for delete expected %d, got %d body=%s", http.StatusOK, addForDeleteResp.Code, addForDeleteResp.Body.String())
+	}
+
+	// Drain the added event before asserting explicit DELETE removal emission.
+	if _, err := readServerEventWithin(conn, 2*time.Second); err != nil {
+		t.Fatalf("read reaction.added (for delete) event: %v", err)
+	}
+
+	deleteReq := httptest.NewRequest(http.MethodDelete, "/api/messages/"+created.ID+"/reactions/"+url.PathEscape("🔥"), nil)
+	deleteReq.Header.Set("Authorization", "Bearer "+bob.Token)
+	deleteResp := httptest.NewRecorder()
+	server.Config.Handler.ServeHTTP(deleteResp, deleteReq)
+	if deleteResp.Code != http.StatusOK {
+		t.Fatalf("explicit delete expected %d, got %d body=%s", http.StatusOK, deleteResp.Code, deleteResp.Body.String())
+	}
+
+	removedByDeleteEvent, err := readServerEventWithin(conn, 2*time.Second)
+	if err != nil {
+		t.Fatalf("read reaction.removed (delete) event: %v", err)
+	}
+	if removedByDeleteEvent.Type != ws.EventTypeReactionRemoved {
+		t.Fatalf("expected event type %q, got %q", ws.EventTypeReactionRemoved, removedByDeleteEvent.Type)
+	}
+	removedByDeleteData, ok := removedByDeleteEvent.Data.(map[string]any)
+	if !ok {
+		t.Fatalf("expected reaction.removed(delete) data map, got %T", removedByDeleteEvent.Data)
+	}
+	if got, _ := removedByDeleteData["message_id"].(string); got != created.ID {
+		t.Fatalf("expected reaction.removed(delete) message_id %q, got %v", created.ID, removedByDeleteData["message_id"])
+	}
+	if got, _ := removedByDeleteData["emoji"].(string); got != "🔥" {
+		t.Fatalf("expected reaction.removed(delete) emoji 🔥, got %v", removedByDeleteData["emoji"])
+	}
+	if got, _ := removedByDeleteData["user_id"].(string); got != bob.User.ID {
+		t.Fatalf("expected reaction.removed(delete) user_id %q, got %v", bob.User.ID, removedByDeleteData["user_id"])
+	}
+}
+
 func TestWebSocketRuntimePumpsHubEventsToClient(t *testing.T) {
 	server, hub := newWebSocketTestServer(t)
 	alice := registerAndLoginUser(t, server.Config.Handler, "alice", "1234")
@@ -276,6 +394,39 @@ func TestWebSocketRuntimeReadEventSubscribesConversation(t *testing.T) {
 	}
 
 	t.Fatalf("expected websocket event after read subscription update")
+}
+
+func TestWebSocketRuntimeReadEventRejectsUnauthorizedConversation(t *testing.T) {
+	server, hub := newWebSocketTestServer(t)
+	alice := registerAndLoginUser(t, server.Config.Handler, "alice", "1234")
+	bob := registerAndLoginUser(t, server.Config.Handler, "bob", "1234")
+	_ = registerAndLoginUser(t, server.Config.Handler, "charlie", "1234")
+
+	conn, resp := performWebSocketRequest(t, server.URL, http.MethodGet, bob.Token, true)
+	defer conn.Close()
+	defer resp.Body.Close()
+	if resp.StatusCode != http.StatusSwitchingProtocols {
+		t.Fatalf("expected status %d, got %d", http.StatusSwitchingProtocols, resp.StatusCode)
+	}
+	waitForHubConnections(t, hub, 1)
+
+	unauthorizedConversationID := mustStartConversation(t, server.Config.Handler, alice.Token, "charlie")
+
+	writeClientJSONFrame(t, conn, map[string]any{
+		"type": "read",
+		"data": map[string]any{
+			"conversation_id": unauthorizedConversationID,
+		},
+	})
+
+	_, err := hub.BroadcastToConversation(unauthorizedConversationID, ws.Event{
+		Type: ws.EventTypeMessageNew,
+		Data: map[string]any{"id": "should-not-deliver"},
+	})
+	if err != nil {
+		t.Fatalf("broadcast unauthorized conversation event: %v", err)
+	}
+	assertNoServerEventWithin(t, conn, 200*time.Millisecond)
 }
 
 func newWebSocketTestServer(t *testing.T) (*httptest.Server, *ws.Hub) {

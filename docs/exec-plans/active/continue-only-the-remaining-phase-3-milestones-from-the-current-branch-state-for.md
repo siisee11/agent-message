@@ -38,7 +38,7 @@ Referenced but missing (noted once):
 - [x] M5. Implement WebSocket session runtime: register client with conversation subscriptions, pump hub events to socket, and parse client frames for `read` events with conversation subscription updates (status: completed)
 - [x] M6. Emit `message.new`, `message.edited`, and `message.deleted` events from message mutation handlers to the conversation via hub broadcast (status: completed)
 - [x] M7. Emit `reaction.added` and `reaction.removed` events from reaction handlers with payloads aligned to `SPEC.md` event contracts (status: completed)
-- [ ] M8. Add/expand tests for reaction endpoints, websocket read handling/subscription behavior, and message/reaction broadcast integration (status: not started)
+- [x] M8. Add/expand tests for reaction endpoints, websocket read handling/subscription behavior, and message/reaction broadcast integration (status: completed)
 - [ ] M9. Run `cd server && go test ./...`, resolve regressions, and verify Phase 3 deliverable completeness from current state only (status: not started)
 
 ## Current progress
@@ -85,8 +85,16 @@ Referenced but missing (noted once):
     - `server/store/store.go`
     - `server/store/sqlite.go`
   - Verified with `cd server && go test ./api ./store` (pass).
+- Completed M8 Phase 3 test expansion:
+  - Expanded websocket integration coverage in `server/api/websocket_test.go` for reaction mutation broadcast paths:
+    - `reaction.added` payload assertions for toggle-add
+    - `reaction.removed` payload assertions for toggle-remove
+    - `reaction.removed` payload assertions for explicit `DELETE /api/messages/:id/reactions/:emoji`
+  - Added websocket read/subscription negative-path coverage:
+    - `read` event with a conversation the caller is not a participant of does not subscribe and does not deliver broadcast events.
+  - Verified with `cd server && go test ./api` (pass).
 - Remaining gap areas by inspection:
-  - Broad integration test coverage for all websocket reaction broadcast paths still needs expansion (tracked in M8)
+  - Full repository test sweep and final Phase 3 validation remain (tracked in M9)
 
 ## Key decisions
 - Preserve existing Phase 3 commits and continue from their current behavior; do not refactor completed milestone surfaces unless required for compatibility.
@@ -98,6 +106,7 @@ Referenced but missing (noted once):
 - `read` websocket events are transport-level subscription updates only in Phase 3; no read-receipt persistence side effects are introduced.
 - Message mutation broadcast failures are currently best-effort/non-blocking for REST success paths (mutation responses are not failed if websocket delivery cannot be enqueued).
 - Reaction mutation broadcast failures are also best-effort/non-blocking for REST success paths, matching message mutation semantics.
+- Integration test assertions for reaction websocket payloads now explicitly enforce `SPEC.md` contracts for both add and remove events.
 
 ## Remaining issues / open questions
 - Bootstrap conversation subscription currently loads a single bounded page (`Limit=1000`) at connect-time; if higher conversation cardinality appears later, pagination strategy can be revisited without changing the runtime contract introduced in M5.

@@ -6,9 +6,6 @@ import (
 	"mime/multipart"
 	"net/http"
 	"net/http/httptest"
-	"os"
-	"path/filepath"
-	"strings"
 	"testing"
 
 	"agent-messenger/server/models"
@@ -33,7 +30,6 @@ func TestMessagesEndpoints(t *testing.T) {
 	if *msg3.AttachmentType != models.AttachmentTypeFile {
 		t.Fatalf("expected attachment type file from multipart upload, got %q", *msg3.AttachmentType)
 	}
-	cleanupAttachmentFromURL(t, *msg3.AttachmentURL)
 
 	t.Run("list messages first page", func(t *testing.T) {
 		req := httptest.NewRequest(http.MethodGet, "/api/conversations/"+conversationID+"/messages?limit=2", nil)
@@ -224,20 +220,4 @@ func mustSendMultipartMessage(t *testing.T, router http.Handler, token, conversa
 		t.Fatalf("decode multipart message: %v", err)
 	}
 	return message
-}
-
-func cleanupAttachmentFromURL(t *testing.T, url string) {
-	t.Helper()
-	const prefix = "/static/uploads/"
-
-	if !strings.HasPrefix(url, prefix) {
-		return
-	}
-
-	filename := strings.TrimPrefix(url, prefix)
-	if filename == "" || strings.Contains(filename, "/") {
-		return
-	}
-
-	_ = os.Remove(filepath.Join(defaultMessageUploadDir, filename))
 }

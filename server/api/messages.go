@@ -2,13 +2,8 @@ package api
 
 import (
 	"errors"
-	"fmt"
-	"io"
 	"mime"
-	"mime/multipart"
 	"net/http"
-	"os"
-	"path/filepath"
 	"strconv"
 	"strings"
 	"time"
@@ -17,12 +12,6 @@ import (
 	"agent-messenger/server/store"
 
 	"github.com/google/uuid"
-)
-
-const (
-	maxAttachmentBytes      = 20 << 20
-	multipartBodySizeBuffer = 1 << 20
-	defaultMessageUploadDir = "./uploads"
 )
 
 type messagesHandler struct {
@@ -35,7 +24,7 @@ func newMessagesHandler(s store.Store) *messagesHandler {
 	return &messagesHandler{
 		store:     s,
 		nowFn:     time.Now,
-		uploadDir: defaultMessageUploadDir,
+		uploadDir: defaultUploadDir,
 	}
 }
 
@@ -240,8 +229,6 @@ func (h *messagesHandler) handleDeleteMessage(w http.ResponseWriter, r *http.Req
 	writeJSON(w, http.StatusOK, message)
 }
 
-var errRequestEntityTooLarge = errors.New("request entity too large")
-
 func (h *messagesHandler) parseCreateMessagePayload(w http.ResponseWriter, r *http.Request) (*string, *string, *models.AttachmentType, error) {
 	contentType := strings.TrimSpace(r.Header.Get("Content-Type"))
 	mediaType, _, err := mime.ParseMediaType(contentType)
@@ -268,7 +255,7 @@ func (h *messagesHandler) parseCreateMessagePayload(w http.ResponseWriter, r *ht
 }
 
 func (h *messagesHandler) parseMultipartMessagePayload(w http.ResponseWriter, r *http.Request) (*string, *string, *models.AttachmentType, error) {
-	maxBodyBytes := int64(maxAttachmentBytes + multipartBodySizeBuffer)
+	maxBodyBytes := int64(maxUploadBytes + multipartBodySizeBuffer)
 	r.Body = http.MaxBytesReader(w, r.Body, maxBodyBytes)
 	if err := r.ParseMultipartForm(maxBodyBytes); err != nil {
 		var maxBytesErr *http.MaxBytesError
@@ -287,7 +274,7 @@ func (h *messagesHandler) parseMultipartMessagePayload(w http.ResponseWriter, r 
 	uploadedFile, header, err := r.FormFile("attachment")
 	if err == nil {
 		defer uploadedFile.Close()
-		url, attachmentType, saveErr := h.saveUploadedAttachment(uploadedFile, header)
+		url, attachmentType, saveErr := saveUploadedFile(h.uploadDir, uploadedFile, header)
 		if saveErr != nil {
 			return nil, nil, nil, saveErr
 		}
@@ -310,45 +297,6 @@ func (h *messagesHandler) parseMultipartMessagePayload(w http.ResponseWriter, r 
 		return nil, nil, nil, models.ErrMessageContentRequired
 	}
 	return content, nil, nil, nil
-}
-
-func (h *messagesHandler) saveUploadedAttachment(file io.Reader, header *multipart.FileHeader) (string, models.AttachmentType, error) {
-	if header.Size > maxAttachmentBytes {
-		return "", "", errRequestEntityTooLarge
-	}
-
-	if err := os.MkdirAll(h.uploadDir, 0o755); err != nil {
-		return "", "", fmt.Errorf("prepare upload dir: %w", err)
-	}
-
-	extension := filepath.Ext(strings.TrimSpace(header.Filename))
-	storedName := uuid.NewString() + extension
-	destPath := filepath.Join(h.uploadDir, storedName)
-
-	dest, err := os.Create(destPath)
-	if err != nil {
-		return "", "", fmt.Errorf("create attachment file: %w", err)
-	}
-	defer dest.Close()
-
-	reader := io.LimitReader(file, maxAttachmentBytes+1)
-	written, err := io.Copy(dest, reader)
-	if err != nil {
-		return "", "", fmt.Errorf("store attachment: %w", err)
-	}
-	if written > maxAttachmentBytes {
-		_ = os.Remove(destPath)
-		return "", "", errRequestEntityTooLarge
-	}
-
-	attachmentType := models.AttachmentTypeFile
-	contentType := strings.ToLower(strings.TrimSpace(header.Header.Get("Content-Type")))
-	if strings.HasPrefix(contentType, "image/") {
-		attachmentType = models.AttachmentTypeImage
-	}
-
-	url := "/static/uploads/" + storedName
-	return url, attachmentType, nil
 }
 
 func parseAttachmentType(raw string) (models.AttachmentType, error) {

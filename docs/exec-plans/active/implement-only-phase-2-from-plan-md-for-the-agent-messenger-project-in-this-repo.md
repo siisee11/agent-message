@@ -45,7 +45,7 @@ Not found (noted once): `ARCHITECTURE.md`, `docs/PLANS.md`.
   - Add handlers for `GET /api/conversations/:id/messages`, `POST /api/conversations/:id/messages`, `PATCH /api/messages/:id`, and `DELETE /api/messages/:id`.
   - Support JSON text sends and multipart attachment sends; enforce own-message edit/delete rules and soft-delete semantics.
 
-- [ ] M5. Implement upload endpoint and static file serving configuration (status: not started)
+- [x] M5. Implement upload endpoint and static file serving configuration (status: completed)
   - Add `POST /api/upload` for multipart uploads with 20 MB cap and safe file naming, returning `{ "url": "..." }`.
   - Add `UPLOAD_DIR` config (default `./uploads`) and serve `/static/uploads/` from that directory.
 
@@ -145,6 +145,29 @@ Not found (noted once): `ARCHITECTURE.md`, `docs/PLANS.md`.
     - own-message edit/delete authorization constraints
     - forbidden access for non-participants.
   - Validation: `cd server && go test ./...` passes.
+- M5 completed:
+  - Added shared upload utilities in `server/api/upload_common.go`:
+    - centralized 20 MB file cap handling
+    - safe file naming with UUID + original extension
+    - URL generation under `/static/uploads/`.
+  - Added authenticated upload endpoint in `server/api/upload.go`:
+    - `POST /api/upload` accepts multipart file uploads (field `file`, with `attachment` fallback)
+    - returns `201` with `{ "url": "/static/uploads/<filename>" }`
+    - enforces 20 MB max payload.
+  - Updated message multipart attachment saving to reuse shared upload helper in `server/api/messages.go`.
+  - Router/dependency updates in `server/api/router.go`:
+    - added `Dependencies.UploadDir`
+    - mounted authenticated `/api/upload`
+    - mounted static file serving at `/static/uploads/` from configured `UploadDir`.
+  - Server config updates in `server/main.go`:
+    - added `UPLOAD_DIR` env support with default `./uploads`
+    - ensures upload directory exists at startup
+    - passes upload dir into API router dependencies.
+  - Test updates:
+    - `server/api/upload_test.go` verifies authenticated upload and static file retrieval.
+    - `server/api/auth_test.go` test-router helper now isolates uploads in a temp directory.
+    - `server/main_test.go` added config coverage for `UPLOAD_DIR`.
+  - Validation: `cd server && go test ./...` passes.
 
 ## Key decisions
 - Keep scope strictly bounded to Phase 2 endpoints and upload/static serving requirements.
@@ -162,9 +185,13 @@ Not found (noted once): `ARCHITECTURE.md`, `docs/PLANS.md`.
   - message text: `content`
   - attachment file: `attachment`
   - optional fallback fields: `attachment_url`, `attachment_type`.
+- Standardized upload endpoint multipart field naming for Phase 2 implementation:
+  - primary field: `file`
+  - compatibility fallback: `attachment`.
+- Chose permissive upload type handling for Phase 2: any file under 20 MB is accepted, with attachment class inferred from request content type (`image/*` => `image`, else `file`).
 
 ## Remaining issues / open questions
-- Decide whether upload MIME/type validation should be permissive (any file under 20 MB) or restricted to a known allowlist for clearer behavior.
+- No M5 blockers.
 
 ## Links to related documents
 - `AGENTS.md`

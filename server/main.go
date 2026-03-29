@@ -16,12 +16,14 @@ import (
 const (
 	defaultServerAddr = ":8080"
 	defaultSQLiteDSN  = "./agent_messenger.sqlite"
+	defaultUploadDir  = "./uploads"
 )
 
 type config struct {
 	ServerAddr         string
 	SQLiteDSN          string
 	CORSAllowedOrigins []string
+	UploadDir          string
 }
 
 func main() {
@@ -39,15 +41,21 @@ func main() {
 		}
 	}()
 
+	if err := os.MkdirAll(cfg.UploadDir, 0o755); err != nil {
+		log.Fatalf("failed to create upload dir: %v", err)
+	}
+
 	handler := api.NewRouter(api.Dependencies{
 		Store:              dataStore,
 		Hub:                hub,
 		CORSAllowedOrigins: cfg.CORSAllowedOrigins,
+		UploadDir:          cfg.UploadDir,
 	})
 
 	log.Printf("agent-messenger server listening on %s", cfg.ServerAddr)
 	log.Printf("sqlite dsn: %s", cfg.SQLiteDSN)
 	log.Printf("cors allowed origins: %s", strings.Join(cfg.CORSAllowedOrigins, ","))
+	log.Printf("upload dir: %s", cfg.UploadDir)
 	if err := http.ListenAndServe(cfg.ServerAddr, handler); err != nil && !errors.Is(err, http.ErrServerClosed) {
 		log.Fatalf("server stopped: %v", err)
 	}
@@ -58,6 +66,7 @@ func loadConfigFromEnv() config {
 		ServerAddr:         envOrDefault("SERVER_ADDR", defaultServerAddr),
 		SQLiteDSN:          envOrDefault("SQLITE_DSN", defaultSQLiteDSN),
 		CORSAllowedOrigins: parseCSVEnv("CORS_ALLOWED_ORIGINS", "*"),
+		UploadDir:          envOrDefault("UPLOAD_DIR", defaultUploadDir),
 	}
 }
 

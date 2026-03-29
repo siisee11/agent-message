@@ -17,3 +17,11 @@ func TestParseCSVEnvDefaults(t *testing.T) {
 		t.Fatalf("unexpected default output: %#v", got)
 	}
 }
+
+func TestLoadConfigFromEnvUploadDir(t *testing.T) {
+	t.Setenv("UPLOAD_DIR", "/tmp/uploads-test")
+	cfg := loadConfigFromEnv()
+	if cfg.UploadDir != "/tmp/uploads-test" {
+		t.Fatalf("expected upload dir /tmp/uploads-test, got %q", cfg.UploadDir)
+	}
+}

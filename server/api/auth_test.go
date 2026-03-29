@@ -147,8 +147,9 @@ func newTestRouter(t *testing.T) (http.Handler, *store.SQLiteStore) {
 	})
 
 	router := NewRouter(Dependencies{
-		Store: sqliteStore,
-		Hub:   ws.NewHub(),
+		Store:     sqliteStore,
+		Hub:       ws.NewHub(),
+		UploadDir: filepath.Join(t.TempDir(), "uploads"),
 	})
 	return router, sqliteStore
 }

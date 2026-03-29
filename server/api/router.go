@@ -3,6 +3,7 @@ package api
 import (
 	"encoding/json"
 	"net/http"
+	"strings"
 
 	"agent-messenger/server/store"
 	"agent-messenger/server/ws"
@@ -12,16 +13,24 @@ type Dependencies struct {
 	Store              store.Store
 	Hub                *ws.Hub
 	CORSAllowedOrigins []string
+	UploadDir          string
 }
 
 func NewRouter(deps Dependencies) http.Handler {
 	mux := http.NewServeMux()
 	mux.HandleFunc("/healthz", healthHandler)
 
+	uploadDir := strings.TrimSpace(deps.UploadDir)
+	if uploadDir == "" {
+		uploadDir = defaultUploadDir
+	}
+
 	authHandler := newAuthHandler(deps.Store)
 	usersHandler := newUsersHandler(deps.Store)
 	conversationsHandler := newConversationsHandler(deps.Store)
 	messagesHandler := newMessagesHandler(deps.Store)
+	messagesHandler.uploadDir = uploadDir
+	uploadHandler := newUploadHandler(uploadDir)
 	authRequired := BearerAuthMiddleware(deps.Store)
 
 	mux.HandleFunc("/api/auth/register", authHandler.handleRegister)
@@ -41,6 +50,8 @@ func NewRouter(deps Dependencies) http.Handler {
 	})))
 
 	mux.Handle("/api/messages/", authRequired(http.HandlerFunc(messagesHandler.handleMessageByID)))
+	mux.Handle("/api/upload", authRequired(http.HandlerFunc(uploadHandler.handleUpload)))
+	mux.Handle("/static/uploads/", http.StripPrefix(staticUploadsPrefix, http.FileServer(http.Dir(uploadDir))))
 
 	return CORSMiddleware(deps.CORSAllowedOrigins)(mux)
 }

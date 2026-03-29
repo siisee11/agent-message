@@ -151,6 +151,7 @@ func newAppServerClient(logPath string) (codexClient, error) {
 }
 
 var turnInactivityTimeoutFn = defaultTurnInactivityTimeout
+var turnInterruptTimeout = 5 * time.Second
 
 func defaultTurnInactivityTimeout(turnTimeout time.Duration) time.Duration {
 	if turnTimeout <= 0 {
@@ -287,24 +288,14 @@ func (client *appServerClient) RunTurn(ctx context.Context, options runTurnOptio
 		case <-requestCtx.Done():
 			client.logDiagnostic("turn wait timed out thread_id=%s turn_id=%s timeout=%s", options.ThreadID, activeTurnID, timeout)
 			client.incrementMetric("ralph_loop_codex_turn_timeout_total", 1)
-			if strings.TrimSpace(activeTurnID) != "" {
-				_, _ = client.request(context.Background(), "turn/interrupt", map[string]any{
-					"threadId": options.ThreadID,
-					"turnId":   activeTurnID,
-				})
-			}
+			client.interruptTurn(options.ThreadID, activeTurnID)
 			err := fmt.Errorf("turn/start timed out after %s", timeout)
 			endSpan(span, "timeout", err, map[string]any{"turn_id": activeTurnID})
 			return turnResult{}, err
 		case <-idleTimer.C:
 			client.logDiagnostic("turn wait became inactive thread_id=%s turn_id=%s idle_timeout=%s", options.ThreadID, activeTurnID, idleTimeout)
 			client.incrementMetric("ralph_loop_codex_turn_inactivity_timeout_total", 1)
-			if strings.TrimSpace(activeTurnID) != "" {
-				_, _ = client.callRequest(context.Background(), "turn/interrupt", map[string]any{
-					"threadId": options.ThreadID,
-					"turnId":   activeTurnID,
-				})
-			}
+			client.interruptTurn(options.ThreadID, activeTurnID)
 			err := fmt.Errorf("turn became inactive after %s", idleTimeout)
 			endSpan(span, "timeout", err, map[string]any{
 				"turn_id":      activeTurnID,
@@ -385,6 +376,24 @@ func (client *appServerClient) RunTurn(ctx context.Context, options runTurnOptio
 				}, nil
 			}
 		}
+	}
+}
+
+func (client *appServerClient) interruptTurn(threadID string, turnID string) {
+	if strings.TrimSpace(turnID) == "" {
+		return
+	}
+	timeout := turnInterruptTimeout
+	if timeout <= 0 {
+		timeout = 5 * time.Second
+	}
+	interruptCtx, cancel := context.WithTimeout(context.Background(), timeout)
+	defer cancel()
+	if _, err := client.callRequest(interruptCtx, "turn/interrupt", map[string]any{
+		"threadId": threadID,
+		"turnId":   turnID,
+	}); err != nil {
+		client.logDiagnostic("turn/interrupt failed thread_id=%s turn_id=%s err=%v", threadID, turnID, err)
 	}
 }
 

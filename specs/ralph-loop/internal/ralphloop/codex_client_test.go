@@ -13,6 +13,11 @@ func TestRunTurnInterruptsWhenInactive(t *testing.T) {
 	defer func() {
 		turnInactivityTimeoutFn = previous
 	}()
+	previousInterruptTimeout := turnInterruptTimeout
+	turnInterruptTimeout = 20 * time.Millisecond
+	defer func() {
+		turnInterruptTimeout = previousInterruptTimeout
+	}()
 
 	interrupted := false
 	client := &appServerClient{
@@ -47,6 +52,59 @@ func TestRunTurnInterruptsWhenInactive(t *testing.T) {
 	}
 	if !interrupted {
 		t.Fatalf("expected turn interrupt request")
+	}
+}
+
+func TestRunTurnReturnsWhenInterruptHangs(t *testing.T) {
+	previous := turnInactivityTimeoutFn
+	turnInactivityTimeoutFn = func(time.Duration) time.Duration { return 20 * time.Millisecond }
+	defer func() {
+		turnInactivityTimeoutFn = previous
+	}()
+	previousInterruptTimeout := turnInterruptTimeout
+	turnInterruptTimeout = 20 * time.Millisecond
+	defer func() {
+		turnInterruptTimeout = previousInterruptTimeout
+	}()
+
+	interruptCalled := false
+	client := &appServerClient{
+		waitResult:    make(chan error),
+		readErr:       make(chan error),
+		notifications: make(chan jsonRPCNotification, 4),
+		pending:       map[int64]chan jsonRPCEnvelope{},
+		requestFn: func(ctx context.Context, method string, _ map[string]any) (map[string]any, error) {
+			switch method {
+			case "turn/start":
+				return map[string]any{"turn": map[string]any{"id": "turn-1"}}, nil
+			case "turn/interrupt":
+				interruptCalled = true
+				<-ctx.Done()
+				return nil, ctx.Err()
+			default:
+				t.Fatalf("unexpected request method: %s", method)
+				return nil, nil
+			}
+		},
+	}
+
+	start := time.Now()
+	_, err := client.RunTurn(context.Background(), runTurnOptions{
+		ThreadID: "thread-1",
+		Prompt:   "continue",
+		Timeout:  time.Second,
+	})
+	if err == nil {
+		t.Fatalf("expected inactivity error")
+	}
+	if !strings.Contains(err.Error(), "inactive") {
+		t.Fatalf("expected inactivity error, got %v", err)
+	}
+	if !interruptCalled {
+		t.Fatalf("expected interrupt attempt")
+	}
+	if elapsed := time.Since(start); elapsed > 250*time.Millisecond {
+		t.Fatalf("RunTurn took too long after hanging interrupt: %s", elapsed)
 	}
 }
 

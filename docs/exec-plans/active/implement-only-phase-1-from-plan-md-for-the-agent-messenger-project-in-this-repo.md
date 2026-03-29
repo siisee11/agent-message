@@ -19,7 +19,7 @@ Out of scope: all Phase 2+ API, WebSocket behaviors, web client work, CLI work, 
 ## Milestones
 - [x] M1. Scaffold `server/` Go module, package directories (`api/`, `ws/`, `store/`, `models/`), and baseline wiring (status: completed)
 - [x] M2. Implement core model structs and validation-friendly request/response shapes needed by Phase 1 auth and store boundaries (status: completed)
-- [ ] M3. Build SQLite store layer with schema migrations for users, conversations, messages, reactions, and sessions; add repository/data-access methods needed by auth flow (status: not started)
+- [x] M3. Build SQLite store layer with schema migrations for users, conversations, messages, reactions, and sessions; add repository/data-access methods needed by auth flow (status: completed)
 - [ ] M4. Implement auth application flow and HTTP handlers for `POST /api/auth/register`, `POST /api/auth/login`, and `DELETE /api/auth/logout` with bcrypt PIN hashing and opaque token issuance/revocation (status: not started)
 - [ ] M5. Add bearer auth middleware, CORS middleware, env-driven config, and `main.go` startup path; run Phase 1 smoke checks (status: not started)
 
@@ -52,6 +52,23 @@ Out of scope: all Phase 2+ API, WebSocket behaviors, web client work, CLI work, 
   - Added validation tests:
     - `server/models/auth_test.go`
   - Validation: `cd server && go test ./...` passes.
+- M3 completed:
+  - Replaced placeholder store contract with auth-ready store interface in `server/store/store.go`:
+    - `CreateUser`, `GetUserByUsername`, `GetUserByID`
+    - `CreateSession`, `GetSessionByToken`, `DeleteSessionByToken`, `GetUserBySessionToken`
+    - Introduced shared store errors: `ErrNotFound`, `ErrNotImplemented`.
+  - Implemented SQLite-backed store in `server/store/sqlite.go`:
+    - `NewSQLiteStore(ctx, dsn)` opens DB, enables FK enforcement, and runs migrations.
+    - Implemented auth data access methods for users/sessions required by upcoming auth handlers and bearer middleware.
+    - Added explicit RFC3339Nano timestamp serialization/parsing for deterministic SQLite storage.
+  - Implemented migration system in `server/store/migrations.go`:
+    - Added `schema_migrations` tracking table.
+    - Added ordered migrations for `users`, `conversations`, `messages`, `reactions`, `sessions`, and supporting indexes.
+  - Added store tests in `server/store/sqlite_test.go`:
+    - Migration application verification.
+    - Auth persistence flow verification (create user/session, resolve by token, delete session, not-found behavior).
+  - Added SQLite dependency in `server/go.mod`/`server/go.sum` (`modernc.org/sqlite`).
+  - Validation: `cd server && go test ./...` passes.
 
 ## Key decisions
 - Enforce strict phase boundary: only Phase 1 deliverables are implemented.
@@ -62,12 +79,13 @@ Out of scope: all Phase 2+ API, WebSocket behaviors, web client work, CLI work, 
 - For M1 scaffolding, keep runtime wiring intentionally minimal (health route + placeholder dependencies) so later milestones can layer auth/store logic without restructuring.
 - Keep model tags explicit for both JSON and DB mapping to reduce translation glue in SQLite repository methods.
 - Keep auth payload validation centralized in model DTOs so handlers can reuse shared rules when implemented in M4.
+- Use pure-Go SQLite driver `modernc.org/sqlite` to avoid CGO/toolchain coupling for local and CI execution.
+- Apply migrations during SQLite store initialization so Phase 1 server startup can guarantee schema readiness.
 
 ## Remaining issues / open questions
 - Confirm final env var names and defaults during implementation (aligning with repo conventions if discovered).
-- Decide migration application strategy (startup auto-migrate vs explicit migration call) while staying inside Phase 1 scope.
 - Determine the minimal store interface surface needed now vs deferred for Phase 2.
-- Next milestone is M3: SQLite schema/migrations and repository methods required for auth/session flows.
+- Next milestone is M4: auth service flow + `/api/auth/register|login|logout` handlers using bcrypt + opaque session tokens.
 
 ## Links to related documents
 - `AGENTS.md`

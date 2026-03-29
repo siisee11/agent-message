@@ -13,9 +13,15 @@ type Dependencies struct {
 	Hub   *ws.Hub
 }
 
-func NewRouter(_ Dependencies) http.Handler {
+func NewRouter(deps Dependencies) http.Handler {
 	mux := http.NewServeMux()
 	mux.HandleFunc("/healthz", healthHandler)
+
+	authHandler := newAuthHandler(deps.Store)
+	mux.HandleFunc("/api/auth/register", authHandler.handleRegister)
+	mux.HandleFunc("/api/auth/login", authHandler.handleLogin)
+	mux.HandleFunc("/api/auth/logout", authHandler.handleLogout)
+
 	return mux
 }
 

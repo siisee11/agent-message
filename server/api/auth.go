@@ -1,0 +1,211 @@
+package api
+
+import (
+	"crypto/rand"
+	"encoding/base64"
+	"encoding/json"
+	"errors"
+	"io"
+	"net/http"
+	"strings"
+	"time"
+
+	"agent-messenger/server/models"
+	"agent-messenger/server/store"
+
+	"github.com/google/uuid"
+	"golang.org/x/crypto/bcrypt"
+)
+
+const sessionTokenByteLen = 32
+
+type authHandler struct {
+	store    store.Store
+	nowFn    func() time.Time
+	tokenFn  func() (string, error)
+	bcryptFn func(pin string) (string, error)
+}
+
+func newAuthHandler(s store.Store) *authHandler {
+	return &authHandler{
+		store:    s,
+		nowFn:    time.Now,
+		tokenFn:  generateSessionToken,
+		bcryptFn: hashPIN,
+	}
+}
+
+func (h *authHandler) handleRegister(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		writeMethodNotAllowed(w, http.MethodPost)
+		return
+	}
+
+	var req models.RegisterRequest
+	if err := decodeJSONBody(r, &req); err != nil {
+		writeError(w, http.StatusBadRequest, "invalid JSON body")
+		return
+	}
+	if err := req.Validate(); err != nil {
+		writeError(w, http.StatusBadRequest, err.Error())
+		return
+	}
+
+	if _, err := h.store.GetUserByUsername(r.Context(), req.Username); err == nil {
+		writeError(w, http.StatusConflict, "username already exists")
+		return
+	} else if !errors.Is(err, store.ErrNotFound) {
+		writeError(w, http.StatusInternalServerError, "failed to register user")
+		return
+	}
+
+	pinHash, err := h.bcryptFn(req.PIN)
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, "failed to register user")
+		return
+	}
+
+	now := h.nowFn().UTC()
+	user, err := h.store.CreateUser(r.Context(), models.CreateUserParams{
+		ID:        uuid.NewString(),
+		Username:  req.Username,
+		PINHash:   pinHash,
+		CreatedAt: now,
+	})
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, "failed to register user")
+		return
+	}
+
+	token, err := h.issueSession(r, user.ID, now)
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, "failed to register user")
+		return
+	}
+
+	writeJSON(w, http.StatusCreated, models.AuthResponse{
+		Token: token,
+		User:  user.Profile(),
+	})
+}
+
+func (h *authHandler) handleLogin(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		writeMethodNotAllowed(w, http.MethodPost)
+		return
+	}
+
+	var req models.LoginRequest
+	if err := decodeJSONBody(r, &req); err != nil {
+		writeError(w, http.StatusBadRequest, "invalid JSON body")
+		return
+	}
+	if err := req.Validate(); err != nil {
+		writeError(w, http.StatusBadRequest, err.Error())
+		return
+	}
+
+	user, err := h.store.GetUserByUsername(r.Context(), req.Username)
+	if err != nil {
+		if errors.Is(err, store.ErrNotFound) {
+			writeError(w, http.StatusUnauthorized, "invalid credentials")
+			return
+		}
+		writeError(w, http.StatusInternalServerError, "failed to login")
+		return
+	}
+
+	if err := bcrypt.CompareHashAndPassword([]byte(user.PINHash), []byte(req.PIN)); err != nil {
+		writeError(w, http.StatusUnauthorized, "invalid credentials")
+		return
+	}
+
+	token, err := h.issueSession(r, user.ID, h.nowFn().UTC())
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, "failed to login")
+		return
+	}
+
+	writeJSON(w, http.StatusOK, models.AuthResponse{
+		Token: token,
+		User:  user.Profile(),
+	})
+}
+
+func (h *authHandler) handleLogout(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodDelete {
+		writeMethodNotAllowed(w, http.MethodDelete)
+		return
+	}
+
+	token, err := parseBearerToken(r.Header.Get("Authorization"))
+	if err != nil {
+		writeError(w, http.StatusUnauthorized, "missing or invalid bearer token")
+		return
+	}
+
+	if err := h.store.DeleteSessionByToken(r.Context(), token); err != nil && !errors.Is(err, store.ErrNotFound) {
+		writeError(w, http.StatusInternalServerError, "failed to logout")
+		return
+	}
+
+	w.WriteHeader(http.StatusNoContent)
+}
+
+func (h *authHandler) issueSession(r *http.Request, userID string, now time.Time) (string, error) {
+	token, err := h.tokenFn()
+	if err != nil {
+		return "", err
+	}
+
+	_, err = h.store.CreateSession(r.Context(), models.CreateSessionParams{
+		Token:     token,
+		UserID:    userID,
+		CreatedAt: now,
+	})
+	if err != nil {
+		return "", err
+	}
+
+	return token, nil
+}
+
+func decodeJSONBody(r *http.Request, dst any) error {
+	decoder := json.NewDecoder(r.Body)
+	decoder.DisallowUnknownFields()
+	if err := decoder.Decode(dst); err != nil {
+		return err
+	}
+	if err := decoder.Decode(&struct{}{}); err != io.EOF {
+		return errors.New("unexpected trailing JSON")
+	}
+	return nil
+}
+
+func parseBearerToken(headerValue string) (string, error) {
+	parts := strings.SplitN(strings.TrimSpace(headerValue), " ", 2)
+	if len(parts) != 2 || !strings.EqualFold(parts[0], "Bearer") {
+		return "", errors.New("invalid authorization header")
+	}
+	token := strings.TrimSpace(parts[1])
+	if token == "" {
+		return "", errors.New("empty bearer token")
+	}
+	return token, nil
+}
+
+func generateSessionToken() (string, error) {
+	raw := make([]byte, sessionTokenByteLen)
+	if _, err := rand.Read(raw); err != nil {
+		return "", err
+	}
+	return base64.RawURLEncoding.EncodeToString(raw), nil
+}
+
+func hashPIN(pin string) (string, error) {
+	hash, err := bcrypt.GenerateFromPassword([]byte(pin), bcrypt.DefaultCost)
+	if err != nil {
+		return "", err
+	}
+	return string(hash), nil
+}

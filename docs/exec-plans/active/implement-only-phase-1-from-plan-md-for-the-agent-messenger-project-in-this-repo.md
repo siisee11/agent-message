@@ -20,7 +20,7 @@ Out of scope: all Phase 2+ API, WebSocket behaviors, web client work, CLI work, 
 - [x] M1. Scaffold `server/` Go module, package directories (`api/`, `ws/`, `store/`, `models/`), and baseline wiring (status: completed)
 - [x] M2. Implement core model structs and validation-friendly request/response shapes needed by Phase 1 auth and store boundaries (status: completed)
 - [x] M3. Build SQLite store layer with schema migrations for users, conversations, messages, reactions, and sessions; add repository/data-access methods needed by auth flow (status: completed)
-- [ ] M4. Implement auth application flow and HTTP handlers for `POST /api/auth/register`, `POST /api/auth/login`, and `DELETE /api/auth/logout` with bcrypt PIN hashing and opaque token issuance/revocation (status: not started)
+- [x] M4. Implement auth application flow and HTTP handlers for `POST /api/auth/register`, `POST /api/auth/login`, and `DELETE /api/auth/logout` with bcrypt PIN hashing and opaque token issuance/revocation (status: completed)
 - [ ] M5. Add bearer auth middleware, CORS middleware, env-driven config, and `main.go` startup path; run Phase 1 smoke checks (status: not started)
 
 ## Current progress
@@ -69,6 +69,33 @@ Out of scope: all Phase 2+ API, WebSocket behaviors, web client work, CLI work, 
     - Auth persistence flow verification (create user/session, resolve by token, delete session, not-found behavior).
   - Added SQLite dependency in `server/go.mod`/`server/go.sum` (`modernc.org/sqlite`).
   - Validation: `cd server && go test ./...` passes.
+- M4 completed:
+  - Added auth handler implementation in `server/api/auth.go`:
+    - `POST /api/auth/register`
+      - Decodes/validates payload (`username`, 4-6 digit PIN)
+      - Detects duplicate username
+      - Hashes PIN via `bcrypt.GenerateFromPassword`
+      - Creates user + opaque session token, returns `{ token, user }`
+    - `POST /api/auth/login`
+      - Validates payload
+      - Looks up user by username
+      - Verifies PIN via `bcrypt.CompareHashAndPassword`
+      - Creates new opaque session token, returns `{ token, user }`
+    - `DELETE /api/auth/logout`
+      - Parses bearer token from `Authorization` header
+      - Revokes token by deleting session row
+      - Returns `204 No Content` (idempotent when token is already absent)
+  - Added secure opaque token generation with `crypto/rand` (32-byte random payload, URL-safe base64 encoding).
+  - Added shared HTTP response helpers in `server/api/http.go` for JSON/error/method responses.
+  - Wired routes in `server/api/router.go` for all auth endpoints.
+  - Added auth API integration tests in `server/api/auth_test.go` covering:
+    - register/login/logout happy path
+    - bcrypt-hashed persistence (not plaintext PIN)
+    - invalid credentials
+    - duplicate username
+    - request validation failure
+  - Added auth dependency in module manifest: `golang.org/x/crypto`.
+  - Validation: `cd server && go test ./...` passes.
 
 ## Key decisions
 - Enforce strict phase boundary: only Phase 1 deliverables are implemented.
@@ -81,11 +108,13 @@ Out of scope: all Phase 2+ API, WebSocket behaviors, web client work, CLI work, 
 - Keep auth payload validation centralized in model DTOs so handlers can reuse shared rules when implemented in M4.
 - Use pure-Go SQLite driver `modernc.org/sqlite` to avoid CGO/toolchain coupling for local and CI execution.
 - Apply migrations during SQLite store initialization so Phase 1 server startup can guarantee schema readiness.
+- Return `204` for logout even if the token no longer exists to keep logout idempotent and avoid leaking token existence via status codes.
+- Keep credential failures generic (`invalid credentials`) to avoid revealing whether username or PIN was incorrect.
 
 ## Remaining issues / open questions
 - Confirm final env var names and defaults during implementation (aligning with repo conventions if discovered).
 - Determine the minimal store interface surface needed now vs deferred for Phase 2.
-- Next milestone is M4: auth service flow + `/api/auth/register|login|logout` handlers using bcrypt + opaque session tokens.
+- Next milestone is M5: bearer-token auth middleware, CORS middleware, and env-configured `main.go` startup path with Phase 1 smoke checks.
 
 ## Links to related documents
 - `AGENTS.md`

@@ -35,7 +35,7 @@ Referenced but missing (noted once):
 
 ## Milestones
 - [x] M4. Implement reaction API surface (`POST /api/messages/:id/reactions`, `DELETE /api/messages/:id/reactions/:emoji`) with validation and route wiring, reusing existing store reaction methods (status: completed)
-- [ ] M5. Implement WebSocket session runtime: register client with conversation subscriptions, pump hub events to socket, and parse client frames for `read` events with conversation subscription updates (status: not started)
+- [x] M5. Implement WebSocket session runtime: register client with conversation subscriptions, pump hub events to socket, and parse client frames for `read` events with conversation subscription updates (status: completed)
 - [ ] M6. Emit `message.new`, `message.edited`, and `message.deleted` events from message mutation handlers to the conversation via hub broadcast (status: not started)
 - [ ] M7. Emit `reaction.added` and `reaction.removed` events from reaction handlers with payloads aligned to `SPEC.md` event contracts (status: not started)
 - [ ] M8. Add/expand tests for reaction endpoints, websocket read handling/subscription behavior, and message/reaction broadcast integration (status: not started)
@@ -59,9 +59,16 @@ Referenced but missing (noted once):
   - Extended `/api/messages/...` dispatch to route reaction paths and preserve existing `PATCH/DELETE` message mutation behavior.
   - Added API coverage in `server/api/messages_test.go` for reaction toggle add/remove, explicit delete by emoji path, validation, forbidden actor, and not-found removal.
   - Verified with `cd server && go test ./api` (pass).
+- Completed M5 websocket session runtime:
+  - Added websocket text-frame JSON I/O support in `server/ws/frames.go` (`ReadJSON`, `WriteJSON`) with masking validation for incoming client frames and ping/pong handling.
+  - Updated `server/api/websocket.go` to bootstrap client subscriptions from `ListConversationsByUser` at connect-time, register those conversation IDs in the hub, and run an outbound write pump that forwards hub events to the socket.
+  - Added client frame parsing for `{ "type": "read", "data": { "conversation_id": ... } }`; valid participant-scoped `read` events now subscribe the connection to that conversation through the hub.
+  - Added focused websocket runtime tests in `server/api/websocket_test.go` for:
+    - hub event delivery to a connected client over the websocket
+    - post-connect `read` event subscription updates for conversations created after socket establishment
+  - Verified with `cd server && go test ./api ./ws` (pass).
 - Remaining gap areas by inspection:
   - Message handlers do not yet broadcast websocket mutation events
-  - WebSocket handler currently upgrades/authenticates but does not process JSON events or flush hub events to clients
 
 ## Key decisions
 - Preserve existing Phase 3 commits and continue from their current behavior; do not refactor completed milestone surfaces unless required for compatibility.
@@ -70,9 +77,10 @@ Referenced but missing (noted once):
 - Keep each milestone scoped for one coding-loop iteration.
 - `POST /api/messages/:id/reactions` returns `models.ToggleReactionResult` (includes `action` + `reaction`) to preserve store-level toggle semantics (`added` / `removed`) for upcoming websocket emission in M7.
 - `DELETE /api/messages/:id/reactions/:emoji` returns the removed `models.Reaction` payload on success (`200 OK`) for deterministic client reconciliation.
+- `read` websocket events are transport-level subscription updates only in Phase 3; no read-receipt persistence side effects are introduced.
 
 ## Remaining issues / open questions
-- Decide exact behavior for `read` events in Phase 3: subscription-only transport behavior vs additional persistence side effects (no persistence requirement currently defined in `PLAN.md`).
+- Bootstrap conversation subscription currently loads a single bounded page (`Limit=1000`) at connect-time; if higher conversation cardinality appears later, pagination strategy can be revisited without changing the runtime contract introduced in M5.
 
 ## Links to related documents
 - `AGENTS.md`

@@ -37,7 +37,7 @@ Not found (noted once): `ARCHITECTURE.md`, `docs/PLANS.md`.
   - Add SQL queries and methods for user search, get current user profile by auth context ID, get-or-create DM conversation, list user conversations, fetch conversation details with participant validation, list messages with cursor pagination, create message, edit own message, and soft-delete own message.
   - Add/adjust indexes or migration updates only if required for Phase 2 query correctness/performance.
 
-- [ ] M3. Implement users and conversations REST handlers/routes (status: not started)
+- [x] M3. Implement users and conversations REST handlers/routes (status: completed)
   - Add authenticated handlers for `/api/users`, `/api/users/me`, `/api/conversations` (GET/POST), and `/api/conversations/:id`.
   - Enforce validation, authorization, and consistent JSON error responses aligned with existing API behavior.
 
@@ -74,6 +74,54 @@ Not found (noted once): `ARCHITECTURE.md`, `docs/PLANS.md`.
   - Added compile-safe placeholder methods on `SQLiteStore` in `server/store/sqlite.go` that return `ErrNotImplemented` for new Phase 2 operations; concrete SQL behavior is deferred to M2.
   - Added model validation tests in `server/models/phase2_test.go`.
   - Validation: `cd server && go test ./...` passes.
+- M2 completed:
+  - Implemented concrete SQLite methods in `server/store/sqlite.go` for all Phase 2 store operations:
+    - `SearchUsersByUsername`
+    - `ListConversationsByUser`
+    - `GetOrCreateDirectConversation`
+    - `GetConversationByIDForUser`
+    - `ListMessagesByConversation` with ID-based cursor semantics via `before` message lookup and `(created_at, id)` ordering
+    - `CreateMessage`
+    - `UpdateMessage` with own-message enforcement
+    - `SoftDeleteMessage` with own-message enforcement
+  - Added participant/ownership enforcement in store layer:
+    - conversation participant checks return `ErrForbidden`
+    - message edit/delete ownership violations return `ErrForbidden`
+  - Added SQLite helper routines for scanning and conversion:
+    - message and conversation lookup helpers
+    - nullable string/message decoding helpers
+  - Added migration `version 7` in `server/store/migrations.go` for Phase 2 query correctness/performance:
+    - unique participant-pair index for DM conversation deduplication
+    - participant lookup indexes on conversations
+    - additional message lookup indexes for pagination/sender filtering
+  - Expanded store tests in `server/store/sqlite_test.go`:
+    - user search
+    - DM get-or-create idempotency
+    - conversation list/detail participant behavior
+    - message list pagination with `before`
+    - create/edit/soft-delete message ownership rules
+  - Validation: `cd server && go test ./...` passes.
+- M3 completed:
+  - Added authenticated users + conversations API handlers in `server/api/users_conversations.go`:
+    - `GET /api/users` with `username` query search and optional positive `limit`
+    - `GET /api/users/me` from bearer-auth context
+    - `GET /api/conversations` with optional positive `limit`
+    - `POST /api/conversations` using `{ "username": "..." }` to get-or-create DM
+    - `GET /api/conversations/:id` for participant-scoped details
+  - Added request validation and error mapping aligned with existing API style:
+    - `400` for invalid JSON/validation/query values
+    - `401` for missing/invalid bearer context
+    - `403` for participant-forbidden conversation access
+    - `404` for unknown usernames/conversations
+    - `500` for unexpected storage failures
+  - Router wiring updates in `server/api/router.go`:
+    - registered new routes under bearer middleware.
+  - Added API tests in `server/api/users_conversations_test.go`:
+    - users profile and search endpoint behavior
+    - conversation create/list/detail behavior
+    - idempotent DM get-or-create behavior
+    - forbidden and validation error paths
+  - Validation: `cd server && go test ./...` passes.
 
 ## Key decisions
 - Keep scope strictly bounded to Phase 2 endpoints and upload/static serving requirements.
@@ -84,6 +132,9 @@ Not found (noted once): `ARCHITECTURE.md`, `docs/PLANS.md`.
 - Preserve existing project conventions for JSON responses and error handling unless Phase 2 requires a new shape.
 - Establish explicit Phase 2 request/response DTOs up front so API handlers and store methods can share one canonical contract.
 - Encode ownership/participant authorization at the store boundary using actor-scoped method signatures and `store.ErrForbidden`.
+- Canonicalize DM participant ordering in persistence (`participant_a`, `participant_b`) to enforce stable get-or-create behavior backed by a unique index.
+- Implement message pagination using `before=<message_id>` translated into an internal `(created_at, id)` seek condition for deterministic ordering.
+- Keep users and conversations routes mounted under the existing bearer middleware and resolve current user identity directly from auth context for `/api/users/me` and actor-scoped conversation operations.
 
 ## Remaining issues / open questions
 - Confirm exact multipart field names for attachment upload in `POST /api/conversations/:id/messages` and `POST /api/upload` (to be standardized and tested during implementation).

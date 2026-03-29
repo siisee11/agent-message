@@ -19,9 +19,19 @@ func NewRouter(deps Dependencies) http.Handler {
 	mux.HandleFunc("/healthz", healthHandler)
 
 	authHandler := newAuthHandler(deps.Store)
+	usersHandler := newUsersHandler(deps.Store)
+	conversationsHandler := newConversationsHandler(deps.Store)
+	authRequired := BearerAuthMiddleware(deps.Store)
+
 	mux.HandleFunc("/api/auth/register", authHandler.handleRegister)
 	mux.HandleFunc("/api/auth/login", authHandler.handleLogin)
-	mux.Handle("/api/auth/logout", BearerAuthMiddleware(deps.Store)(http.HandlerFunc(authHandler.handleLogout)))
+	mux.Handle("/api/auth/logout", authRequired(http.HandlerFunc(authHandler.handleLogout)))
+
+	mux.Handle("/api/users", authRequired(http.HandlerFunc(usersHandler.handleUsers)))
+	mux.Handle("/api/users/me", authRequired(http.HandlerFunc(usersHandler.handleMe)))
+
+	mux.Handle("/api/conversations", authRequired(http.HandlerFunc(conversationsHandler.handleConversationsCollection)))
+	mux.Handle("/api/conversations/", authRequired(http.HandlerFunc(conversationsHandler.handleConversationDetail)))
 
 	return CORSMiddleware(deps.CORSAllowedOrigins)(mux)
 }

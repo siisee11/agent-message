@@ -2,6 +2,7 @@ package api
 
 import (
 	"bufio"
+	"bytes"
 	"context"
 	"encoding/binary"
 	"encoding/json"
@@ -89,6 +90,87 @@ func TestWebSocketEndpointUpgradeValidation(t *testing.T) {
 		t.Fatalf("expected status %d, got %d", http.StatusBadRequest, resp.StatusCode)
 	}
 	assertErrorBody(t, resp.Body, ws.ErrWebSocketUpgradeRequired.Error())
+}
+
+func TestWebSocketRuntimeBroadcastsMessageMutations(t *testing.T) {
+	server, _ := newWebSocketTestServer(t)
+	alice := registerAndLoginUser(t, server.Config.Handler, "alice", "1234")
+	bob := registerAndLoginUser(t, server.Config.Handler, "bob", "1234")
+	conversationID := mustStartConversation(t, server.Config.Handler, alice.Token, "bob")
+
+	conn, resp := performWebSocketRequest(t, server.URL, http.MethodGet, bob.Token, true)
+	defer conn.Close()
+	defer resp.Body.Close()
+	if resp.StatusCode != http.StatusSwitchingProtocols {
+		t.Fatalf("expected status %d, got %d", http.StatusSwitchingProtocols, resp.StatusCode)
+	}
+
+	created := mustSendJSONMessage(t, server.Config.Handler, alice.Token, conversationID, `{"content":"hello realtime"}`)
+
+	newEvent, err := readServerEventWithin(conn, 2*time.Second)
+	if err != nil {
+		t.Fatalf("read message.new event: %v", err)
+	}
+	if newEvent.Type != ws.EventTypeMessageNew {
+		t.Fatalf("expected event type %q, got %q", ws.EventTypeMessageNew, newEvent.Type)
+	}
+	newData, ok := newEvent.Data.(map[string]any)
+	if !ok {
+		t.Fatalf("expected message.new data map, got %T", newEvent.Data)
+	}
+	if got, _ := newData["id"].(string); got != created.ID {
+		t.Fatalf("expected message.new id %q, got %v", created.ID, newData["id"])
+	}
+	if got, _ := newData["conversation_id"].(string); got != conversationID {
+		t.Fatalf("expected message.new conversation_id %q, got %v", conversationID, newData["conversation_id"])
+	}
+
+	editReq := httptest.NewRequest(http.MethodPatch, "/api/messages/"+created.ID, bytes.NewBufferString(`{"content":"edited text"}`))
+	editReq.Header.Set("Authorization", "Bearer "+alice.Token)
+	editReq.Header.Set("Content-Type", "application/json")
+	editResp := httptest.NewRecorder()
+	server.Config.Handler.ServeHTTP(editResp, editReq)
+	if editResp.Code != http.StatusOK {
+		t.Fatalf("edit expected %d, got %d body=%s", http.StatusOK, editResp.Code, editResp.Body.String())
+	}
+
+	editedEvent, err := readServerEventWithin(conn, 2*time.Second)
+	if err != nil {
+		t.Fatalf("read message.edited event: %v", err)
+	}
+	if editedEvent.Type != ws.EventTypeMessageEdited {
+		t.Fatalf("expected event type %q, got %q", ws.EventTypeMessageEdited, editedEvent.Type)
+	}
+	editedData, ok := editedEvent.Data.(map[string]any)
+	if !ok {
+		t.Fatalf("expected message.edited data map, got %T", editedEvent.Data)
+	}
+	if got, _ := editedData["id"].(string); got != created.ID {
+		t.Fatalf("expected message.edited id %q, got %v", created.ID, editedData["id"])
+	}
+
+	deleteReq := httptest.NewRequest(http.MethodDelete, "/api/messages/"+created.ID, nil)
+	deleteReq.Header.Set("Authorization", "Bearer "+alice.Token)
+	deleteResp := httptest.NewRecorder()
+	server.Config.Handler.ServeHTTP(deleteResp, deleteReq)
+	if deleteResp.Code != http.StatusOK {
+		t.Fatalf("delete expected %d, got %d body=%s", http.StatusOK, deleteResp.Code, deleteResp.Body.String())
+	}
+
+	deletedEvent, err := readServerEventWithin(conn, 2*time.Second)
+	if err != nil {
+		t.Fatalf("read message.deleted event: %v", err)
+	}
+	if deletedEvent.Type != ws.EventTypeMessageDeleted {
+		t.Fatalf("expected event type %q, got %q", ws.EventTypeMessageDeleted, deletedEvent.Type)
+	}
+	deletedData, ok := deletedEvent.Data.(map[string]any)
+	if !ok {
+		t.Fatalf("expected message.deleted data map, got %T", deletedEvent.Data)
+	}
+	if got, _ := deletedData["id"].(string); got != created.ID {
+		t.Fatalf("expected message.deleted id %q, got %v", created.ID, deletedData["id"])
+	}
 }
 
 func TestWebSocketRuntimePumpsHubEventsToClient(t *testing.T) {

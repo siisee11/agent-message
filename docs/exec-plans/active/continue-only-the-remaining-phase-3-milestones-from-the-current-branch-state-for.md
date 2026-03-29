@@ -36,7 +36,7 @@ Referenced but missing (noted once):
 ## Milestones
 - [x] M4. Implement reaction API surface (`POST /api/messages/:id/reactions`, `DELETE /api/messages/:id/reactions/:emoji`) with validation and route wiring, reusing existing store reaction methods (status: completed)
 - [x] M5. Implement WebSocket session runtime: register client with conversation subscriptions, pump hub events to socket, and parse client frames for `read` events with conversation subscription updates (status: completed)
-- [ ] M6. Emit `message.new`, `message.edited`, and `message.deleted` events from message mutation handlers to the conversation via hub broadcast (status: not started)
+- [x] M6. Emit `message.new`, `message.edited`, and `message.deleted` events from message mutation handlers to the conversation via hub broadcast (status: completed)
 - [ ] M7. Emit `reaction.added` and `reaction.removed` events from reaction handlers with payloads aligned to `SPEC.md` event contracts (status: not started)
 - [ ] M8. Add/expand tests for reaction endpoints, websocket read handling/subscription behavior, and message/reaction broadcast integration (status: not started)
 - [ ] M9. Run `cd server && go test ./...`, resolve regressions, and verify Phase 3 deliverable completeness from current state only (status: not started)
@@ -67,8 +67,16 @@ Referenced but missing (noted once):
     - hub event delivery to a connected client over the websocket
     - post-connect `read` event subscription updates for conversations created after socket establishment
   - Verified with `cd server && go test ./api ./ws` (pass).
+- Completed M6 message mutation websocket emission:
+  - Wired a shared hub instance in router initialization so HTTP message handlers and websocket sessions publish/consume through the same `ws.Hub`.
+  - Extended `messagesHandler` to hold a hub reference and emit:
+    - `message.new` on successful `POST /api/conversations/:id/messages` with full `models.Message` payload
+    - `message.edited` on successful `PATCH /api/messages/:id` with full `models.Message` payload
+    - `message.deleted` on successful `DELETE /api/messages/:id` with `{ "id": "<message_id>" }` payload (aligned with `SPEC.md`)
+  - Added websocket integration coverage in `server/api/websocket_test.go` validating that REST create/edit/delete mutations are broadcast to subscribed clients with expected event types and IDs.
+  - Verified with `cd server && go test ./api` (pass).
 - Remaining gap areas by inspection:
-  - Message handlers do not yet broadcast websocket mutation events
+  - Reaction handlers do not yet emit websocket mutation events
 
 ## Key decisions
 - Preserve existing Phase 3 commits and continue from their current behavior; do not refactor completed milestone surfaces unless required for compatibility.
@@ -78,6 +86,7 @@ Referenced but missing (noted once):
 - `POST /api/messages/:id/reactions` returns `models.ToggleReactionResult` (includes `action` + `reaction`) to preserve store-level toggle semantics (`added` / `removed`) for upcoming websocket emission in M7.
 - `DELETE /api/messages/:id/reactions/:emoji` returns the removed `models.Reaction` payload on success (`200 OK`) for deterministic client reconciliation.
 - `read` websocket events are transport-level subscription updates only in Phase 3; no read-receipt persistence side effects are introduced.
+- Message mutation broadcast failures are currently best-effort/non-blocking for REST success paths (mutation responses are not failed if websocket delivery cannot be enqueued).
 
 ## Remaining issues / open questions
 - Bootstrap conversation subscription currently loads a single bounded page (`Limit=1000`) at connect-time; if higher conversation cardinality appears later, pagination strategy can be revisited without changing the runtime contract introduced in M5.

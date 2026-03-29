@@ -11,19 +11,22 @@ import (
 
 	"agent-messenger/server/models"
 	"agent-messenger/server/store"
+	"agent-messenger/server/ws"
 
 	"github.com/google/uuid"
 )
 
 type messagesHandler struct {
 	store     store.Store
+	hub       *ws.Hub
 	nowFn     func() time.Time
 	uploadDir string
 }
 
-func newMessagesHandler(s store.Store) *messagesHandler {
+func newMessagesHandler(s store.Store, hub *ws.Hub) *messagesHandler {
 	return &messagesHandler{
 		store:     s,
+		hub:       hub,
 		nowFn:     time.Now,
 		uploadDir: defaultUploadDir,
 	}
@@ -247,6 +250,7 @@ func (h *messagesHandler) handleCreateMessage(w http.ResponseWriter, r *http.Req
 		return
 	}
 
+	h.broadcastConversationEvent(conversationID, ws.EventTypeMessageNew, message)
 	writeJSON(w, http.StatusCreated, message)
 }
 
@@ -291,6 +295,7 @@ func (h *messagesHandler) handleEditMessage(w http.ResponseWriter, r *http.Reque
 		return
 	}
 
+	h.broadcastConversationEvent(message.ConversationID, ws.EventTypeMessageEdited, message)
 	writeJSON(w, http.StatusOK, message)
 }
 
@@ -324,7 +329,18 @@ func (h *messagesHandler) handleDeleteMessage(w http.ResponseWriter, r *http.Req
 		return
 	}
 
+	h.broadcastConversationEvent(message.ConversationID, ws.EventTypeMessageDeleted, map[string]string{"id": message.ID})
 	writeJSON(w, http.StatusOK, message)
+}
+
+func (h *messagesHandler) broadcastConversationEvent(conversationID, eventType string, data any) {
+	if h.hub == nil {
+		return
+	}
+	_, _ = h.hub.BroadcastToConversation(conversationID, ws.Event{
+		Type: eventType,
+		Data: data,
+	})
 }
 
 func (h *messagesHandler) parseCreateMessagePayload(w http.ResponseWriter, r *http.Request) (*string, *string, *models.AttachmentType, error) {

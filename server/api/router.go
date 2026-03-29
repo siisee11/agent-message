@@ -25,11 +25,16 @@ func NewRouter(deps Dependencies) http.Handler {
 		uploadDir = defaultUploadDir
 	}
 
+	hub := deps.Hub
+	if hub == nil {
+		hub = ws.NewHub()
+	}
+
 	authHandler := newAuthHandler(deps.Store)
 	usersHandler := newUsersHandler(deps.Store)
 	conversationsHandler := newConversationsHandler(deps.Store)
-	messagesHandler := newMessagesHandler(deps.Store)
-	websocketHandler := newWebSocketHandler(deps.Store, deps.Hub)
+	messagesHandler := newMessagesHandler(deps.Store, hub)
+	websocketHandler := newWebSocketHandler(deps.Store, hub)
 	messagesHandler.uploadDir = uploadDir
 	uploadHandler := newUploadHandler(uploadDir)
 	authRequired := BearerAuthMiddleware(deps.Store)

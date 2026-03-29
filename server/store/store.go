@@ -9,6 +9,7 @@ import (
 
 var (
 	ErrNotFound       = errors.New("not found")
+	ErrForbidden      = errors.New("forbidden")
 	ErrNotImplemented = errors.New("not implemented")
 )
 
@@ -21,6 +22,14 @@ type Store interface {
 	GetSessionByToken(ctx context.Context, token string) (models.Session, error)
 	DeleteSessionByToken(ctx context.Context, token string) error
 	GetUserBySessionToken(ctx context.Context, token string) (models.User, error)
+	SearchUsersByUsername(ctx context.Context, params models.SearchUsersParams) ([]models.User, error)
+	ListConversationsByUser(ctx context.Context, params models.ListUserConversationsParams) ([]models.ConversationSummary, error)
+	GetOrCreateDirectConversation(ctx context.Context, params models.GetOrCreateDirectConversationParams) (models.Conversation, error)
+	GetConversationByIDForUser(ctx context.Context, params models.GetConversationForUserParams) (models.ConversationDetails, error)
+	ListMessagesByConversation(ctx context.Context, params models.ListConversationMessagesParams) ([]models.MessageDetails, error)
+	CreateMessage(ctx context.Context, params models.CreateMessageParams) (models.Message, error)
+	UpdateMessage(ctx context.Context, params models.UpdateMessageParams) (models.Message, error)
+	SoftDeleteMessage(ctx context.Context, params models.SoftDeleteMessageParams) (models.Message, error)
 }
 
 type NoopStore struct{}
@@ -59,4 +68,36 @@ func (s *NoopStore) DeleteSessionByToken(_ context.Context, _ string) error {
 
 func (s *NoopStore) GetUserBySessionToken(_ context.Context, _ string) (models.User, error) {
 	return models.User{}, ErrNotImplemented
+}
+
+func (s *NoopStore) SearchUsersByUsername(_ context.Context, _ models.SearchUsersParams) ([]models.User, error) {
+	return nil, ErrNotImplemented
+}
+
+func (s *NoopStore) ListConversationsByUser(_ context.Context, _ models.ListUserConversationsParams) ([]models.ConversationSummary, error) {
+	return nil, ErrNotImplemented
+}
+
+func (s *NoopStore) GetOrCreateDirectConversation(_ context.Context, _ models.GetOrCreateDirectConversationParams) (models.Conversation, error) {
+	return models.Conversation{}, ErrNotImplemented
+}
+
+func (s *NoopStore) GetConversationByIDForUser(_ context.Context, _ models.GetConversationForUserParams) (models.ConversationDetails, error) {
+	return models.ConversationDetails{}, ErrNotImplemented
+}
+
+func (s *NoopStore) ListMessagesByConversation(_ context.Context, _ models.ListConversationMessagesParams) ([]models.MessageDetails, error) {
+	return nil, ErrNotImplemented
+}
+
+func (s *NoopStore) CreateMessage(_ context.Context, _ models.CreateMessageParams) (models.Message, error) {
+	return models.Message{}, ErrNotImplemented
+}
+
+func (s *NoopStore) UpdateMessage(_ context.Context, _ models.UpdateMessageParams) (models.Message, error) {
+	return models.Message{}, ErrNotImplemented
+}
+
+func (s *NoopStore) SoftDeleteMessage(_ context.Context, _ models.SoftDeleteMessageParams) (models.Message, error) {
+	return models.Message{}, ErrNotImplemented
 }

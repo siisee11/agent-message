@@ -144,6 +144,38 @@ func (s *SQLiteStore) GetUserBySessionToken(ctx context.Context, token string) (
 	return s.getUserByQuery(ctx, query, token)
 }
 
+func (s *SQLiteStore) SearchUsersByUsername(_ context.Context, _ models.SearchUsersParams) ([]models.User, error) {
+	return nil, ErrNotImplemented
+}
+
+func (s *SQLiteStore) ListConversationsByUser(_ context.Context, _ models.ListUserConversationsParams) ([]models.ConversationSummary, error) {
+	return nil, ErrNotImplemented
+}
+
+func (s *SQLiteStore) GetOrCreateDirectConversation(_ context.Context, _ models.GetOrCreateDirectConversationParams) (models.Conversation, error) {
+	return models.Conversation{}, ErrNotImplemented
+}
+
+func (s *SQLiteStore) GetConversationByIDForUser(_ context.Context, _ models.GetConversationForUserParams) (models.ConversationDetails, error) {
+	return models.ConversationDetails{}, ErrNotImplemented
+}
+
+func (s *SQLiteStore) ListMessagesByConversation(_ context.Context, _ models.ListConversationMessagesParams) ([]models.MessageDetails, error) {
+	return nil, ErrNotImplemented
+}
+
+func (s *SQLiteStore) CreateMessage(_ context.Context, _ models.CreateMessageParams) (models.Message, error) {
+	return models.Message{}, ErrNotImplemented
+}
+
+func (s *SQLiteStore) UpdateMessage(_ context.Context, _ models.UpdateMessageParams) (models.Message, error) {
+	return models.Message{}, ErrNotImplemented
+}
+
+func (s *SQLiteStore) SoftDeleteMessage(_ context.Context, _ models.SoftDeleteMessageParams) (models.Message, error) {
+	return models.Message{}, ErrNotImplemented
+}
+
 func (s *SQLiteStore) configure(ctx context.Context) error {
 	const query = `PRAGMA foreign_keys = ON`
 	if _, err := s.db.ExecContext(ctx, query); err != nil {

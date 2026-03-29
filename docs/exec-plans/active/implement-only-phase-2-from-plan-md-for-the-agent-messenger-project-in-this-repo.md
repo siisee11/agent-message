@@ -29,7 +29,7 @@ Required docs reviewed for this plan: `AGENTS.md`, `PLAN.md`, `SPEC.md`, `docs/e
 Not found (noted once): `ARCHITECTURE.md`, `docs/PLANS.md`.
 
 ## Milestones
-- [ ] M1. Expand domain/store contracts for Phase 2 reads/writes (status: not started)
+- [x] M1. Expand domain/store contracts for Phase 2 reads/writes (status: completed)
   - Add model/request DTOs needed for user search, conversation summaries/details, message pagination, message create/update/soft-delete, and upload response shape.
   - Extend `store.Store` interface and `NoopStore` with Phase 2 operations and ownership/participant checks.
 
@@ -58,7 +58,22 @@ Not found (noted once): `ARCHITECTURE.md`, `docs/PLANS.md`.
   - `./ralph-loop init --base-branch main --work-branch ralph-phase-2-core-rest-api --output json`
   - Verified JSON fields: `worktree_path=/Users/dev/git/agent-messenger/.worktrees/phase-2-core-rest-api`, `work_branch=ralph-phase-2-core-rest-api`, `base_branch=main`, `worktree_id=phase-2-core-rest-api-8a22ad8c`.
 - Execution plan created for Phase 2 implementation.
-- Milestones M1-M6 are all not started.
+- M1 completed:
+  - Added Phase 2 API/domain DTOs in `server/models/phase2.go`:
+    - Request DTOs: `StartConversationRequest`, `SendMessageRequest`, `EditMessageRequest`.
+    - Pagination DTO: `ListMessagesQuery` with default limit `20` and max limit `100`.
+    - Response/projection DTOs: `ConversationSummary`, `ConversationDetails`, `MessageDetails`, `UploadResponse`.
+  - Added Phase 2 store-boundary parameter DTOs in `server/models/store_params.go`:
+    - `SearchUsersParams`, `ListUserConversationsParams`, `GetOrCreateDirectConversationParams`,
+      `GetConversationForUserParams`, `ListConversationMessagesParams`,
+      `CreateMessageParams`, `UpdateMessageParams`, `SoftDeleteMessageParams`.
+  - Extended store contracts in `server/store/store.go`:
+    - Added Phase 2 methods for user search, conversation list/detail/get-or-create DM, message list/create/update/delete.
+    - Added `ErrForbidden` to represent ownership/participant authorization failures at store boundary.
+    - Expanded `NoopStore` with all new method stubs.
+  - Added compile-safe placeholder methods on `SQLiteStore` in `server/store/sqlite.go` that return `ErrNotImplemented` for new Phase 2 operations; concrete SQL behavior is deferred to M2.
+  - Added model validation tests in `server/models/phase2_test.go`.
+  - Validation: `cd server && go test ./...` passes.
 
 ## Key decisions
 - Keep scope strictly bounded to Phase 2 endpoints and upload/static serving requirements.
@@ -67,9 +82,10 @@ Not found (noted once): `ARCHITECTURE.md`, `docs/PLANS.md`.
 - Keep message pagination cursor based on message ID (`before`) and enforce a bounded `limit` with default 20.
 - Keep file serving rooted in configurable `UPLOAD_DIR` with path-safe handling to prevent traversal.
 - Preserve existing project conventions for JSON responses and error handling unless Phase 2 requires a new shape.
+- Establish explicit Phase 2 request/response DTOs up front so API handlers and store methods can share one canonical contract.
+- Encode ownership/participant authorization at the store boundary using actor-scoped method signatures and `store.ErrForbidden`.
 
 ## Remaining issues / open questions
-- Confirm final response envelope shapes for conversation list/detail and message list where `SPEC.md` defines behavior but not strict JSON schema details.
 - Confirm exact multipart field names for attachment upload in `POST /api/conversations/:id/messages` and `POST /api/upload` (to be standardized and tested during implementation).
 - Decide whether upload MIME/type validation should be permissive (any file under 20 MB) or restricted to a known allowlist for clearer behavior.
 

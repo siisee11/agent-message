@@ -97,6 +97,17 @@ var sqliteMigrations = []migration{
 			CREATE INDEX idx_sessions_user_id ON sessions(user_id);
 		`,
 	},
+	{
+		version: 7,
+		name:    "create_phase2_indexes",
+		sql: `
+			CREATE UNIQUE INDEX idx_conversations_participants_unique ON conversations(participant_a, participant_b);
+			CREATE INDEX idx_conversations_participant_a_created_at ON conversations(participant_a, created_at);
+			CREATE INDEX idx_conversations_participant_b_created_at ON conversations(participant_b, created_at);
+			CREATE INDEX idx_messages_conversation_id_id ON messages(conversation_id, id);
+			CREATE INDEX idx_messages_sender_id ON messages(sender_id);
+		`,
+	},
 }
 
 func (s *SQLiteStore) migrate(ctx context.Context) error {

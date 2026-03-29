@@ -33,7 +33,7 @@ Not found (noted once): `ARCHITECTURE.md`, `docs/PLANS.md`.
   - Add model/request DTOs needed for user search, conversation summaries/details, message pagination, message create/update/soft-delete, and upload response shape.
   - Extend `store.Store` interface and `NoopStore` with Phase 2 operations and ownership/participant checks.
 
-- [ ] M2. Implement SQLite data access for Phase 2 operations (status: not started)
+- [x] M2. Implement SQLite data access for Phase 2 operations (status: completed)
   - Add SQL queries and methods for user search, get current user profile by auth context ID, get-or-create DM conversation, list user conversations, fetch conversation details with participant validation, list messages with cursor pagination, create message, edit own message, and soft-delete own message.
   - Add/adjust indexes or migration updates only if required for Phase 2 query correctness/performance.
 

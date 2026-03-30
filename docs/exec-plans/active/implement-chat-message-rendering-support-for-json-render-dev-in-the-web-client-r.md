@@ -43,7 +43,7 @@ Referenced but missing (noted once):
 - [x] M2. Introduce explicit message-kind protocol/types and parsing helpers for deterministic `text` vs `json_render` handling with backward-compatible text defaults (status: completed)
 - [x] M3. Implement DM bubble render branching in `DmConversationPage.tsx` with deleted-message precedence, text bubble parity, and minimal read-only json-render registry rendering (status: completed)
 - [x] M4. Update editability and preview behavior: disable edit affordances/flows for `json_render` messages, keep delete allowed, and add compact conversation preview fallback in `ChatShellPage.tsx` (status: completed)
-- [ ] M5. Add/update tests for message-kind parsing, render branch selection, preview fallback, and editability constraints; run web verification commands and fix regressions (status: not started)
+- [x] M5. Add/update tests for message-kind parsing, render branch selection, preview fallback, and editability constraints; run web verification commands and fix regressions (status: completed)
 
 ## Current progress
 - Ran `./ralph-loop init --base-branch main --work-branch ralph-react19-json-render-chat --output json`.
@@ -110,6 +110,29 @@ Referenced but missing (noted once):
     - Removed edit action from context menu for `json_render` messages.
     - Added defensive guard rails in `beginEdit` and submit-time edit flow to block stale/forced edits of `json_render` messages.
   - Verified build + typecheck pass with `cd web && npm run build`.
+- Completed M5 (tests + verification):
+  - Added web test runner support:
+    - Added `vitest` to `web/devDependencies`.
+    - Added `test` script in `web/package.json`: `vitest run`.
+  - Added protocol parsing tests in:
+    - `web/src/api/messageProtocol.test.ts`
+    - Covers:
+      - deterministic kind resolution (`kind`/`message_kind`, unknown fallback to `text`)
+      - no inference from JSON-looking text content
+      - json-render parsing branch and spec-field precedence
+  - Added render/preview/editability tests in:
+    - `web/src/messages/messagePresentation.test.ts`
+    - Covers:
+      - deleted precedence for preview/render branching
+      - compact preview fallback (`[json-render]`) including attachment combos
+      - json-render read-only editability (`canEdit=false`) with delete still allowed
+      - explicit render branch outputs for `text` and `json_render`
+  - Refactored shared presentation logic into:
+    - `web/src/messages/messagePresentation.ts`
+    - Wired both pages (`ChatShellPage.tsx`, `DmConversationPage.tsx`) to this shared logic so tested behavior matches runtime behavior.
+  - Verification commands run:
+    - `cd web && npm test` (12 tests passed)
+    - `cd web && npm run build` (tsc + vite build passed)
 
 ## Key decisions
 - Use an explicit message-kind protocol field for deterministic rendering; do not parse arbitrary text as JSON specs.
@@ -121,10 +144,12 @@ Referenced but missing (noted once):
 - Normalize protocol from either `kind` or `message_kind` while keeping `text` as the fallback for absent or unexpected values.
 - Use `@json-render/react` `Renderer` with a minimal component registry and no action handlers for read-only json-render message rendering.
 - Use `[json-render]` as the compact preview fallback label in conversation list entries for `json_render` messages.
+- Centralize preview/editability/render-variant decisions in shared helpers to keep page behavior and tests aligned.
 
 ## Remaining issues / open questions
 - React 19 install emitted a transient peer-resolution warning from stale `18.x` metadata during dependency resolution, but final tree is resolved to React/ReactDOM 19.x and build is green.
 - Json-render payload shape is still accepted as `unknown` at the API edge; runtime rendering currently expects flat json-render spec shape (`root` + `elements`) and falls back to a compact placeholder when invalid.
+- No remaining blockers for the scoped task; all milestones completed with passing web tests/build.
 
 ## Links to related documents
 - `AGENTS.md`

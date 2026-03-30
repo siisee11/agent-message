@@ -1,14 +1,13 @@
 import { useMemo, useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { NavLink, useNavigate } from 'react-router-dom'
-import { ApiError, parseMessageContent, type ConversationSummary, type Message, type UserProfile } from '../api'
+import { ApiError, type ConversationSummary, type Message, type UserProfile } from '../api'
 import { apiClient } from '../api/runtime'
 import { useAuth } from '../auth'
+import { summarizeLastMessagePreview } from '../messages/messagePresentation'
 import { useRealtime } from '../realtime'
 import styles from './ChatShellPage.module.css'
 
-const MESSAGE_PREVIEW_EMPTY = '대화를 시작해 보세요'
-const MESSAGE_PREVIEW_JSON_RENDER = '[json-render]'
 const DATE_FORMATTER = new Intl.DateTimeFormat(undefined, {
   month: 'short',
   day: 'numeric',
@@ -24,46 +23,6 @@ function resolveErrorMessage(error: unknown, fallback: string): string {
     return error.message
   }
   return fallback
-}
-
-function summarizeLastMessage(lastMessage?: Message): string {
-  if (!lastMessage) {
-    return MESSAGE_PREVIEW_EMPTY
-  }
-
-  if (lastMessage.deleted) {
-    return '삭제된 메시지입니다'
-  }
-
-  const parsedContent = parseMessageContent(lastMessage)
-  const content = parsedContent.textContent?.trim()
-  const attachmentLabel =
-    lastMessage.attachment_type === 'image'
-      ? '[이미지]'
-      : lastMessage.attachment_type === 'file'
-        ? '[파일]'
-        : undefined
-
-  if (parsedContent.kind === 'json_render') {
-    if (attachmentLabel) {
-      return `${attachmentLabel} ${MESSAGE_PREVIEW_JSON_RENDER}`
-    }
-    return MESSAGE_PREVIEW_JSON_RENDER
-  }
-
-  if (attachmentLabel && content) {
-    return `${attachmentLabel} ${content}`
-  }
-
-  if (content) {
-    return content
-  }
-
-  if (attachmentLabel) {
-    return attachmentLabel
-  }
-
-  return MESSAGE_PREVIEW_EMPTY
 }
 
 function formatLastMessageTime(lastMessage?: Message): string {
@@ -164,7 +123,7 @@ export function ChatShellPage() {
   }
 
   function renderConversationItem(summary: ConversationSummary) {
-    const preview = summarizeLastMessage(summary.last_message)
+    const preview = summarizeLastMessagePreview(summary.last_message)
     const timestamp = formatLastMessageTime(summary.last_message)
     const conversationId = summary.conversation.id
 

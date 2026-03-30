@@ -14,11 +14,16 @@ import {
   type MessageDetails,
   type Reaction,
   type UserProfile,
-  parseMessageContent,
 } from '../api'
 import { apiClient } from '../api/runtime'
 import { useAuth } from '../auth'
 import { MessageJsonRender } from '../components/MessageJsonRender'
+import {
+  canDeleteMessageForUser,
+  canEditMessageForUser,
+  MESSAGE_PREVIEW_DELETED,
+  resolveMessageRenderContent,
+} from '../messages/messagePresentation'
 import { useRealtime } from '../realtime'
 import {
   fallbackSender,
@@ -56,17 +61,6 @@ interface ReactionGroup {
   emoji: string
   count: number
   reactedByMe: boolean
-}
-
-function canDeleteMessage(message: Message, currentUserId: string | undefined): boolean {
-  return message.sender_id === currentUserId && !message.deleted
-}
-
-function canEditMessage(message: Message, currentUserId: string | undefined): boolean {
-  if (!canDeleteMessage(message, currentUserId)) {
-    return false
-  }
-  return parseMessageContent(message).kind === 'text'
 }
 
 function resolveErrorMessage(error: unknown, fallback: string): string {
@@ -387,7 +381,7 @@ export function DmConversationPage() {
   }
 
   function handleOpenContextMenu(event: React.MouseEvent, details: MessageDetails): void {
-    if (!canDeleteMessage(details.message, user?.id)) {
+    if (!canDeleteMessageForUser(details.message, user?.id)) {
       return
     }
     event.preventDefault()
@@ -395,7 +389,7 @@ export function DmConversationPage() {
   }
 
   function handleToggleActionMenu(button: HTMLButtonElement, details: MessageDetails): void {
-    if (!canDeleteMessage(details.message, user?.id)) {
+    if (!canDeleteMessageForUser(details.message, user?.id)) {
       return
     }
     if (actionMenu?.messageId === details.message.id) {
@@ -407,7 +401,7 @@ export function DmConversationPage() {
   }
 
   function beginEdit(details: MessageDetails): void {
-    if (!canEditMessage(details.message, user?.id)) {
+    if (!canEditMessageForUser(details.message, user?.id)) {
       setComposerError('json-render 메시지는 수정할 수 없습니다.')
       setActionMenu(null)
       return
@@ -450,7 +444,7 @@ export function DmConversationPage() {
     const trimmedContent = composerText.trim()
     if (editingTarget) {
       const editingDetails = messagesAscending.find((details) => details.message.id === editingTarget.messageId)
-      if (!editingDetails || !canEditMessage(editingDetails.message, user?.id)) {
+      if (!editingDetails || !canEditMessageForUser(editingDetails.message, user?.id)) {
         setEditingTarget(null)
         setComposerText('')
         setComposerError('json-render 메시지는 수정할 수 없습니다.')
@@ -569,7 +563,7 @@ export function DmConversationPage() {
             {messagesAscending.length > 0 ? (
               <ol className={styles.timelineList}>
                 {messagesAscending.map((details: MessageDetails) => {
-                  const parsedContent = parseMessageContent(details.message)
+                  const renderContent = resolveMessageRenderContent(details.message)
                   const reactionGroups = groupReactionsByEmoji(messageReactions[details.message.id], user?.id)
                   return (
                     <li
@@ -587,7 +581,7 @@ export function DmConversationPage() {
                             {!details.message.deleted && details.message.edited ? (
                               <span className={styles.editedBadge}>[수정됨]</span>
                             ) : null}
-                            {canDeleteMessage(details.message, user?.id) ? (
+                            {canDeleteMessageForUser(details.message, user?.id) ? (
                               <button
                                 aria-label="Message actions"
                                 className={styles.messageActionsTrigger}
@@ -602,18 +596,16 @@ export function DmConversationPage() {
                           </span>
                         </div>
 
-                        {details.message.deleted ? (
-                          <p className={`${styles.messageText} ${styles.messageTextDeleted}`}>삭제된 메시지입니다</p>
+                        {renderContent.variant === 'deleted' ? (
+                          <p className={`${styles.messageText} ${styles.messageTextDeleted}`}>{MESSAGE_PREVIEW_DELETED}</p>
                         ) : null}
 
-                        {!details.message.deleted &&
-                        parsedContent.kind === 'text' &&
-                        parsedContent.textContent?.trim() ? (
-                          <p className={styles.messageText}>{parsedContent.textContent.trim()}</p>
+                        {renderContent.variant === 'text' && renderContent.textContent ? (
+                          <p className={styles.messageText}>{renderContent.textContent}</p>
                         ) : null}
 
-                        {!details.message.deleted && parsedContent.kind === 'json_render' ? (
-                          <MessageJsonRender spec={parsedContent.jsonRenderSpec} />
+                        {renderContent.variant === 'json_render' ? (
+                          <MessageJsonRender spec={renderContent.jsonRenderSpec} />
                         ) : null}
 
                         {!details.message.deleted &&
@@ -775,7 +767,7 @@ export function DmConversationPage() {
           ref={actionMenuRef}
           style={{ left: `${actionMenu.x}px`, top: `${actionMenu.y}px` }}
         >
-          {canEditMessage(actionMenuMessage.message, user?.id) ? (
+          {canEditMessageForUser(actionMenuMessage.message, user?.id) ? (
             <button
               className={styles.contextMenuAction}
               disabled={disableComposerActions}

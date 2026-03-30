@@ -61,7 +61,7 @@ Referenced but missing (noted once):
   - Provide `docker-compose` configuration with server and PostgreSQL services.
   - Wire env/config defaults for local compose startup and storage.
 
-- [ ] M6. Update quickstart documentation and run final checks (status: not started)
+- [x] M6. Update quickstart documentation and run final checks (status: completed)
   - Update `README.md` quickstart covering server, web, and CLI workflows (including DB driver selection).
   - Run relevant tests/build checks and fix regressions within Phase 7 scope.
   - Finalize with small logical milestone commits only.
@@ -149,6 +149,20 @@ Referenced but missing (noted once):
   - Validation runs:
     - `docker compose config` (pass).
     - `cd server && go test ./...` (pass).
+- Completed M6 (README quickstart + final checks):
+  - Added top-level quickstart documentation:
+    - `README.md`
+  - README covers:
+    - Server startup with SQLite defaults.
+    - Postgres-backed startup via Compose and `DB_DRIVER=postgres`.
+    - Web quickstart (`npm ci`, `npm run dev`, `VITE_API_BASE_URL` override).
+    - CLI quickstart and common commands (`register/login/open/send/read/edit/delete/react/unreact/watch`).
+    - Phase 7 validation constraints summary and check commands.
+  - Final checks executed:
+    - `cd server && go test ./...` (pass)
+    - `cd cli && go test ./...` (pass)
+    - `cd web && npm ci && npm run build` (pass)
+    - `docker compose config` (pass)
 
 ## Key decisions
 - Keep scope strictly bounded to Phase 7 tasks from `PLAN.md`.
@@ -167,10 +181,11 @@ Referenced but missing (noted once):
   - Upload file type enforcement is centralized in `saveUploadedFile`, so `/api/upload` and multipart message attachment flows stay aligned.
 - For M4 testing strategy, keep integration tests in `server/` package and run against `httptest.NewServer` over HTTP to exercise router middleware/handlers/store together without introducing external service dependencies.
 - For M5 deployment scaffolding, use a two-service compose stack (app + db) with healthcheck-gated startup and persistent volumes to approximate a local production baseline without adding orchestration complexity.
+- For M6 finalization, keep root documentation focused on runnable quickstart commands and verified build/test commands for each component.
 
 ## Remaining issues / open questions
-- Remaining Phase 7 milestones pending: M6.
-- Confirm exact repository location/creation path for the top-level `README.md` quickstart update if a root `README.md` is absent in current tree state.
+- Remaining Phase 7 milestones pending: none.
+- No remaining open issues within Phase 7 scope.
 
 ## Links to related documents
 - `AGENTS.md`

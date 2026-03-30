@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
+import { normalizeMessageProtocol } from '../api'
 import type { Message, Reaction } from '../api'
 
 const DEFAULT_SSE_URL = resolveDefaultSSEURL()
@@ -107,9 +108,9 @@ function parseServerEvent(rawData: string): ServerEvent | null {
 
   switch (type) {
     case 'message.new':
-      return { type, data: data as Message }
+      return { type, data: normalizeMessageProtocol(data as Message) }
     case 'message.edited':
-      return { type, data: data as Message }
+      return { type, data: normalizeMessageProtocol(data as Message) }
     case 'message.deleted':
       return { type, data: data as { id: string } }
     case 'reaction.added':

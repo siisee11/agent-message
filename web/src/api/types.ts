@@ -1,6 +1,8 @@
 export type ISODateString = string
 
 export type AttachmentType = 'image' | 'file'
+export type MessageKind = 'text' | 'json_render'
+export type JsonRenderSpec = unknown
 
 export interface UserProfile {
   id: string
@@ -35,6 +37,10 @@ export interface Message {
   conversation_id: string
   sender_id: string
   content?: string
+  kind?: MessageKind | null
+  message_kind?: MessageKind | null
+  json_render?: JsonRenderSpec | null
+  json_render_spec?: JsonRenderSpec | null
   attachment_url?: string
   attachment_type?: AttachmentType
   edited: boolean
@@ -124,4 +130,3 @@ export type SendMessageInput =
   | SendMessageTextInput
   | SendMessageFileInput
   | SendMessageAttachmentURLInput
-

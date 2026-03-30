@@ -40,7 +40,7 @@ Referenced but missing (noted once):
 
 ## Milestones
 - [x] M1. Upgrade `web/` to React 19 and align related dependencies/tooling until build and typecheck are green (status: completed)
-- [ ] M2. Introduce explicit message-kind protocol/types and parsing helpers for deterministic `text` vs `json_render` handling with backward-compatible text defaults (status: not started)
+- [x] M2. Introduce explicit message-kind protocol/types and parsing helpers for deterministic `text` vs `json_render` handling with backward-compatible text defaults (status: completed)
 - [ ] M3. Implement DM bubble render branching in `DmConversationPage.tsx` with deleted-message precedence, text bubble parity, and minimal read-only json-render registry rendering (status: not started)
 - [ ] M4. Update editability and preview behavior: disable edit affordances/flows for `json_render` messages, keep delete allowed, and add compact conversation preview fallback in `ChatShellPage.tsx` (status: not started)
 - [ ] M5. Add/update tests for message-kind parsing, render branch selection, preview fallback, and editability constraints; run web verification commands and fix regressions (status: not started)
@@ -67,6 +67,21 @@ Referenced but missing (noted once):
     - `web/src/pages/DmConversationPage.tsx`
     - `web/src/routes/ProtectedRoute.tsx`
   - Verified build + typecheck pass with `cd web && npm run build`.
+- Completed M2 (explicit message protocol/types and parsing helpers):
+  - Added message protocol types in `web/src/api/types.ts`:
+    - `MessageKind = 'text' | 'json_render'`
+    - `JsonRenderSpec = unknown`
+    - optional protocol fields on `Message`: `kind`, `message_kind`, `json_render`, `json_render_spec`
+  - Added `web/src/api/messageProtocol.ts` with deterministic helpers:
+    - `resolveMessageKind` and `isJsonRenderMessage` (no JSON-text inference)
+    - `resolveJsonRenderSpec`
+    - `normalizeMessageProtocol`, `normalizeMessageDetailsProtocol`, `normalizeConversationSummaryProtocol`
+    - `parseMessageContent` for future render branching
+  - Integrated normalization in data ingestion paths:
+    - API client normalizes `listConversations`, `listMessages`, `sendMessage`, `editMessage`, `deleteMessage`
+    - SSE parsing normalizes `message.new` and `message.edited` payloads
+  - Preserved backward compatibility by defaulting missing/unknown kinds to `text`.
+  - Verified build + typecheck pass with `cd web && npm run build`.
 
 ## Key decisions
 - Use an explicit message-kind protocol field for deterministic rendering; do not parse arbitrary text as JSON specs.
@@ -75,11 +90,12 @@ Referenced but missing (noted once):
 - Keep json-render handling intentionally minimal and read-only for this iteration.
 - Preserve existing attachment and reaction behavior without protocol drift.
 - For React 19 type compatibility, prefer inferred component return types over global `JSX.Element` annotations.
+- Normalize protocol from either `kind` or `message_kind` while keeping `text` as the fallback for absent or unexpected values.
 
 ## Remaining issues / open questions
-- Confirm exact server payload/source field name for message kind if current API types differ from planned `text` / `json_render` naming.
 - Confirm the compact preview label string for json-render messages (for example `[json-render]`) before final polish if product wording differs.
 - React 19 install emitted a transient peer-resolution warning from stale `18.x` metadata during dependency resolution, but final tree is resolved to React/ReactDOM 19.x and build is green.
+- Json-render payload shape remains intentionally unopinionated (`unknown`) until M3 defines the minimal read-only registry contract.
 
 ## Links to related documents
 - `AGENTS.md`

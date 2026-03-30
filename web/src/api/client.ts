@@ -18,6 +18,11 @@ import type {
   UploadResponse,
   UserProfile,
 } from './types'
+import {
+  normalizeConversationSummaryProtocol,
+  normalizeMessageDetailsProtocol,
+  normalizeMessageProtocol,
+} from './messageProtocol'
 
 interface ApiErrorBody {
   error?: string
@@ -174,13 +179,14 @@ export class ApiClient {
   }
 
   async listConversations(query: ListConversationsQuery = {}): Promise<ConversationSummary[]> {
-    return this.requestJSON<ConversationSummary[]>({
+    const summaries = await this.requestJSON<ConversationSummary[]>({
       method: 'GET',
       path: '/api/conversations',
       query: {
         limit: query.limit,
       },
     })
+    return summaries.map(normalizeConversationSummaryProtocol)
   }
 
   async startConversation(input: StartConversationRequest): Promise<ConversationDetails> {
@@ -200,7 +206,7 @@ export class ApiClient {
   }
 
   async listMessages(conversationId: string, query: ListMessagesQuery = {}): Promise<MessageDetails[]> {
-    return this.requestJSON<MessageDetails[]>({
+    const detailsList = await this.requestJSON<MessageDetails[]>({
       method: 'GET',
       path: `/api/conversations/${encodeURIComponent(conversationId)}/messages`,
       query: {
@@ -208,6 +214,7 @@ export class ApiClient {
         limit: query.limit,
       },
     })
+    return detailsList.map(normalizeMessageDetailsProtocol)
   }
 
   async sendMessage(conversationId: string, payload: SendMessageInput): Promise<Message> {
@@ -223,7 +230,7 @@ export class ApiClient {
         method: 'POST',
         path,
         body: formData,
-      })
+      }).then(normalizeMessageProtocol)
     }
 
     if (isSendMessageAttachmentURLInput(payload)) {
@@ -239,7 +246,7 @@ export class ApiClient {
         method: 'POST',
         path,
         body: formData,
-      })
+      }).then(normalizeMessageProtocol)
     }
 
     return this.requestJSON<Message>({
@@ -247,7 +254,7 @@ export class ApiClient {
       path,
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ content: payload.content }),
-    })
+    }).then(normalizeMessageProtocol)
   }
 
   async editMessage(messageId: string, input: EditMessageRequest): Promise<Message> {
@@ -256,14 +263,14 @@ export class ApiClient {
       path: `/api/messages/${encodeURIComponent(messageId)}`,
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(input),
-    })
+    }).then(normalizeMessageProtocol)
   }
 
   async deleteMessage(messageId: string): Promise<Message> {
     return this.requestJSON<Message>({
       method: 'DELETE',
       path: `/api/messages/${encodeURIComponent(messageId)}`,
-    })
+    }).then(normalizeMessageProtocol)
   }
 
   async toggleReaction(messageId: string, input: ToggleReactionRequest): Promise<ToggleReactionResult> {

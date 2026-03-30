@@ -1,12 +1,15 @@
 package api
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
 	"log"
+	"net"
 	"net/http"
 	"strings"
+	"syscall"
 
 	"agent-messenger/server/realtime"
 	"agent-messenger/server/store"
@@ -74,7 +77,6 @@ func (h *eventStreamHandler) handleEventStream(w http.ResponseWriter, r *http.Re
 	}
 	defer func() {
 		h.hub.Unregister(client)
-		log.Printf("sse disconnected user=%s remote=%s", user.ID, r.RemoteAddr)
 	}()
 
 	w.Header().Set("Content-Type", "text/event-stream")
@@ -84,20 +86,27 @@ func (h *eventStreamHandler) handleEventStream(w http.ResponseWriter, r *http.Re
 	w.WriteHeader(http.StatusOK)
 	flusher.Flush()
 
-	log.Printf("sse connected user=%s conversations=%d remote=%s", user.ID, len(conversationIDs), r.RemoteAddr)
-
 	for {
 		select {
 		case <-r.Context().Done():
 			return
 		case event := <-client.Send:
 			if err := writeSSEEvent(w, event); err != nil {
-				log.Printf("sse write failed user=%s event=%s: %v", user.ID, event.Type, err)
+				if !isExpectedSSEDisconnect(err) {
+					log.Printf("sse write failed user=%s event=%s: %v", user.ID, event.Type, err)
+				}
 				return
 			}
 			flusher.Flush()
 		}
 	}
+}
+
+func isExpectedSSEDisconnect(err error) bool {
+	return errors.Is(err, context.Canceled) ||
+		errors.Is(err, net.ErrClosed) ||
+		errors.Is(err, syscall.EPIPE) ||
+		errors.Is(err, syscall.ECONNRESET)
 }
 
 func writeSSEEvent(w http.ResponseWriter, event realtime.Event) error {

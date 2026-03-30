@@ -68,13 +68,15 @@ npm ci
 npm run dev
 ```
 
-By default, the web client uses same-origin API calls (`/api/...`).
+In local dev, Vite proxies `/api/...` and `/static/uploads/...` to `http://localhost:8080`, so you usually do not need `VITE_API_BASE_URL`.
 If your API is on a different origin, set `VITE_API_BASE_URL`:
 
 ```bash
 cd web
 VITE_API_BASE_URL=http://localhost:8080 npm run dev
 ```
+
+When `VITE_API_BASE_URL` is set, requests become cross-origin and the server must allow that origin via `CORS_ALLOWED_ORIGINS`.
 
 Build check:
 

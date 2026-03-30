@@ -53,7 +53,7 @@ Referenced but missing (noted once):
   - Enforce PIN 4-6 numeric-digit validation consistently.
   - Tighten upload validation for size/type/field handling per Phase 7 constraints.
 
-- [ ] M4. Add server-stack end-to-end integration tests with `httptest` (status: not started)
+- [x] M4. Add server-stack end-to-end integration tests with `httptest` (status: completed)
   - Add integration test coverage for critical auth/conversation/message/reaction/upload flows against the router/server stack.
   - Cover both success and key validation/error paths for newly tightened behavior.
 
@@ -109,6 +109,23 @@ Referenced but missing (noted once):
     - Model validation tests: `server/models/auth_test.go`, `server/models/phase2_test.go`.
     - API validation tests: `server/api/auth_test.go`, `server/api/users_conversations_test.go`, `server/api/upload_test.go`, `server/api/messages_test.go`.
   - Validation run: `cd server && go test ./...` (pass).
+- Completed M4 (server-stack E2E integration tests):
+  - Added a new integration suite using `httptest.NewServer` with the real API router + SQLite store + WS hub stack:
+    - `server/e2e_integration_test.go`.
+  - Added end-to-end happy-path coverage for:
+    - register/login token flow,
+    - start conversation,
+    - send message,
+    - toggle reaction,
+    - list messages,
+    - upload + static file retrieval.
+  - Added end-to-end validation/error-path coverage for tightened Phase 7 behavior:
+    - invalid username on register,
+    - invalid PIN on register,
+    - invalid username query for `/api/users`,
+    - unsupported file type on `/api/upload`,
+    - unsupported multipart attachment type on message send.
+  - Validation run: `cd server && go test ./...` (pass).
 
 ## Key decisions
 - Keep scope strictly bounded to Phase 7 tasks from `PLAN.md`.
@@ -125,9 +142,10 @@ Referenced but missing (noted once):
   - Username identity fields (`register`, `login`, `start conversation`) use strict username validation (`3-32`, allowed charset).
   - Username prefix search query uses a relaxed variant (no minimum length, same charset, same maximum length).
   - Upload file type enforcement is centralized in `saveUploadedFile`, so `/api/upload` and multipart message attachment flows stay aligned.
+- For M4 testing strategy, keep integration tests in `server/` package and run against `httptest.NewServer` over HTTP to exercise router middleware/handlers/store together without introducing external service dependencies.
 
 ## Remaining issues / open questions
-- Remaining Phase 7 milestones pending: M4-M6.
+- Remaining Phase 7 milestones pending: M5-M6.
 - Confirm exact repository location/creation path for the top-level `README.md` quickstart update if a root `README.md` is absent in current tree state.
 
 ## Links to related documents

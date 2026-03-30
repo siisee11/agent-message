@@ -33,7 +33,7 @@ Referenced but missing (noted once):
 - `docs/PLANS.md`
 
 ## Milestones
-- [ ] M1. Scaffold `cli/` module, root command tree, HTTP client layer, and config store primitives (status: not started)
+- [x] M1. Scaffold `cli/` module, root command tree, HTTP client layer, and config store primitives (status: completed)
   - Initialize `cli/go.mod` and command entrypoint.
   - Add shared REST client wrappers for existing server endpoints used by Phase 6.
   - Implement config load/save for `~/.msgr/config` and safe defaults.
@@ -72,17 +72,25 @@ Referenced but missing (noted once):
   - `base_branch=main`
   - `worktree_id=phase-6-cli-client-121b0b8b`
 - Reviewed available planning/spec docs listed above.
-- Phase 6 implementation work has not started yet; all milestones are currently not started.
+- Completed M1 scaffold under `cli/`:
+  - Added `cli/go.mod`, `main.go`, and root command wiring for all Phase 6 commands.
+  - Added `internal/api` REST client wrappers for auth, users, conversations, messages, reactions, and websocket URL generation.
+  - Added `internal/config` store with default path `~/.msgr/config`, default `server_url`, token/read-session state, normalize/load/save behavior, and unit tests.
+- Added a local `github.com/spf13/cobra` compatibility module via `replace` at `cli/third_party/cobra` because the sandbox cannot reach `proxy.golang.org`; this keeps command wiring API-compatible for Phase 6 while allowing offline build/test.
+- Validation run for this milestone:
+  - `cd cli && GOCACHE=/tmp/go-cache GOMODCACHE=/tmp/go-mod go test ./...`
+  - `cd cli && GOCACHE=/tmp/go-cache GOMODCACHE=/tmp/go-mod go build ./...`
 
 ## Key decisions
 - Keep implementation bounded to Phase 6 CLI deliverable and existing server/API/WS contracts.
 - Use milestone-sized commits (one or a few tightly related changes per milestone) to preserve clean history and rollback safety.
 - Persist read-session index mapping locally to satisfy index-based commands without introducing server changes.
 - Prefer deterministic, parseable CLI output where required by SPEC while keeping human-readable defaults for core commands.
+- Use a local Cobra-compatible shim (`replace github.com/spf13/cobra => ./third_party/cobra`) due offline dependency constraints in this environment.
 
 ## Remaining issues / open questions
-- Confirm exact shape of message payloads/events used by server endpoints during implementation to ensure strict contract compatibility.
-- Confirm whether existing repository has CLI scaffolding/tests to extend vs. creating new `cli/` tree from scratch.
+- M2+ command behavior is still stubbed and must be implemented sequentially.
+- Decide whether to keep the local Cobra shim or switch to upstream `github.com/spf13/cobra` when networked module fetch is available.
 
 ## Links to related documents
 - `AGENTS.md`

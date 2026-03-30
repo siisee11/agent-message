@@ -51,7 +51,7 @@ Referenced but missing (noted once):
   - Render inline image attachments and downloadable non-image file links.
   - Ensure own-vs-other bubble styling and deleted/edit state precedence are correct.
 
-- [ ] M4. Implement composer and own-message actions (status: not started)
+- [x] M4. Implement composer and own-message actions (status: completed)
   - Build message input with text send + file/image attach flow (upload + send message payload integration).
   - Implement own-message edit mode (prefill, submit patch, cancel).
   - Implement own-message delete action with UI interaction (context menu/right-click equivalent on web).
@@ -113,7 +113,27 @@ Referenced but missing (noted once):
     - when deleted, only deleted placeholder is shown
     - edited badge and attachment/content rendering are suppressed for deleted messages
   - Verified web build passes after M3 changes: `npm run build`.
-- Milestones M4-M6 remain not started.
+- Milestone M4 is complete:
+  - Added composer UI at the bottom of the DM timeline:
+    - text input + submit
+    - file/image attach input
+    - selected attachment chip with remove control
+  - Implemented upload + send integration for attachments:
+    - upload via `apiClient.uploadFile(...)`
+    - send message via `apiClient.sendMessage(...)` with uploaded URL and inferred attachment type (`image` or `file`)
+  - Added own-message actions with context-menu style interaction:
+    - right-click on own, non-deleted bubble opens actions menu
+    - overflow trigger button (`⋯`) opens same menu
+    - actions: Edit, Delete
+  - Implemented edit mode lifecycle:
+    - action menu “Edit” pre-fills composer text
+    - submit performs `PATCH /api/messages/:id`
+    - cancel exits edit mode without mutation
+  - Implemented delete action:
+    - action menu “Delete” performs `DELETE /api/messages/:id`
+  - Added local message-cache updates for send/edit/delete and conversation-list invalidation for preview freshness.
+  - Verified web build passes after M4 changes: `npm run build`.
+- Milestones M5-M6 remain not started.
 
 ## Key decisions
 - Keep implementation strictly bounded to Phase 5 UI and required integration wiring.
@@ -124,10 +144,12 @@ Referenced but missing (noted once):
 - Use a deterministic pagination cursor strategy based on server ordering (messages returned newest-first; next cursor is oldest loaded id).
 - Keep message rendering in M2 intentionally minimal (timeline correctness first), deferring full bubble semantics to M3.
 - For M3 rendering precedence, treat `deleted` as dominant over `edited` and attachment/content display to match soft-delete UX expectations.
+- For M4 message actions, use a lightweight custom context menu (right-click + overflow button) instead of introducing a new menu dependency.
+- For attachment sends, prefer explicit upload-then-send URL flow to align with Phase 5 requirement wording and existing server APIs.
 
 ## Remaining issues / open questions
-- M4 must add composer/send/edit/delete interactions on top of M3 bubble rendering.
-- M5+ still need websocket-driven live reconciliation and reaction toggle UX integration.
+- M5 must integrate websocket-driven live cache reconciliation and reaction toggle UX on top of current paginated/composer behavior.
+- M6 remains final validation and end-to-end Phase 5 verification.
 
 ## Links to related documents
 - `AGENTS.md`

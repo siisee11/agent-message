@@ -43,7 +43,7 @@
   box-shadow: 0 10px 22px -22px #173d86;
   padding: 0.8rem;
   display: grid;
-  grid-template-rows: auto 1fr;
+  grid-template-rows: auto 1fr auto;
   gap: 0.6rem;
 }
 
@@ -141,6 +141,21 @@
   font-size: 0.75rem;
 }
 
+.messageActionsTrigger {
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: #345990;
+  font-size: 1rem;
+  line-height: 1;
+  padding: 0.08rem 0.3rem;
+  cursor: pointer;
+}
+
+.messageActionsTrigger:hover {
+  background: #dbe8ff;
+}
+
 .messageText {
   margin: 0.4rem 0 0;
   font-size: 0.88rem;
@@ -184,6 +199,160 @@
 
 .fileAttachmentLink:hover {
   background: #eef4ff;
+}
+
+.composerForm {
+  border: 1px solid #dce6fb;
+  border-radius: 10px;
+  background: #f8fbff;
+  padding: 0.7rem;
+  display: grid;
+  gap: 0.55rem;
+}
+
+.editingBanner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.7rem;
+  font-size: 0.83rem;
+  color: #23457f;
+}
+
+.editingCancelButton {
+  border: 1px solid #b9ccec;
+  border-radius: 7px;
+  background: #ffffff;
+  color: #2a487f;
+  font-size: 0.78rem;
+  padding: 0.25rem 0.45rem;
+  cursor: pointer;
+}
+
+.composerInput {
+  width: 100%;
+  border: 1px solid #c2d2f4;
+  border-radius: 8px;
+  padding: 0.55rem 0.62rem;
+  background: #ffffff;
+  color: #122447;
+  resize: vertical;
+  min-height: 64px;
+}
+
+.composerInput:focus {
+  outline: 2px solid #9ab3ef;
+  border-color: #5d80db;
+}
+
+.composerControls {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.6rem;
+  flex-wrap: wrap;
+}
+
+.attachLabel {
+  border: 1px solid #beceee;
+  border-radius: 8px;
+  background: #f6f9ff;
+  color: #1f3f78;
+  font-size: 0.84rem;
+  font-weight: 600;
+  padding: 0.33rem 0.56rem;
+  cursor: pointer;
+}
+
+.attachLabelDisabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.attachInput {
+  display: none;
+}
+
+.attachmentChip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  border: 1px solid #c8d9f7;
+  border-radius: 999px;
+  background: #ffffff;
+  padding: 0.15rem 0.4rem 0.15rem 0.5rem;
+}
+
+.attachmentName {
+  font-size: 0.78rem;
+  color: #2b477b;
+  max-width: 220px;
+  text-overflow: ellipsis;
+  overflow: hidden;
+  white-space: nowrap;
+}
+
+.attachmentRemove {
+  border: 0;
+  border-radius: 999px;
+  background: #dce8ff;
+  color: #2f4f89;
+  font-size: 0.72rem;
+  padding: 0.16rem 0.36rem;
+  cursor: pointer;
+}
+
+.submitButton {
+  border: 0;
+  border-radius: 8px;
+  background: #2454d6;
+  color: #ffffff;
+  font-size: 0.86rem;
+  font-weight: 600;
+  padding: 0.42rem 0.72rem;
+  cursor: pointer;
+}
+
+.submitButton:disabled {
+  opacity: 0.62;
+  cursor: not-allowed;
+}
+
+.contextMenu {
+  position: fixed;
+  z-index: 20;
+  display: grid;
+  gap: 0.22rem;
+  min-width: 180px;
+  padding: 0.36rem;
+  border: 1px solid #c5d6f7;
+  border-radius: 10px;
+  background: #ffffff;
+  box-shadow: 0 18px 28px -18px #132f63;
+}
+
+.contextMenuAction {
+  border: 0;
+  border-radius: 7px;
+  text-align: left;
+  background: #f4f8ff;
+  color: #203d70;
+  padding: 0.43rem 0.52rem;
+  font-size: 0.84rem;
+  cursor: pointer;
+}
+
+.contextMenuAction:hover {
+  background: #eaf2ff;
+}
+
+.contextMenuActionDanger {
+  color: #8c1d33;
+  background: #fff4f6;
+}
+
+.contextMenuActionDanger:hover {
+  background: #ffe7ec;
 }
 
 .card {

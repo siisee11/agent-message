@@ -79,7 +79,7 @@ func (h *messagesHandler) handleMessageReactions(w http.ResponseWriter, r *http.
 
 	messageID, valid := messageReactionsPath(r.URL.Path)
 	if !valid {
-		http.NotFound(w, r)
+		writeError(w, http.StatusNotFound, "message not found")
 		return
 	}
 
@@ -136,7 +136,7 @@ func (h *messagesHandler) handleMessageReactionByEmoji(w http.ResponseWriter, r 
 
 	messageID, emoji, valid := messageReactionByEmojiPath(r.URL.Path)
 	if !valid {
-		http.NotFound(w, r)
+		writeError(w, http.StatusNotFound, "reaction not found")
 		return
 	}
 
@@ -170,7 +170,7 @@ func (h *messagesHandler) handleListMessages(w http.ResponseWriter, r *http.Requ
 
 	conversationID, valid := conversationMessagesPath(r.URL.Path)
 	if !valid {
-		http.NotFound(w, r)
+		writeError(w, http.StatusNotFound, "conversation not found")
 		return
 	}
 
@@ -218,7 +218,7 @@ func (h *messagesHandler) handleCreateMessage(w http.ResponseWriter, r *http.Req
 
 	conversationID, valid := conversationMessagesPath(r.URL.Path)
 	if !valid {
-		http.NotFound(w, r)
+		writeError(w, http.StatusNotFound, "conversation not found")
 		return
 	}
 
@@ -271,7 +271,7 @@ func (h *messagesHandler) handleEditMessage(w http.ResponseWriter, r *http.Reque
 
 	messageID, valid := messageIDFromPath(r.URL.Path)
 	if !valid {
-		http.NotFound(w, r)
+		writeError(w, http.StatusNotFound, "message not found")
 		return
 	}
 
@@ -316,7 +316,7 @@ func (h *messagesHandler) handleDeleteMessage(w http.ResponseWriter, r *http.Req
 
 	messageID, valid := messageIDFromPath(r.URL.Path)
 	if !valid {
-		http.NotFound(w, r)
+		writeError(w, http.StatusNotFound, "message not found")
 		return
 	}
 

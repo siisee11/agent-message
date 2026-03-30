@@ -44,7 +44,7 @@ Referenced but missing (noted once):
   - Add config/bootstrap selection for SQLite vs PostgreSQL via `DB_DRIVER` and supporting DSN envs.
   - Preserve existing behavior/contracts for handlers and store callers.
 
-- [ ] M2. Normalize API error response shape across endpoints to `{ "error": "..." }` (status: not started)
+- [x] M2. Normalize API error response shape across endpoints to `{ "error": "..." }` (status: completed)
   - Audit shared HTTP helpers and all handlers to ensure uniform JSON error envelope and status mapping.
   - Remove remaining inconsistent bodies (plain text/non-standard payloads) while preserving status semantics.
 
@@ -82,6 +82,15 @@ Referenced but missing (noted once):
   - Added bootstrap tests in `server/main_test.go` for driver normalization, SQLite opening path, unknown driver rejection, and required Postgres DSN behavior.
   - Added PostgreSQL driver dependency in `server/go.mod`/`server/go.sum` (`github.com/jackc/pgx/v5/stdlib`).
   - Validation run: `cd server && go test ./...` (pass).
+- Completed M2 (consistent API JSON error envelope):
+  - Replaced remaining `http.NotFound` responses in API handlers with `writeError(..., 404, ...)` to ensure JSON error payload shape:
+    - `server/api/messages.go`
+    - `server/api/users_conversations.go`
+  - Added an `/api/` catch-all route that emits JSON 404 responses (`{"error":"not found"}`) for unknown API endpoints:
+    - `server/api/router.go`
+  - Added targeted API tests asserting JSON error envelope + `application/json` content type for unknown and invalid API paths:
+    - `server/api/error_responses_test.go`
+  - Validation run: `cd server && go test ./api ./...` (pass).
 
 ## Key decisions
 - Keep scope strictly bounded to Phase 7 tasks from `PLAN.md`.
@@ -93,9 +102,10 @@ Referenced but missing (noted once):
   - `SQLITE_DSN` for SQLite.
   - `POSTGRES_DSN` with fallback to `DATABASE_URL` for PostgreSQL.
 - Keep model timestamp storage format unchanged (`RFC3339Nano` text) across both backends to preserve existing parsing/ordering behavior and avoid contract drift in this milestone.
+- For M2 consistency, API path parsing failures and unknown `/api/*` routes should return JSON error envelopes instead of default `http.NotFound` plain-text responses.
 
 ## Remaining issues / open questions
-- Remaining Phase 7 milestones pending: M2-M6.
+- Remaining Phase 7 milestones pending: M3-M6.
 - Confirm exact repository location/creation path for the top-level `README.md` quickstart update if a root `README.md` is absent in current tree state.
 
 ## Links to related documents

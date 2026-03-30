@@ -57,6 +57,9 @@ func NewRouter(deps Dependencies) http.Handler {
 
 	mux.Handle("/api/messages/", authRequired(http.HandlerFunc(messagesHandler.handleMessageByID)))
 	mux.Handle("/api/upload", authRequired(http.HandlerFunc(uploadHandler.handleUpload)))
+	mux.HandleFunc("/api/", func(w http.ResponseWriter, _ *http.Request) {
+		writeError(w, http.StatusNotFound, "not found")
+	})
 	mux.Handle("/static/uploads/", http.StripPrefix(staticUploadsPrefix, http.FileServer(http.Dir(uploadDir))))
 	mux.HandleFunc("/ws", websocketHandler.handleWebSocket)
 

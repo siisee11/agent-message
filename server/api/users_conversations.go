@@ -126,7 +126,7 @@ func (h *conversationsHandler) handleConversationDetail(w http.ResponseWriter, r
 
 	conversationID, valid := conversationIDFromPath(r.URL.Path)
 	if !valid {
-		http.NotFound(w, r)
+		writeError(w, http.StatusNotFound, "conversation not found")
 		return
 	}
 

@@ -244,6 +244,13 @@ func (c *Client) doJSON(ctx context.Context, method, requestPath string, in, out
 	if c.baseURL == nil {
 		return errors.New("server URL is not configured")
 	}
+	parsedRequestPath, err := url.Parse(requestPath)
+	if err != nil {
+		return fmt.Errorf("parse request path: %w", err)
+	}
+	if parsedRequestPath.IsAbs() {
+		return errors.New("request path must be relative")
+	}
 
 	var body io.Reader
 	if in != nil {
@@ -255,11 +262,13 @@ func (c *Client) doJSON(ctx context.Context, method, requestPath string, in, out
 	}
 
 	u := *c.baseURL
-	if strings.HasPrefix(requestPath, "/") {
-		u.Path = strings.TrimSuffix(c.baseURL.Path, "/") + requestPath
+	if strings.HasPrefix(parsedRequestPath.Path, "/") {
+		u.Path = strings.TrimSuffix(c.baseURL.Path, "/") + parsedRequestPath.Path
 	} else {
-		u.Path = strings.TrimSuffix(c.baseURL.Path, "/") + "/" + requestPath
+		u.Path = strings.TrimSuffix(c.baseURL.Path, "/") + "/" + parsedRequestPath.Path
 	}
+	u.RawQuery = parsedRequestPath.RawQuery
+	u.Fragment = parsedRequestPath.Fragment
 
 	req, err := http.NewRequestWithContext(ctx, method, u.String(), body)
 	if err != nil {

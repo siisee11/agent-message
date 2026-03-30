@@ -6,26 +6,6 @@ import (
 	"github.com/spf13/cobra"
 )
 
-func newSendMessageCommand(_ *Runtime) *cobra.Command {
-	return &cobra.Command{
-		Use:   "send <username> <text>",
-		Short: "Send a message to a user",
-		Args:  cobra.ExactArgs(2),
-		RunE:  notImplemented("send"),
-	}
-}
-
-func newReadMessagesCommand(_ *Runtime) *cobra.Command {
-	cmd := &cobra.Command{
-		Use:   "read <username>",
-		Short: "Read recent messages from a conversation",
-		Args:  cobra.ExactArgs(1),
-		RunE:  notImplemented("read"),
-	}
-	cmd.Flags().IntP("n", "n", 20, "Number of most recent messages to fetch")
-	return cmd
-}
-
 func newEditMessageCommand(_ *Runtime) *cobra.Command {
 	return &cobra.Command{
 		Use:   "edit <index> <text>",

@@ -48,7 +48,7 @@ Referenced but missing (noted once):
   - `open <username>` get-or-create DM via conversations API.
   - Add shared helper used by `send/read/watch` to resolve DM conversation by username.
 
-- [ ] M4. Implement `send` and `read`, including read-session index map persistence (status: not started)
+- [x] M4. Implement `send` and `read`, including read-session index map persistence (status: completed)
   - `send <username> <text>` posts message to resolved conversation.
   - `read <username> [--n N]` fetches recent messages and prints indexed output.
   - Persist per-conversation read-session mapping from display index to message UUID.
@@ -98,6 +98,16 @@ Referenced but missing (noted once):
 - Additional validation run after M3:
   - `cd cli && GOCACHE=/tmp/go-cache GOMODCACHE=/tmp/go-mod go test ./...`
   - `cd cli && GOCACHE=/tmp/go-cache GOMODCACHE=/tmp/go-mod go build ./...`
+- Completed M4 send/read and read-session persistence:
+  - Implemented `send <username> <text>` and `read <username> [--n N]` handlers in `cli/internal/cmd/messages.go`.
+  - `send` resolves DM conversation by username and posts to `POST /api/conversations/:id/messages`.
+  - `read` resolves DM conversation by username, fetches latest messages with `limit`, prints indexed output in SPEC format (`[index] <uuid> <user>: <text>`), and persists per-conversation index→message mapping in config `read_sessions`.
+  - Added helpers to persist session data including `conversation_id`, `username`, `index_to_message`, and `last_read_message`.
+  - Added tests in `cli/internal/cmd/messages_test.go` for send flow, read output, read-session persistence, and invalid limit handling.
+  - Fixed API client request-path parsing so query parameters are sent as URL query (not path), which was required for `read --n` to correctly call `GET /api/conversations/:id/messages?limit=...`.
+- Additional validation run after M4:
+  - `cd cli && GOCACHE=/tmp/go-cache GOMODCACHE=/tmp/go-mod go test ./...`
+  - `cd cli && GOCACHE=/tmp/go-cache GOMODCACHE=/tmp/go-mod go build ./...`
 
 ## Key decisions
 - Keep implementation bounded to Phase 6 CLI deliverable and existing server/API/WS contracts.
@@ -107,9 +117,10 @@ Referenced but missing (noted once):
 - Use a local Cobra-compatible shim (`replace github.com/spf13/cobra => ./third_party/cobra`) due offline dependency constraints in this environment.
 - For `logout`, prioritize local token invalidation durability: clear and persist local token even when remote `/api/auth/logout` returns an error.
 - Keep conversation command output stable and simple (`<conversation_id> <username>`) to support scripting and easier manual inspection.
+- Preserve server message ordering (newest-first) in `read` output and index mapping so local index resolution remains deterministic with server pagination order.
 
 ## Remaining issues / open questions
-- M4+ command behavior is still stubbed and must be implemented sequentially.
+- M5+ command behavior is still stubbed and must be implemented sequentially.
 - Decide whether to keep the local Cobra shim or switch to upstream `github.com/spf13/cobra` when networked module fetch is available.
 
 ## Links to related documents

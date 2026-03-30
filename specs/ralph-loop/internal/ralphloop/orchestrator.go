@@ -274,12 +274,50 @@ func runMain(ctx context.Context, repoRoot string, options MainOptions, stdout i
 		Telemetry:     telemetry,
 	})
 	if err != nil {
+		checkpoint, checkpointErr := checkpointDirtyWorktree(worktree.WorktreePath)
+		if checkpointErr != nil {
+			err = fmt.Errorf("%w; also failed to checkpoint dirty worktree: %s", err, checkpointErr)
+		} else if checkpoint.Committed {
+			shortHead := checkpoint.Head
+			if len(shortHead) > 7 {
+				shortHead = shortHead[:7]
+			}
+			message := fmt.Sprintf("Checkpointed interrupted coding state at %s.", shortHead)
+			logWarn(stderr, message)
+			if telemetry != nil {
+				telemetry.Log("warn", message, map[string]any{
+					"phase":           "coding",
+					"checkpoint_head": checkpoint.Head,
+				})
+				telemetry.SetMetric("ralph_loop_last_commit", checkpoint.Head)
+			}
+		}
 		endSpan(codingSpan, "error", err, map[string]any{"phase": "coding"})
 		return result, withLogTail(err, logFile)
 	}
 	result.Iterations = codingResult.Iterations
 	if !codingResult.Completed {
-		err = fmt.Errorf("Ralph Loop reached %d iterations without completion", options.MaxIterations)
+		checkpoint, checkpointErr := checkpointDirtyWorktree(worktree.WorktreePath)
+		if checkpointErr != nil {
+			err = fmt.Errorf("Ralph Loop reached %d iterations without completion; also failed to checkpoint dirty worktree: %s", options.MaxIterations, checkpointErr)
+		} else {
+			err = fmt.Errorf("Ralph Loop reached %d iterations without completion", options.MaxIterations)
+			if checkpoint.Committed {
+				shortHead := checkpoint.Head
+				if len(shortHead) > 7 {
+					shortHead = shortHead[:7]
+				}
+				message := fmt.Sprintf("Checkpointed incomplete coding state at %s.", shortHead)
+				logWarn(stderr, message)
+				if telemetry != nil {
+					telemetry.Log("warn", message, map[string]any{
+						"phase":           "coding",
+						"checkpoint_head": checkpoint.Head,
+					})
+					telemetry.SetMetric("ralph_loop_last_commit", checkpoint.Head)
+				}
+			}
+		}
 		endSpan(codingSpan, "failed", err, map[string]any{"phase": "coding"})
 		return result, withLogTail(err, logFile)
 	}

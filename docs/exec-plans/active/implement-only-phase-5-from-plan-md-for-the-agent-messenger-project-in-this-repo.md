@@ -41,7 +41,7 @@ Referenced but missing (noted once):
   - Implement conversation list rendering with partner name and last-message preview.
   - Add start-new-DM entry UI and create/open flow using existing typed API client.
 
-- [ ] M2. Implement `/dm/:conversationId` data loading and cursor-based message history (status: not started)
+- [x] M2. Implement `/dm/:conversationId` data loading and cursor-based message history (status: completed)
   - Add conversation detail fetch and message pagination state.
   - Implement load-older behavior using `before` cursor + limit.
   - Ensure route transitions and initial-scroll behavior are stable.
@@ -88,7 +88,19 @@ Referenced but missing (noted once):
     - navigation to created/existing conversation route on success
   - Added sidebar account/logout action using existing auth context.
   - Verified web build passes: `npm run build` (after installing `web/` dependencies with `npm ci` in this worktree).
-- Milestones M2-M6 remain not started.
+- Milestone M2 is complete:
+  - Replaced `/dm/:conversationId` placeholder with route-bound data loading:
+    - conversation detail query via `apiClient.getConversation(conversationId)`
+    - message history query via cursor-paginated `apiClient.listMessages(conversationId, { before, limit })`
+  - Implemented cursor-based load-older UI using React Query infinite pagination:
+    - first page loads latest messages
+    - next page cursor uses the oldest loaded message id (`before=<oldest_id>`)
+  - Added timeline scroll stabilization:
+    - initial conversation load scrolls message viewport to bottom
+    - load-older preserves viewport anchor to avoid jump while older messages prepend
+    - route transitions reset naturally per conversation query key and per-conversation initial-scroll guard
+  - Verified web build passes after M2 changes: `npm run build`.
+- Milestones M3-M6 remain not started.
 
 ## Key decisions
 - Keep implementation strictly bounded to Phase 5 UI and required integration wiring.
@@ -96,10 +108,12 @@ Referenced but missing (noted once):
 - Sequence work so each milestone is implementable in one coding-loop iteration with verifiable outcomes.
 - Prioritize stable message timeline behavior (pagination + realtime merges) before polishing interaction details.
 - Keep `/dm/:conversationId` as a route-level placeholder in M1 so sidebar navigation works now while deferring message loading/pagination logic strictly to M2.
+- Use a deterministic pagination cursor strategy based on server ordering (messages returned newest-first; next cursor is oldest loaded id).
+- Keep message rendering in M2 intentionally minimal (timeline correctness first), deferring full bubble semantics to M3.
 
 ## Remaining issues / open questions
-- M2 must implement actual conversation detail and cursor-based message timeline data loading for `/dm/:conversationId` (currently placeholder only).
-- M2 must establish initial timeline UX rules (initial anchor and load-older trigger behavior) on top of the new shell routing.
+- M3 must replace M2’s minimal timeline rows with full Phase 5 bubble semantics (edited/deleted badges, attachment rendering, own-vs-other styling precedence).
+- M4+ still need composer/actions/reactions/realtime reconciliation beyond M2’s history-loading scope.
 
 ## Links to related documents
 - `AGENTS.md`

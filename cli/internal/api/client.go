@@ -87,6 +87,13 @@ func (c *Client) Token() string {
 	return c.token
 }
 
+func (c *Client) SetHTTPClient(httpClient *http.Client) {
+	if httpClient == nil {
+		return
+	}
+	c.httpClient = httpClient
+}
+
 func (c *Client) Register(ctx context.Context, username, pin string) (AuthResponse, error) {
 	var out AuthResponse
 	err := c.doJSON(ctx, http.MethodPost, "/api/auth/register", map[string]string{

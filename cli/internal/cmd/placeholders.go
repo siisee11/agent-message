@@ -6,33 +6,6 @@ import (
 	"github.com/spf13/cobra"
 )
 
-func newRegisterCommand(_ *Runtime) *cobra.Command {
-	return &cobra.Command{
-		Use:   "register <username> <pin>",
-		Short: "Register a new account",
-		Args:  cobra.ExactArgs(2),
-		RunE:  notImplemented("register"),
-	}
-}
-
-func newLoginCommand(_ *Runtime) *cobra.Command {
-	return &cobra.Command{
-		Use:   "login <username> <pin>",
-		Short: "Log in with username and PIN",
-		Args:  cobra.ExactArgs(2),
-		RunE:  notImplemented("login"),
-	}
-}
-
-func newLogoutCommand(_ *Runtime) *cobra.Command {
-	return &cobra.Command{
-		Use:   "logout",
-		Short: "Log out and clear local token",
-		Args:  cobra.NoArgs,
-		RunE:  notImplemented("logout"),
-	}
-}
-
 func newListConversationsCommand(_ *Runtime) *cobra.Command {
 	return &cobra.Command{
 		Use:   "ls",

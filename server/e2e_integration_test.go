@@ -14,8 +14,8 @@ import (
 
 	"agent-messenger/server/api"
 	"agent-messenger/server/models"
+	"agent-messenger/server/realtime"
 	"agent-messenger/server/store"
-	"agent-messenger/server/ws"
 )
 
 func TestServerStackE2EHappyPath(t *testing.T) {
@@ -127,7 +127,7 @@ func newE2EServer(t *testing.T) *httptest.Server {
 
 	router := api.NewRouter(api.Dependencies{
 		Store:     sqliteStore,
-		Hub:       ws.NewHub(),
+		Hub:       realtime.NewHub(),
 		UploadDir: filepath.Join(t.TempDir(), "uploads"),
 	})
 	return httptest.NewServer(router)

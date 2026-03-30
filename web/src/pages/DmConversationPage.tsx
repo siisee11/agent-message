@@ -5,7 +5,7 @@ import {
   useQuery,
   useQueryClient,
 } from '@tanstack/react-query'
-import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import { useParams } from 'react-router-dom'
 import {
   ApiError,
@@ -17,7 +17,12 @@ import {
 } from '../api'
 import { apiClient } from '../api/runtime'
 import { useAuth } from '../auth'
-import { useWebSocket } from '../hooks'
+import { useRealtime } from '../realtime'
+import {
+  fallbackSender,
+  prependMessageToPages,
+  replaceMessageInPages,
+} from '../realtime/state'
 import styles from './DmConversationPage.module.css'
 
 const MESSAGE_PAGE_SIZE = 20
@@ -44,8 +49,6 @@ interface ActionMenuState {
   x: number
   y: number
 }
-
-type MessageReactionsState = Record<string, Reaction[]>
 
 interface ReactionGroup {
   emoji: string
@@ -91,165 +94,6 @@ function inferAttachmentType(file: File): 'image' | 'file' {
   return file.type.startsWith('image/') ? 'image' : 'file'
 }
 
-function fallbackSender(message: Message): UserProfile {
-  return {
-    id: message.sender_id,
-    username: 'me',
-    created_at: message.created_at,
-  }
-}
-
-function prependMessageToPages(
-  current: InfiniteData<MessageDetails[]> | undefined,
-  createdDetails: MessageDetails,
-): InfiniteData<MessageDetails[]> {
-  if (!current || current.pages.length === 0) {
-    return {
-      pageParams: [undefined],
-      pages: [[createdDetails]],
-    }
-  }
-
-  const alreadyExists = current.pages.some((page) =>
-    page.some((details) => details.message.id === createdDetails.message.id),
-  )
-  if (alreadyExists) {
-    return current
-  }
-
-  return {
-    ...current,
-    pages: [[createdDetails, ...current.pages[0]], ...current.pages.slice(1)],
-  }
-}
-
-function markMessageDeletedInPages(
-  current: InfiniteData<MessageDetails[]> | undefined,
-  messageId: string,
-): InfiniteData<MessageDetails[]> | undefined {
-  if (!current) {
-    return current
-  }
-
-  let replaced = false
-  const nextPages = current.pages.map((page) =>
-    page.map((details) => {
-      if (details.message.id !== messageId) {
-        return details
-      }
-
-      replaced = true
-      return {
-        ...details,
-        message: {
-          ...details.message,
-          deleted: true,
-          content: undefined,
-          attachment_url: undefined,
-          attachment_type: undefined,
-        },
-      }
-    }),
-  )
-
-  if (!replaced) {
-    return current
-  }
-
-  return {
-    ...current,
-    pages: nextPages,
-  }
-}
-
-function replaceMessageInPages(
-  current: InfiniteData<MessageDetails[]> | undefined,
-  updatedMessage: Message,
-): InfiniteData<MessageDetails[]> | undefined {
-  if (!current) {
-    return current
-  }
-
-  let replaced = false
-  const nextPages = current.pages.map((page) =>
-    page.map((details) => {
-      if (details.message.id !== updatedMessage.id) {
-        return details
-      }
-      replaced = true
-      return {
-        ...details,
-        message: updatedMessage,
-      }
-    }),
-  )
-
-  if (!replaced) {
-    return current
-  }
-
-  return {
-    ...current,
-    pages: nextPages,
-  }
-}
-
-function resolveRealtimeSender(
-  message: Message,
-  currentUser: UserProfile | null,
-  otherParticipant: UserProfile | null,
-): UserProfile {
-  if (currentUser && message.sender_id === currentUser.id) {
-    return currentUser
-  }
-  if (otherParticipant && message.sender_id === otherParticipant.id) {
-    return otherParticipant
-  }
-  return fallbackSender(message)
-}
-
-function addReactionToState(
-  state: MessageReactionsState,
-  reaction: Reaction,
-): MessageReactionsState {
-  const current = state[reaction.message_id] ?? []
-  const alreadyExists = current.some(
-    (existing) => existing.emoji === reaction.emoji && existing.user_id === reaction.user_id,
-  )
-  if (alreadyExists) {
-    return state
-  }
-  return {
-    ...state,
-    [reaction.message_id]: [...current, reaction],
-  }
-}
-
-function removeReactionFromState(
-  state: MessageReactionsState,
-  removal: { message_id: string; emoji: string; user_id: string },
-): MessageReactionsState {
-  const current = state[removal.message_id] ?? []
-  const next = current.filter(
-    (reaction) =>
-      !(reaction.emoji === removal.emoji && reaction.user_id === removal.user_id),
-  )
-
-  if (next.length === current.length) {
-    return state
-  }
-
-  if (next.length === 0) {
-    const { [removal.message_id]: _removed, ...rest } = state
-    return rest
-  }
-
-  return {
-    ...state,
-    [removal.message_id]: next,
-  }
-}
-
 function groupReactionsByEmoji(
   reactions: Reaction[] | undefined,
   currentUserId: string | undefined,
@@ -281,7 +125,9 @@ function groupReactionsByEmoji(
 
 export function DmConversationPage(): JSX.Element {
   const { conversationId } = useParams()
-  const { token, user } = useAuth()
+  const { user } = useAuth()
+  const realtime = useRealtime()
+  const { messageReactions } = realtime
   const queryClient = useQueryClient()
 
   const timelineRef = useRef<HTMLDivElement | null>(null)
@@ -295,7 +141,6 @@ export function DmConversationPage(): JSX.Element {
   const [composerError, setComposerError] = useState<string | null>(null)
   const [editingTarget, setEditingTarget] = useState<EditTarget | null>(null)
   const [actionMenu, setActionMenu] = useState<ActionMenuState | null>(null)
-  const [messageReactions, setMessageReactions] = useState<MessageReactionsState>({})
 
   const conversationQuery = useQuery({
     queryKey: ['conversation', conversationId],
@@ -440,70 +285,6 @@ export function DmConversationPage(): JSX.Element {
     return messagesAscending.find((details) => details.message.id === actionMenu.messageId) ?? null
   }, [actionMenu, messagesAscending])
 
-  const handleMessageNew = useCallback(
-    (incomingMessage: Message) => {
-      const key = ['messages', incomingMessage.conversation_id] as const
-      const existingCache = queryClient.getQueryData<InfiniteData<MessageDetails[]>>(key)
-      const shouldUpdate = incomingMessage.conversation_id === conversationId || existingCache !== undefined
-      if (!shouldUpdate) {
-        void queryClient.invalidateQueries({ queryKey: ['conversations'] })
-        return
-      }
-
-      const sender = resolveRealtimeSender(incomingMessage, user, otherParticipant)
-      queryClient.setQueryData<InfiniteData<MessageDetails[]>>(key, (current) =>
-        prependMessageToPages(current, {
-          message: incomingMessage,
-          sender,
-        }),
-      )
-      void queryClient.invalidateQueries({ queryKey: ['conversations'] })
-    },
-    [conversationId, otherParticipant, queryClient, user],
-  )
-
-  const handleMessageEdited = useCallback(
-    (updatedMessage: Message) => {
-      const key = ['messages', updatedMessage.conversation_id] as const
-      const existingCache = queryClient.getQueryData<InfiniteData<MessageDetails[]>>(key)
-      const shouldUpdate = updatedMessage.conversation_id === conversationId || existingCache !== undefined
-      if (!shouldUpdate) {
-        void queryClient.invalidateQueries({ queryKey: ['conversations'] })
-        return
-      }
-
-      queryClient.setQueryData<InfiniteData<MessageDetails[]>>(key, (current) =>
-        replaceMessageInPages(current, updatedMessage),
-      )
-      void queryClient.invalidateQueries({ queryKey: ['conversations'] })
-    },
-    [conversationId, queryClient],
-  )
-
-  const handleMessageDeleted = useCallback(
-    (messageID: string) => {
-      queryClient.setQueriesData<InfiniteData<MessageDetails[]>>({ queryKey: ['messages'] }, (current) =>
-        markMessageDeletedInPages(current, messageID),
-      )
-      void queryClient.invalidateQueries({ queryKey: ['conversations'] })
-    },
-    [queryClient],
-  )
-
-  const ws = useWebSocket({
-    token,
-    enabled: Boolean(token),
-    onMessageNew: ({ data }) => handleMessageNew(data),
-    onMessageEdited: ({ data }) => handleMessageEdited(data),
-    onMessageDeleted: ({ data }) => handleMessageDeleted(data.id),
-    onReactionAdded: ({ data }) => {
-      setMessageReactions((state) => addReactionToState(state, data))
-    },
-    onReactionRemoved: ({ data }) => {
-      setMessageReactions((state) => removeReactionFromState(state, data))
-    },
-  })
-
   useLayoutEffect(() => {
     const timeline = timelineRef.current
     if (!timeline || !conversationId) {
@@ -527,12 +308,6 @@ export function DmConversationPage(): JSX.Element {
       initialScrollConversationRef.current = conversationId
     }
   }, [conversationId, messagePagesQuery.isFetchingNextPage, messagesAscending.length])
-
-  useEffect(() => {
-    if (ws.status === 'open' && conversationId) {
-      ws.sendReadEvent(conversationId)
-    }
-  }, [conversationId, ws.sendReadEvent, ws.status])
 
   useEffect(() => {
     if (!actionMenu) {
@@ -680,15 +455,14 @@ export function DmConversationPage(): JSX.Element {
       apiClient.toggleReaction(input.messageId, { emoji: input.emoji }),
     onSuccess: ({ action, reaction }) => {
       setComposerError(null)
-      setMessageReactions((state) => {
-        if (action === 'added') {
-          return addReactionToState(state, reaction)
-        }
-        return removeReactionFromState(state, {
-          message_id: reaction.message_id,
-          emoji: reaction.emoji,
-          user_id: reaction.user_id,
-        })
+      if (action === 'added') {
+        realtime.applyReactionAdded(reaction)
+        return
+      }
+      realtime.applyReactionRemoved({
+        message_id: reaction.message_id,
+        emoji: reaction.emoji,
+        user_id: reaction.user_id,
       })
     },
     onError: (error: unknown) => {

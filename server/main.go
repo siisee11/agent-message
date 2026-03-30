@@ -9,8 +9,8 @@ import (
 	"strings"
 
 	"agent-messenger/server/api"
+	"agent-messenger/server/realtime"
 	"agent-messenger/server/store"
-	"agent-messenger/server/ws"
 )
 
 const (
@@ -33,7 +33,7 @@ func main() {
 	cfg := loadConfigFromEnv()
 
 	ctx := context.Background()
-	hub := ws.NewHub()
+	hub := realtime.NewHub()
 	dataStore, driver, err := openStore(ctx, cfg)
 	if err != nil {
 		log.Fatalf("failed to initialize store: %v", err)

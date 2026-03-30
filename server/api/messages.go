@@ -2,6 +2,7 @@ package api
 
 import (
 	"errors"
+	"log"
 	"mime"
 	"net/http"
 	"net/url"
@@ -10,20 +11,20 @@ import (
 	"time"
 
 	"agent-messenger/server/models"
+	"agent-messenger/server/realtime"
 	"agent-messenger/server/store"
-	"agent-messenger/server/ws"
 
 	"github.com/google/uuid"
 )
 
 type messagesHandler struct {
 	store     store.Store
-	hub       *ws.Hub
+	hub       *realtime.Hub
 	nowFn     func() time.Time
 	uploadDir string
 }
 
-func newMessagesHandler(s store.Store, hub *ws.Hub) *messagesHandler {
+func newMessagesHandler(s store.Store, hub *realtime.Hub) *messagesHandler {
 	return &messagesHandler{
 		store:     s,
 		hub:       hub,
@@ -114,9 +115,9 @@ func (h *messagesHandler) handleMessageReactions(w http.ResponseWriter, r *http.
 
 	switch result.Action {
 	case models.ReactionMutationAdded:
-		h.broadcastReactionEventForMessage(r, user.ID, messageID, ws.EventTypeReactionAdded, result.Reaction)
+		h.broadcastReactionEventForMessage(r, user.ID, messageID, realtime.EventTypeReactionAdded, result.Reaction)
 	case models.ReactionMutationRemoved:
-		h.broadcastReactionEventForMessage(r, user.ID, messageID, ws.EventTypeReactionRemoved, reactionRemovedEventData(result.Reaction))
+		h.broadcastReactionEventForMessage(r, user.ID, messageID, realtime.EventTypeReactionRemoved, reactionRemovedEventData(result.Reaction))
 	}
 
 	writeJSON(w, http.StatusOK, result)
@@ -157,7 +158,7 @@ func (h *messagesHandler) handleMessageReactionByEmoji(w http.ResponseWriter, r 
 		return
 	}
 
-	h.broadcastReactionEventForMessage(r, user.ID, messageID, ws.EventTypeReactionRemoved, reactionRemovedEventData(reaction))
+	h.broadcastReactionEventForMessage(r, user.ID, messageID, realtime.EventTypeReactionRemoved, reactionRemovedEventData(reaction))
 	writeJSON(w, http.StatusOK, reaction)
 }
 
@@ -258,7 +259,8 @@ func (h *messagesHandler) handleCreateMessage(w http.ResponseWriter, r *http.Req
 		return
 	}
 
-	h.broadcastConversationEvent(conversationID, ws.EventTypeMessageNew, message)
+	log.Printf("message created conversation=%s message=%s sender=%s attachment=%t", conversationID, message.ID, user.ID, message.AttachmentURL != nil)
+	h.broadcastConversationEvent(conversationID, realtime.EventTypeMessageNew, message)
 	writeJSON(w, http.StatusCreated, message)
 }
 
@@ -303,7 +305,8 @@ func (h *messagesHandler) handleEditMessage(w http.ResponseWriter, r *http.Reque
 		return
 	}
 
-	h.broadcastConversationEvent(message.ConversationID, ws.EventTypeMessageEdited, message)
+	log.Printf("message edited conversation=%s message=%s actor=%s", message.ConversationID, message.ID, user.ID)
+	h.broadcastConversationEvent(message.ConversationID, realtime.EventTypeMessageEdited, message)
 	writeJSON(w, http.StatusOK, message)
 }
 
@@ -337,7 +340,8 @@ func (h *messagesHandler) handleDeleteMessage(w http.ResponseWriter, r *http.Req
 		return
 	}
 
-	h.broadcastConversationEvent(message.ConversationID, ws.EventTypeMessageDeleted, map[string]string{"id": message.ID})
+	log.Printf("message deleted conversation=%s message=%s actor=%s", message.ConversationID, message.ID, user.ID)
+	h.broadcastConversationEvent(message.ConversationID, realtime.EventTypeMessageDeleted, map[string]string{"id": message.ID})
 	writeJSON(w, http.StatusOK, message)
 }
 
@@ -345,10 +349,15 @@ func (h *messagesHandler) broadcastConversationEvent(conversationID, eventType s
 	if h.hub == nil {
 		return
 	}
-	_, _ = h.hub.BroadcastToConversation(conversationID, ws.Event{
+	result, err := h.hub.BroadcastToConversation(conversationID, realtime.Event{
 		Type: eventType,
 		Data: data,
 	})
+	if err != nil {
+		log.Printf("broadcast failed conversation=%s event=%s: %v", conversationID, eventType, err)
+		return
+	}
+	log.Printf("broadcast conversation=%s event=%s delivered=%d dropped=%d", conversationID, eventType, result.Delivered, result.Dropped)
 }
 
 func (h *messagesHandler) broadcastReactionEventForMessage(r *http.Request, userID, messageID, eventType string, data any) {
@@ -361,8 +370,10 @@ func (h *messagesHandler) broadcastReactionEventForMessage(r *http.Request, user
 		UserID:    userID,
 	})
 	if err != nil {
+		log.Printf("reaction broadcast lookup failed actor=%s message=%s event=%s: %v", userID, messageID, eventType, err)
 		return
 	}
+	log.Printf("reaction event conversation=%s message=%s actor=%s event=%s", message.ConversationID, messageID, userID, eventType)
 	h.broadcastConversationEvent(message.ConversationID, eventType, data)
 }
 

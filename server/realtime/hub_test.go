@@ -1,4 +1,4 @@
-package ws
+package realtime
 
 import (
 	"errors"
@@ -61,58 +61,37 @@ func TestHubRegisterBroadcastAndUnregister(t *testing.T) {
 	assertEvent(t, clientA.Send, EventTypeMessageNew)
 }
 
-func TestHubConversationSubscriptionMutation(t *testing.T) {
+func TestHubSubscribeUserAddsConversationToExistingConnections(t *testing.T) {
 	hub := NewHub()
-	client := &Client{UserID: "u1", Send: make(chan Event, 2)}
+	clientA := &Client{UserID: "u1", Send: make(chan Event, 2)}
+	clientB := &Client{UserID: "u1", Send: make(chan Event, 2)}
+	clientC := &Client{UserID: "u2", Send: make(chan Event, 2)}
 
-	if err := hub.Register(client, nil); err != nil {
-		t.Fatalf("register: %v", err)
+	if err := hub.Register(clientA, []string{"conv-a"}); err != nil {
+		t.Fatalf("register clientA: %v", err)
+	}
+	if err := hub.Register(clientB, nil); err != nil {
+		t.Fatalf("register clientB: %v", err)
+	}
+	if err := hub.Register(clientC, nil); err != nil {
+		t.Fatalf("register clientC: %v", err)
 	}
 
-	if err := hub.Subscribe(client, "conv-a"); err != nil {
-		t.Fatalf("subscribe conv-a: %v", err)
-	}
-	if err := hub.Subscribe(client, "conv-b"); err != nil {
-		t.Fatalf("subscribe conv-b: %v", err)
+	if err := hub.SubscribeUser("u1", "conv-new"); err != nil {
+		t.Fatalf("subscribe user: %v", err)
 	}
 
-	conversationIDs, err := hub.ConversationIDs(client)
+	result, err := hub.BroadcastToConversation("conv-new", Event{Type: EventTypeMessageNew})
 	if err != nil {
-		t.Fatalf("conversation ids after subscribe: %v", err)
+		t.Fatalf("broadcast conv-new: %v", err)
 	}
-	if !reflect.DeepEqual(conversationIDs, []string{"conv-a", "conv-b"}) {
-		t.Fatalf("unexpected conversation ids after subscribe: %#v", conversationIDs)
-	}
-
-	if err := hub.Unsubscribe(client, "conv-a"); err != nil {
-		t.Fatalf("unsubscribe conv-a: %v", err)
-	}
-	if err := hub.SetConversations(client, []string{"conv-c", "conv-b", "conv-c"}); err != nil {
-		t.Fatalf("set conversations: %v", err)
+	if result.Delivered != 2 || result.Dropped != 0 {
+		t.Fatalf("unexpected broadcast result: %+v", result)
 	}
 
-	conversationIDs, err = hub.ConversationIDs(client)
-	if err != nil {
-		t.Fatalf("conversation ids after set: %v", err)
-	}
-	if !reflect.DeepEqual(conversationIDs, []string{"conv-b", "conv-c"}) {
-		t.Fatalf("unexpected conversation ids after set: %#v", conversationIDs)
-	}
-
-	event := Event{Type: EventTypeMessageEdited}
-	if _, err := hub.BroadcastToConversation("conv-a", event); err != nil {
-		t.Fatalf("broadcast conv-a should succeed: %v", err)
-	}
-	assertNoEvent(t, client.Send)
-
-	result, err := hub.BroadcastToConversation("conv-c", event)
-	if err != nil {
-		t.Fatalf("broadcast conv-c should succeed: %v", err)
-	}
-	if result.Delivered != 1 || result.Dropped != 0 {
-		t.Fatalf("unexpected broadcast result to conv-c: %+v", result)
-	}
-	assertEvent(t, client.Send, EventTypeMessageEdited)
+	assertEvent(t, clientA.Send, EventTypeMessageNew)
+	assertEvent(t, clientB.Send, EventTypeMessageNew)
+	assertNoEvent(t, clientC.Send)
 }
 
 func TestHubValidationAndDropSemantics(t *testing.T) {
@@ -150,6 +129,22 @@ func TestHubValidationAndDropSemantics(t *testing.T) {
 	}
 	if result.Delivered != 0 || result.Dropped != 1 {
 		t.Fatalf("expected dropped event for blocked client, got %+v", result)
+	}
+}
+
+func TestHubConversationIDs(t *testing.T) {
+	hub := NewHub()
+	client := &Client{UserID: "u1", Send: make(chan Event, 1)}
+	if err := hub.Register(client, []string{"conv-b", "conv-a"}); err != nil {
+		t.Fatalf("register: %v", err)
+	}
+
+	conversationIDs, err := hub.ConversationIDs(client)
+	if err != nil {
+		t.Fatalf("conversation ids: %v", err)
+	}
+	if !reflect.DeepEqual(conversationIDs, []string{"conv-a", "conv-b"}) {
+		t.Fatalf("unexpected conversation ids: %#v", conversationIDs)
 	}
 }
 

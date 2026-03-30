@@ -8,7 +8,7 @@ A lightweight Telegram-inspired messenger with a server, web client, and CLI cli
 
 | Component | Technology |
 |-----------|-----------|
-| Server    | Go (REST + WebSocket) |
+| Server    | Go (REST + SSE) |
 | Web Client | React + TypeScript |
 | CLI Client | Go |
 | Database  | SQLite (dev) / PostgreSQL (prod) |
@@ -22,13 +22,13 @@ A lightweight Telegram-inspired messenger with a server, web client, and CLI cli
 │  Web Client │        │  CLI Client │
 │ React + TS  │        │     Go      │
 └──────┬──────┘        └──────┬──────┘
-       │ HTTP / WebSocket      │ HTTP / WebSocket
+       │ HTTP / SSE            │ HTTP / SSE
        └──────────┬────────────┘
                   │
          ┌────────▼────────┐
          │     Server      │
          │  Go + REST API  │
-         │  + WebSocket    │
+         │  + SSE stream   │
          └────────┬────────┘
                   │
          ┌────────▼────────┐
@@ -43,7 +43,7 @@ A lightweight Telegram-inspired messenger with a server, web client, and CLI cli
 
 - **Username + PIN login**: Users register and log in with a unique username and a 4–6 digit numeric PIN.
 - On login/register, the server issues an **opaque session token** with no expiry (invalidated only on logout).
-- Token is passed as `Authorization: Bearer <token>` on all API requests and as a query param for WebSocket connections.
+- Token is passed as `Authorization: Bearer <token>` on all API requests and as a query param for the SSE stream connection.
 
 ---
 
@@ -139,10 +139,10 @@ created_at timestamp
 
 ---
 
-## WebSocket
+## Realtime Stream
 
-- **Endpoint**: `GET /ws?token=<session_token>`
-- One persistent connection per client session.
+- **Endpoint**: `GET /api/events?token=<session_token>`
+- One persistent SSE connection per client session.
 
 ### Server → Client Events
 
@@ -162,15 +162,6 @@ created_at timestamp
 // Reaction removed
 { "type": "reaction.removed", "data": { "message_id": "...", "emoji": "...", "user_id": "..." } }
 ```
-
-### Client → Server Events
-
-```jsonc
-// Mark messages as read
-{ "type": "read", "data": { "conversation_id": "..." } }
-```
-
----
 
 ## Web Client Features
 
@@ -223,7 +214,7 @@ Reactions:
   unreact <index> <emoji>     Remove a reaction
 
 Watch mode:
-  watch <username>          Stream incoming messages in real-time (WebSocket)
+  watch <username>          Stream incoming messages in real-time (SSE)
 ```
 
 Config is stored at `~/.msgr/config` (JSON with server URL and session token).
@@ -270,7 +261,7 @@ agent-messenger/
 ├── server/              # Go server
 │   ├── main.go
 │   ├── api/             # HTTP handlers
-│   ├── ws/              # WebSocket hub
+│   ├── realtime/        # Realtime event hub
 │   ├── store/           # Database layer
 │   └── models/
 ├── web/                 # React + TypeScript client

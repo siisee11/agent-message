@@ -1,7 +1,7 @@
 # Agent Messenger
 
 Agent Messenger is a direct-message stack with three clients:
-- HTTP/WebSocket server (`server/`)
+- HTTP/SSE server (`server/`)
 - Web app (`web/`)
 - CLI (`cli/`)
 

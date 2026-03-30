@@ -2,12 +2,14 @@ package api
 
 import (
 	"errors"
+	"log"
 	"net/http"
 	"strconv"
 	"strings"
 	"time"
 
 	"agent-messenger/server/models"
+	"agent-messenger/server/realtime"
 	"agent-messenger/server/store"
 
 	"github.com/google/uuid"
@@ -94,12 +96,14 @@ func (h *usersHandler) handleMe(w http.ResponseWriter, r *http.Request) {
 
 type conversationsHandler struct {
 	store store.Store
+	hub   *realtime.Hub
 	nowFn func() time.Time
 }
 
-func newConversationsHandler(s store.Store) *conversationsHandler {
+func newConversationsHandler(s store.Store, hub *realtime.Hub) *conversationsHandler {
 	return &conversationsHandler{
 		store: s,
+		hub:   hub,
 		nowFn: time.Now,
 	}
 }
@@ -249,7 +253,32 @@ func (h *conversationsHandler) handleStartConversation(w http.ResponseWriter, r 
 	if conversation.ID == newConversationID {
 		status = http.StatusCreated
 	}
+	log.Printf(
+		"conversation ready id=%s actor=%s target=%s created=%t",
+		conversation.ID,
+		user.ID,
+		targetUser.ID,
+		conversation.ID == newConversationID,
+	)
+	h.subscribeConversationParticipants(conversation)
 	writeJSON(w, status, details)
+}
+
+func (h *conversationsHandler) subscribeConversationParticipants(conversation models.Conversation) {
+	if h.hub == nil {
+		return
+	}
+
+	if err := h.hub.SubscribeUser(conversation.ParticipantA, conversation.ID); err != nil {
+		log.Printf("conversation subscribe failed user=%s conversation=%s: %v", conversation.ParticipantA, conversation.ID, err)
+	} else {
+		log.Printf("conversation subscribed user=%s conversation=%s source=create", conversation.ParticipantA, conversation.ID)
+	}
+	if err := h.hub.SubscribeUser(conversation.ParticipantB, conversation.ID); err != nil {
+		log.Printf("conversation subscribe failed user=%s conversation=%s: %v", conversation.ParticipantB, conversation.ID, err)
+	} else {
+		log.Printf("conversation subscribed user=%s conversation=%s source=create", conversation.ParticipantB, conversation.ID)
+	}
 }
 
 func parsePositiveIntQuery(r *http.Request, key string) (int, error) {

@@ -212,32 +212,23 @@ func (c *Client) RemoveReaction(ctx context.Context, messageID, emoji string) (R
 	return out, err
 }
 
-func (c *Client) WebSocketURL() (string, error) {
+func (c *Client) EventStreamURL() (string, error) {
 	if c.baseURL == nil {
 		return "", errors.New("server URL is not configured")
 	}
 
-	wsURL := *c.baseURL
-	switch wsURL.Scheme {
-	case "http":
-		wsURL.Scheme = "ws"
-	case "https":
-		wsURL.Scheme = "wss"
-	default:
-		return "", errors.New("server URL must use http or https")
-	}
-
-	joined := path.Join(wsURL.Path, "ws")
+	streamURL := *c.baseURL
+	joined := path.Join(streamURL.Path, "api", "events")
 	if !strings.HasPrefix(joined, "/") {
 		joined = "/" + joined
 	}
-	wsURL.Path = joined
-	query := wsURL.Query()
+	streamURL.Path = joined
+	query := streamURL.Query()
 	if c.token != "" {
 		query.Set("token", c.token)
 	}
-	wsURL.RawQuery = query.Encode()
-	return wsURL.String(), nil
+	streamURL.RawQuery = query.Encode()
+	return streamURL.String(), nil
 }
 
 func (c *Client) doJSON(ctx context.Context, method, requestPath string, in, out any) error {

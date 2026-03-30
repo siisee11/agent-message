@@ -1,14 +1,7 @@
-export { useWebSocket } from './useWebSocket'
+export { useEventStream } from './useEventStream'
 export type {
-  KnownServerEvent,
-  MessageDeletedEvent,
-  MessageEditedEvent,
-  MessageNewEvent,
-  ReactionAddedEvent,
-  ReactionRemovedEvent,
-  ServerWebSocketEvent,
-  UseWebSocketOptions,
-  UseWebSocketResult,
-  WebSocketConnectionStatus,
-} from './useWebSocket'
-
+  EventStreamConnectionStatus,
+  ServerEvent,
+  UseEventStreamOptions,
+  UseEventStreamResult,
+} from './useEventStream'

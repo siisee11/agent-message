@@ -1,4 +1,4 @@
-package ws
+package realtime
 
 import (
 	"errors"
@@ -108,9 +108,10 @@ func (h *Hub) Unregister(client *Client) {
 	h.removeClientLocked(client, existing)
 }
 
-func (h *Hub) Subscribe(client *Client, conversationID string) error {
-	if client == nil {
-		return ErrClientNil
+func (h *Hub) SubscribeUser(userID, conversationID string) error {
+	userID = strings.TrimSpace(userID)
+	if userID == "" {
+		return ErrClientUserIDRequired
 	}
 	conversationID = strings.TrimSpace(conversationID)
 	if conversationID == "" {
@@ -120,76 +121,20 @@ func (h *Hub) Subscribe(client *Client, conversationID string) error {
 	h.mu.Lock()
 	defer h.mu.Unlock()
 
-	state, ok := h.clients[client]
-	if !ok {
-		return ErrClientNotRegistered
-	}
-	if _, exists := state.conversations[conversationID]; exists {
-		return nil
-	}
-
-	state.conversations[conversationID] = struct{}{}
-	h.clients[client] = state
-	h.addConversationClientLocked(conversationID, client)
-	return nil
-}
-
-func (h *Hub) Unsubscribe(client *Client, conversationID string) error {
-	if client == nil {
-		return ErrClientNil
-	}
-	conversationID = strings.TrimSpace(conversationID)
-	if conversationID == "" {
-		return ErrConversationIDMissing
-	}
-
-	h.mu.Lock()
-	defer h.mu.Unlock()
-
-	state, ok := h.clients[client]
-	if !ok {
-		return ErrClientNotRegistered
-	}
-	if _, exists := state.conversations[conversationID]; !exists {
-		return nil
-	}
-
-	delete(state.conversations, conversationID)
-	h.clients[client] = state
-	h.removeConversationClientLocked(conversationID, client)
-	return nil
-}
-
-func (h *Hub) SetConversations(client *Client, conversationIDs []string) error {
-	if client == nil {
-		return ErrClientNil
-	}
-
-	conversationSet := normalizeConversationSet(conversationIDs)
-
-	h.mu.Lock()
-	defer h.mu.Unlock()
-
-	state, ok := h.clients[client]
-	if !ok {
-		return ErrClientNotRegistered
-	}
-
-	for conversationID := range state.conversations {
-		if _, keep := conversationSet[conversationID]; keep {
+	for client := range h.userClients[userID] {
+		state, ok := h.clients[client]
+		if !ok {
 			continue
 		}
-		h.removeConversationClientLocked(conversationID, client)
-	}
-	for conversationID := range conversationSet {
 		if _, exists := state.conversations[conversationID]; exists {
 			continue
 		}
+
+		state.conversations[conversationID] = struct{}{}
+		h.clients[client] = state
 		h.addConversationClientLocked(conversationID, client)
 	}
 
-	state.conversations = conversationSet
-	h.clients[client] = state
 	return nil
 }
 
@@ -228,26 +173,6 @@ func (h *Hub) ConnectionsForUser(userID string) int {
 	h.mu.RLock()
 	defer h.mu.RUnlock()
 	return len(h.userClients[userID])
-}
-
-func (h *Hub) ConversationIDs(client *Client) ([]string, error) {
-	if client == nil {
-		return nil, ErrClientNil
-	}
-
-	h.mu.RLock()
-	state, ok := h.clients[client]
-	h.mu.RUnlock()
-	if !ok {
-		return nil, ErrClientNotRegistered
-	}
-
-	out := make([]string, 0, len(state.conversations))
-	for conversationID := range state.conversations {
-		out = append(out, conversationID)
-	}
-	sort.Strings(out)
-	return out, nil
 }
 
 func (h *Hub) ConnectionCount() int {
@@ -290,33 +215,53 @@ func (h *Hub) addConversationClientLocked(conversationID string, client *Client)
 }
 
 func (h *Hub) removeConversationClientLocked(conversationID string, client *Client) {
-	clientSet, ok := h.conversationClients[conversationID]
+	conversationSet, ok := h.conversationClients[conversationID]
 	if !ok {
 		return
 	}
-	delete(clientSet, client)
-	if len(clientSet) == 0 {
+	delete(conversationSet, client)
+	if len(conversationSet) == 0 {
 		delete(h.conversationClients, conversationID)
 	}
 }
 
 func (h *Hub) copyConversationRecipientsLocked(conversationID string) []*Client {
-	clientSet := h.conversationClients[conversationID]
-	out := make([]*Client, 0, len(clientSet))
-	for client := range clientSet {
+	recipients := h.conversationClients[conversationID]
+	out := make([]*Client, 0, len(recipients))
+	for client := range recipients {
 		out = append(out, client)
 	}
 	return out
 }
 
-func normalizeConversationSet(ids []string) map[string]struct{} {
-	out := make(map[string]struct{}, len(ids))
-	for _, id := range ids {
-		id = strings.TrimSpace(id)
-		if id == "" {
+func normalizeConversationSet(conversationIDs []string) map[string]struct{} {
+	conversationSet := make(map[string]struct{}, len(conversationIDs))
+	for _, rawConversationID := range conversationIDs {
+		conversationID := strings.TrimSpace(rawConversationID)
+		if conversationID == "" {
 			continue
 		}
-		out[id] = struct{}{}
+		conversationSet[conversationID] = struct{}{}
 	}
-	return out
+	return conversationSet
+}
+
+func (h *Hub) ConversationIDs(client *Client) ([]string, error) {
+	if client == nil {
+		return nil, ErrClientNil
+	}
+
+	h.mu.RLock()
+	state, ok := h.clients[client]
+	h.mu.RUnlock()
+	if !ok {
+		return nil, ErrClientNotRegistered
+	}
+
+	out := make([]string, 0, len(state.conversations))
+	for conversationID := range state.conversations {
+		out = append(out, conversationID)
+	}
+	sort.Strings(out)
+	return out, nil
 }

@@ -10,8 +10,8 @@ import (
 	"testing"
 
 	"agent-messenger/server/models"
+	"agent-messenger/server/realtime"
 	"agent-messenger/server/store"
-	"agent-messenger/server/ws"
 
 	"golang.org/x/crypto/bcrypt"
 )
@@ -164,7 +164,7 @@ func newTestRouter(t *testing.T) (http.Handler, *store.SQLiteStore) {
 
 	router := NewRouter(Dependencies{
 		Store:     sqliteStore,
-		Hub:       ws.NewHub(),
+		Hub:       realtime.NewHub(),
 		UploadDir: filepath.Join(t.TempDir(), "uploads"),
 	})
 	return router, sqliteStore

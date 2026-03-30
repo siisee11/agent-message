@@ -35,7 +35,7 @@ func TestRunWatchStreamsOnlyTargetConversationMessageNewEvents(t *testing.T) {
 	connectWatchStream = func(rawURL string) (watchStream, error) {
 		capturedURL = rawURL
 		return &fakeWatchStream{
-			events: []wsEvent{
+			events: []streamEvent{
 				{Type: "reaction.added", Data: json.RawMessage(`{"message_id":"m-0"}`)},
 				{Type: "message.new", Data: json.RawMessage(`{"id":"m-other","conversation_id":"c-other","sender_id":"u9","content":"nope","edited":false,"deleted":false,"created_at":"2026-01-01T00:00:00Z","updated_at":"2026-01-01T00:00:00Z"}`)},
 				{Type: "message.new", Data: json.RawMessage(`{"id":"m-target","conversation_id":"c-target","sender_id":"u2","content":"hello","edited":false,"deleted":false,"created_at":"2026-01-01T00:00:00Z","updated_at":"2026-01-01T00:00:00Z"}`)},
@@ -56,8 +56,8 @@ func TestRunWatchStreamsOnlyTargetConversationMessageNewEvents(t *testing.T) {
 	if got, want := strings.TrimSpace(stdout.String()), "m-target u2: hello"; got != want {
 		t.Fatalf("stdout mismatch: got %q want %q", got, want)
 	}
-	if got, want := capturedURL, "ws://example.test/ws?token=tok-watch"; got != want {
-		t.Fatalf("websocket URL mismatch: got %q want %q", got, want)
+	if got, want := capturedURL, "http://example.test/api/events?token=tok-watch"; got != want {
+		t.Fatalf("event stream URL mismatch: got %q want %q", got, want)
 	}
 }
 
@@ -79,13 +79,13 @@ func TestRunWatchRequiresLogin(t *testing.T) {
 }
 
 type fakeWatchStream struct {
-	events []wsEvent
+	events []streamEvent
 	index  int
 }
 
-func (f *fakeWatchStream) ReadEvent() (wsEvent, error) {
+func (f *fakeWatchStream) ReadEvent() (streamEvent, error) {
 	if f.index >= len(f.events) {
-		return wsEvent{}, io.EOF
+		return streamEvent{}, io.EOF
 	}
 	event := f.events[f.index]
 	f.index++

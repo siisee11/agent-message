@@ -5,13 +5,13 @@ import (
 	"net/http"
 	"strings"
 
+	"agent-messenger/server/realtime"
 	"agent-messenger/server/store"
-	"agent-messenger/server/ws"
 )
 
 type Dependencies struct {
 	Store              store.Store
-	Hub                *ws.Hub
+	Hub                *realtime.Hub
 	CORSAllowedOrigins []string
 	UploadDir          string
 }
@@ -27,14 +27,14 @@ func NewRouter(deps Dependencies) http.Handler {
 
 	hub := deps.Hub
 	if hub == nil {
-		hub = ws.NewHub()
+		hub = realtime.NewHub()
 	}
 
 	authHandler := newAuthHandler(deps.Store)
 	usersHandler := newUsersHandler(deps.Store)
-	conversationsHandler := newConversationsHandler(deps.Store)
+	conversationsHandler := newConversationsHandler(deps.Store, hub)
 	messagesHandler := newMessagesHandler(deps.Store, hub)
-	websocketHandler := newWebSocketHandler(deps.Store, hub)
+	eventStreamHandler := newEventStreamHandler(deps.Store, hub)
 	messagesHandler.uploadDir = uploadDir
 	uploadHandler := newUploadHandler(uploadDir)
 	authRequired := BearerAuthMiddleware(deps.Store)
@@ -60,8 +60,8 @@ func NewRouter(deps Dependencies) http.Handler {
 	mux.HandleFunc("/api/", func(w http.ResponseWriter, _ *http.Request) {
 		writeError(w, http.StatusNotFound, "not found")
 	})
+	mux.HandleFunc("/api/events", eventStreamHandler.handleEventStream)
 	mux.Handle("/static/uploads/", http.StripPrefix(staticUploadsPrefix, http.FileServer(http.Dir(uploadDir))))
-	mux.HandleFunc("/ws", websocketHandler.handleWebSocket)
 
 	return CORSMiddleware(deps.CORSAllowedOrigins)(mux)
 }

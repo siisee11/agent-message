@@ -46,7 +46,7 @@ Referenced but missing (noted once):
   - Implement load-older behavior using `before` cursor + limit.
   - Ensure route transitions and initial-scroll behavior are stable.
 
-- [ ] M3. Implement message rendering for Phase 5 bubble requirements (status: not started)
+- [x] M3. Implement message rendering for Phase 5 bubble requirements (status: completed)
   - Render sender, timestamp, edited badge (`[수정됨]`), and deleted placeholder (`"삭제된 메시지입니다"`).
   - Render inline image attachments and downloadable non-image file links.
   - Ensure own-vs-other bubble styling and deleted/edit state precedence are correct.
@@ -100,7 +100,20 @@ Referenced but missing (noted once):
     - load-older preserves viewport anchor to avoid jump while older messages prepend
     - route transitions reset naturally per conversation query key and per-conversation initial-scroll guard
   - Verified web build passes after M2 changes: `npm run build`.
-- Milestones M3-M6 remain not started.
+- Milestone M3 is complete:
+  - Upgraded message timeline rows into bubble UI semantics in `/dm/:conversationId`:
+    - sender name and timestamp metadata on each message
+    - edited badge rendered as `[수정됨]` for non-deleted edited messages
+    - deleted placeholder rendered as `"삭제된 메시지입니다"`
+  - Added attachment rendering:
+    - inline preview image for `attachment_type === "image"` + `attachment_url`
+    - downloadable link for non-image files (`attachment_type === "file"`)
+  - Added own-vs-other alignment and visual treatment with bubble classes driven by `message.sender_id === currentUser.id`.
+  - Enforced deleted/edit precedence in rendering:
+    - when deleted, only deleted placeholder is shown
+    - edited badge and attachment/content rendering are suppressed for deleted messages
+  - Verified web build passes after M3 changes: `npm run build`.
+- Milestones M4-M6 remain not started.
 
 ## Key decisions
 - Keep implementation strictly bounded to Phase 5 UI and required integration wiring.
@@ -110,10 +123,11 @@ Referenced but missing (noted once):
 - Keep `/dm/:conversationId` as a route-level placeholder in M1 so sidebar navigation works now while deferring message loading/pagination logic strictly to M2.
 - Use a deterministic pagination cursor strategy based on server ordering (messages returned newest-first; next cursor is oldest loaded id).
 - Keep message rendering in M2 intentionally minimal (timeline correctness first), deferring full bubble semantics to M3.
+- For M3 rendering precedence, treat `deleted` as dominant over `edited` and attachment/content display to match soft-delete UX expectations.
 
 ## Remaining issues / open questions
-- M3 must replace M2’s minimal timeline rows with full Phase 5 bubble semantics (edited/deleted badges, attachment rendering, own-vs-other styling precedence).
-- M4+ still need composer/actions/reactions/realtime reconciliation beyond M2’s history-loading scope.
+- M4 must add composer/send/edit/delete interactions on top of M3 bubble rendering.
+- M5+ still need websocket-driven live reconciliation and reaction toggle UX integration.
 
 ## Links to related documents
 - `AGENTS.md`

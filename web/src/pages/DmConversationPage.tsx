@@ -54,27 +54,6 @@ function formatMessageTimestamp(message: Message): string {
   return TIMESTAMP_FORMATTER.format(new Date(parsed))
 }
 
-function previewMessageBody(message: Message): string {
-  if (message.deleted) {
-    return 'Deleted message'
-  }
-
-  const content = message.content?.trim()
-  if (content) {
-    return content
-  }
-
-  if (message.attachment_type === 'image') {
-    return '[image attachment]'
-  }
-
-  if (message.attachment_type === 'file') {
-    return '[file attachment]'
-  }
-
-  return '(empty)'
-}
-
 export function DmConversationPage(): JSX.Element {
   const { conversationId } = useParams()
   const { user } = useAuth()
@@ -219,12 +198,63 @@ export function DmConversationPage(): JSX.Element {
             {messagesAscending.length > 0 ? (
               <ol className={styles.timelineList}>
                 {messagesAscending.map((details: MessageDetails) => (
-                  <li className={styles.timelineItem} key={details.message.id}>
-                    <div className={styles.timelineMeta}>
-                      <span className={styles.sender}>{details.sender.username}</span>
-                      <span className={styles.timestamp}>{formatMessageTimestamp(details.message)}</span>
+                  <li
+                    className={`${styles.timelineItem} ${
+                      details.message.sender_id === user?.id ? styles.timelineItemOwn : styles.timelineItemOther
+                    }`}
+                    key={details.message.id}
+                  >
+                    <div className={styles.messageBubble}>
+                      <div className={styles.timelineMeta}>
+                        <span className={styles.sender}>{details.sender.username}</span>
+                        <span className={styles.timelineMetaRight}>
+                          <span className={styles.timestamp}>{formatMessageTimestamp(details.message)}</span>
+                          {!details.message.deleted && details.message.edited ? (
+                            <span className={styles.editedBadge}>[수정됨]</span>
+                          ) : null}
+                        </span>
+                      </div>
+
+                      {details.message.deleted ? (
+                        <p className={`${styles.messageText} ${styles.messageTextDeleted}`}>삭제된 메시지입니다</p>
+                      ) : null}
+
+                      {!details.message.deleted && details.message.content?.trim() ? (
+                        <p className={styles.messageText}>{details.message.content.trim()}</p>
+                      ) : null}
+
+                      {!details.message.deleted &&
+                      details.message.attachment_type === 'image' &&
+                      details.message.attachment_url ? (
+                        <a
+                          className={styles.imageAttachmentLink}
+                          href={details.message.attachment_url}
+                          rel="noreferrer"
+                          target="_blank"
+                        >
+                          <img
+                            alt="Message attachment"
+                            className={styles.imageAttachment}
+                            loading="lazy"
+                            src={details.message.attachment_url}
+                          />
+                        </a>
+                      ) : null}
+
+                      {!details.message.deleted &&
+                      details.message.attachment_type === 'file' &&
+                      details.message.attachment_url ? (
+                        <a
+                          className={styles.fileAttachmentLink}
+                          download
+                          href={details.message.attachment_url}
+                          rel="noreferrer"
+                          target="_blank"
+                        >
+                          첨부 파일 다운로드
+                        </a>
+                      ) : null}
                     </div>
-                    <p className={styles.messagePreview}>{previewMessageBody(details.message)}</p>
                   </li>
                 ))}
               </ol>

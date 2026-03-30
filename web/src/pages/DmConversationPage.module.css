@@ -84,14 +84,32 @@
   padding: 0;
   list-style: none;
   display: grid;
-  gap: 0.5rem;
+  gap: 0.55rem;
 }
 
 .timelineItem {
+  display: flex;
+}
+
+.timelineItemOwn {
+  justify-content: flex-end;
+}
+
+.timelineItemOther {
+  justify-content: flex-start;
+}
+
+.messageBubble {
+  width: min(100%, 520px);
   border: 1px solid #d9e4fb;
-  border-radius: 10px;
+  border-radius: 12px;
   background: #ffffff;
   padding: 0.52rem 0.62rem;
+}
+
+.timelineItemOwn .messageBubble {
+  background: #e9f2ff;
+  border-color: #c4d7fb;
 }
 
 .timelineMeta {
@@ -99,6 +117,12 @@
   align-items: baseline;
   justify-content: space-between;
   gap: 0.7rem;
+}
+
+.timelineMetaRight {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.36rem;
 }
 
 .sender {
@@ -112,12 +136,54 @@
   font-size: 0.76rem;
 }
 
-.messagePreview {
+.editedBadge {
+  color: #395b96;
+  font-size: 0.75rem;
+}
+
+.messageText {
   margin: 0.4rem 0 0;
   font-size: 0.88rem;
   color: #1c335d;
   white-space: pre-wrap;
   word-break: break-word;
+}
+
+.messageTextDeleted {
+  color: #5f6880;
+  font-style: italic;
+}
+
+.imageAttachmentLink {
+  margin-top: 0.48rem;
+  display: inline-block;
+}
+
+.imageAttachment {
+  max-width: min(100%, 320px);
+  max-height: 240px;
+  border: 1px solid #cbd9f6;
+  border-radius: 10px;
+  object-fit: cover;
+  display: block;
+}
+
+.fileAttachmentLink {
+  margin-top: 0.5rem;
+  display: inline-flex;
+  align-items: center;
+  border: 1px solid #bfceef;
+  border-radius: 8px;
+  background: #f6f9ff;
+  color: #1f3e73;
+  text-decoration: none;
+  font-size: 0.84rem;
+  font-weight: 600;
+  padding: 0.33rem 0.52rem;
+}
+
+.fileAttachmentLink:hover {
+  background: #eef4ff;
 }
 
 .card {

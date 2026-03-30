@@ -86,6 +86,34 @@ func newLogoutCommand(rt *Runtime) *cobra.Command {
 	}
 }
 
+func newWhoAmICommand(rt *Runtime) *cobra.Command {
+	return &cobra.Command{
+		Use:   "whoami",
+		Short: "Print the currently authenticated user",
+		Args:  cobra.NoArgs,
+		RunE: func(_ *cobra.Command, _ []string) error {
+			return runWhoAmI(rt)
+		},
+	}
+}
+
+func runWhoAmI(rt *Runtime) error {
+	if err := ensureRuntime(rt); err != nil {
+		return err
+	}
+	if err := ensureLoggedIn(rt); err != nil {
+		return err
+	}
+
+	user, err := rt.Client.Me(context.Background())
+	if err != nil {
+		return err
+	}
+
+	_, _ = fmt.Fprintln(rt.Stdout, user.Username)
+	return nil
+}
+
 func runLogout(rt *Runtime) error {
 	if err := ensureRuntime(rt); err != nil {
 		return err

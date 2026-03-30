@@ -2,6 +2,7 @@ package store
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"path/filepath"
 	"testing"
@@ -248,6 +249,23 @@ func TestSQLiteStorePhase2CoreOperations(t *testing.T) {
 		t.Fatalf("expected attachment metadata on msg3, got %+v", msg3)
 	}
 
+	jsonRenderSpec := json.RawMessage(`{"root":"stack-1","elements":{"stack-1":{"type":"Stack"}}}`)
+	msg4, err := s.CreateMessage(ctx, models.CreateMessageParams{
+		ID:             "msg-4",
+		ConversationID: conversationAB.ID,
+		SenderID:       alice.ID,
+		Kind:           models.MessageKindJSONRender,
+		JSONRenderSpec: jsonRenderSpec,
+		CreatedAt:      base.Add(9*time.Second + time.Millisecond),
+		UpdatedAt:      base.Add(9*time.Second + time.Millisecond),
+	})
+	if err != nil {
+		t.Fatalf("CreateMessage(msg4) error = %v", err)
+	}
+	if msg4.Kind != models.MessageKindJSONRender || string(msg4.JSONRenderSpec) != string(jsonRenderSpec) {
+		t.Fatalf("expected json_render metadata on msg4, got %+v", msg4)
+	}
+
 	_, err = s.CreateMessage(ctx, models.CreateMessageParams{
 		ID:             "msg-forbidden",
 		ConversationID: conversationAB.ID,
@@ -276,8 +294,8 @@ func TestSQLiteStorePhase2CoreOperations(t *testing.T) {
 	if conversations[0].OtherUser.ID != bob.ID {
 		t.Fatalf("expected other user bob, got %+v", conversations[0].OtherUser)
 	}
-	if conversations[0].LastMessage == nil || conversations[0].LastMessage.ID != msg3.ID {
-		t.Fatalf("expected last message msg3 in AB summary, got %+v", conversations[0].LastMessage)
+	if conversations[0].LastMessage == nil || conversations[0].LastMessage.ID != msg4.ID {
+		t.Fatalf("expected last message msg4 in AB summary, got %+v", conversations[0].LastMessage)
 	}
 	if conversations[1].Conversation.ID != conversationAC.ID {
 		t.Fatalf("expected AC second, got %q", conversations[1].Conversation.ID)
@@ -294,7 +312,7 @@ func TestSQLiteStorePhase2CoreOperations(t *testing.T) {
 	if err != nil {
 		t.Fatalf("ListMessagesByConversation(first page) error = %v", err)
 	}
-	if len(firstPage) != 2 || firstPage[0].Message.ID != "msg-3" || firstPage[1].Message.ID != "msg-2" {
+	if len(firstPage) != 2 || firstPage[0].Message.ID != "msg-4" || firstPage[1].Message.ID != "msg-3" {
 		t.Fatalf("unexpected first message page: %+v", firstPage)
 	}
 

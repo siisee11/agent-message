@@ -136,6 +136,48 @@ func TestRunLogoutClearsTokenEvenWhenServerFails(t *testing.T) {
 	}
 }
 
+func TestRunWhoAmIReturnsCurrentUsername(t *testing.T) {
+	t.Parallel()
+
+	rt, stdout, _ := newTestRuntime(t, "http://example.test", "whoami-token", func(req *http.Request, _ []byte) (*http.Response, error) {
+		if req.Method != http.MethodGet {
+			t.Fatalf("unexpected method: %s", req.Method)
+		}
+		if req.URL.Path != "/api/users/me" {
+			t.Fatalf("unexpected path: %s", req.URL.Path)
+		}
+		if got, want := req.Header.Get("Authorization"), "Bearer whoami-token"; got != want {
+			t.Fatalf("authorization mismatch: got %q want %q", got, want)
+		}
+
+		return jsonResponse(http.StatusOK, `{"id":"u1","username":"alice","created_at":"2026-01-01T00:00:00Z"}`), nil
+	})
+
+	if err := runWhoAmI(rt); err != nil {
+		t.Fatalf("runWhoAmI: %v", err)
+	}
+	if got, want := strings.TrimSpace(stdout.String()), "alice"; got != want {
+		t.Fatalf("stdout mismatch: got %q want %q", got, want)
+	}
+}
+
+func TestRunWhoAmIRequiresLogin(t *testing.T) {
+	t.Parallel()
+
+	rt, _, _ := newTestRuntime(t, "http://example.test", "", func(req *http.Request, _ []byte) (*http.Response, error) {
+		t.Fatalf("unexpected request: %s %s", req.Method, req.URL.Path)
+		return nil, nil
+	})
+
+	err := runWhoAmI(rt)
+	if err == nil {
+		t.Fatalf("expected error")
+	}
+	if got := err.Error(); !strings.Contains(got, "not logged in") {
+		t.Fatalf("unexpected error: %q", got)
+	}
+}
+
 type roundTripFunc func(req *http.Request) (*http.Response, error)
 
 func (f roundTripFunc) RoundTrip(req *http.Request) (*http.Response, error) {

@@ -5,6 +5,8 @@ import (
 	"net/http"
 	"strings"
 	"testing"
+
+	"agent-messenger/cli/internal/api"
 )
 
 func TestRunSendMessageResolvesConversationAndSends(t *testing.T) {
@@ -54,13 +56,64 @@ func TestRunSendMessageResolvesConversationAndSends(t *testing.T) {
 		}
 	})
 
-	if err := runSendMessage(rt, "bob", "hello world"); err != nil {
+	if err := runSendMessage(rt, "bob", "hello world", "text"); err != nil {
 		t.Fatalf("runSendMessage: %v", err)
 	}
 	if !seenOpen || !seenSend {
 		t.Fatalf("expected both open and send calls, seenOpen=%v seenSend=%v", seenOpen, seenSend)
 	}
 	if got, want := strings.TrimSpace(stdout.String()), "sent m-send"; got != want {
+		t.Fatalf("stdout mismatch: got %q want %q", got, want)
+	}
+}
+
+func TestRunSendMessageSupportsJSONRenderKind(t *testing.T) {
+	t.Parallel()
+
+	rt, stdout, _ := newTestRuntime(t, "http://example.test", "tok-send", func(req *http.Request, body []byte) (*http.Response, error) {
+		switch {
+		case req.Method == http.MethodPost && req.URL.Path == "/api/conversations":
+			return jsonResponse(http.StatusOK, `{
+				"conversation":{"id":"c-send","participant_a":"u1","participant_b":"u2","created_at":"2026-01-01T00:00:00Z"},
+				"participant_a":{"id":"u1","username":"alice","created_at":"2026-01-01T00:00:00Z"},
+				"participant_b":{"id":"u2","username":"bob","created_at":"2026-01-01T00:00:00Z"}
+			}`), nil
+		case req.Method == http.MethodPost && req.URL.Path == "/api/conversations/c-send/messages":
+			var payload map[string]any
+			if err := json.Unmarshal(body, &payload); err != nil {
+				t.Fatalf("decode send payload: %v", err)
+			}
+			if got, want := payload["kind"], "json_render"; got != want {
+				t.Fatalf("send kind mismatch: got %v want %q", got, want)
+			}
+			spec, ok := payload["json_render_spec"].(map[string]any)
+			if !ok {
+				t.Fatalf("expected json_render_spec object in payload, got %T", payload["json_render_spec"])
+			}
+			if got, want := spec["root"], "stack-1"; got != want {
+				t.Fatalf("spec root mismatch: got %v want %q", got, want)
+			}
+			return jsonResponse(http.StatusCreated, `{
+				"id":"m-json",
+				"conversation_id":"c-send",
+				"sender_id":"u1",
+				"kind":"json_render",
+				"json_render_spec":{"root":"stack-1","elements":{"stack-1":{"type":"Stack"}}},
+				"edited":false,
+				"deleted":false,
+				"created_at":"2026-01-01T00:00:00Z",
+				"updated_at":"2026-01-01T00:00:00Z"
+			}`), nil
+		default:
+			t.Fatalf("unexpected request: %s %s", req.Method, req.URL.Path)
+			return nil, nil
+		}
+	})
+
+	if err := runSendMessage(rt, "bob", `{"root":"stack-1","elements":{"stack-1":{"type":"Stack"}}}`, "json_render"); err != nil {
+		t.Fatalf("runSendMessage(json_render): %v", err)
+	}
+	if got, want := strings.TrimSpace(stdout.String()), "sent m-json"; got != want {
 		t.Fatalf("stdout mismatch: got %q want %q", got, want)
 	}
 }
@@ -175,5 +228,20 @@ func TestRunReadMessagesRejectsInvalidLimit(t *testing.T) {
 	}
 	if got := err.Error(); !strings.Contains(got, "positive integer") {
 		t.Fatalf("unexpected error: %q", got)
+	}
+}
+
+func TestMessageTextUsesJSONRenderPlaceholder(t *testing.T) {
+	t.Parallel()
+
+	details := api.MessageDetails{
+		Message: api.Message{
+			ID:   "m-json",
+			Kind: "json_render",
+		},
+	}
+
+	if got, want := messageText(details), "[json-render]"; got != want {
+		t.Fatalf("messageText mismatch: got %q want %q", got, want)
 	}
 }

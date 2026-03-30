@@ -176,11 +176,15 @@ func (c *Client) ListMessages(ctx context.Context, conversationID string, before
 	return out, err
 }
 
-func (c *Client) SendMessage(ctx context.Context, conversationID, content string) (Message, error) {
+type SendMessageRequest struct {
+	Content        *string         `json:"content,omitempty"`
+	Kind           string          `json:"kind,omitempty"`
+	JSONRenderSpec json.RawMessage `json:"json_render_spec,omitempty"`
+}
+
+func (c *Client) SendMessage(ctx context.Context, conversationID string, input SendMessageRequest) (Message, error) {
 	var out Message
-	err := c.doJSON(ctx, http.MethodPost, "/api/conversations/"+url.PathEscape(conversationID)+"/messages", map[string]string{
-		"content": content,
-	}, &out)
+	err := c.doJSON(ctx, http.MethodPost, "/api/conversations/"+url.PathEscape(conversationID)+"/messages", input, &out)
 	return out, err
 }
 
@@ -320,16 +324,18 @@ type Conversation struct {
 
 // Message matches the message model shape.
 type Message struct {
-	ID             string    `json:"id"`
-	ConversationID string    `json:"conversation_id"`
-	SenderID       string    `json:"sender_id"`
-	Content        *string   `json:"content,omitempty"`
-	AttachmentURL  *string   `json:"attachment_url,omitempty"`
-	AttachmentType *string   `json:"attachment_type,omitempty"`
-	Edited         bool      `json:"edited"`
-	Deleted        bool      `json:"deleted"`
-	CreatedAt      time.Time `json:"created_at"`
-	UpdatedAt      time.Time `json:"updated_at"`
+	ID             string          `json:"id"`
+	ConversationID string          `json:"conversation_id"`
+	SenderID       string          `json:"sender_id"`
+	Content        *string         `json:"content,omitempty"`
+	Kind           string          `json:"kind,omitempty"`
+	JSONRenderSpec json.RawMessage `json:"json_render_spec,omitempty"`
+	AttachmentURL  *string         `json:"attachment_url,omitempty"`
+	AttachmentType *string         `json:"attachment_type,omitempty"`
+	Edited         bool            `json:"edited"`
+	Deleted        bool            `json:"deleted"`
+	CreatedAt      time.Time       `json:"created_at"`
+	UpdatedAt      time.Time       `json:"updated_at"`
 }
 
 // Reaction matches the reaction model shape.

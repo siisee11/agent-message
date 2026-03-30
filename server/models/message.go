@@ -1,10 +1,18 @@
 package models
 
-import "time"
+import (
+	"encoding/json"
+	"time"
+)
+
+type MessageKind string
 
 type AttachmentType string
 
 const (
+	MessageKindText       MessageKind = "text"
+	MessageKindJSONRender MessageKind = "json_render"
+
 	AttachmentTypeImage AttachmentType = "image"
 	AttachmentTypeFile  AttachmentType = "file"
 )
@@ -15,6 +23,8 @@ type Message struct {
 	ConversationID string          `json:"conversation_id" db:"conversation_id"`
 	SenderID       string          `json:"sender_id" db:"sender_id"`
 	Content        *string         `json:"content,omitempty" db:"content"`
+	Kind           MessageKind     `json:"kind,omitempty" db:"kind"`
+	JSONRenderSpec json.RawMessage `json:"json_render_spec,omitempty" db:"json_render_spec"`
 	AttachmentURL  *string         `json:"attachment_url,omitempty" db:"attachment_url"`
 	AttachmentType *AttachmentType `json:"attachment_type,omitempty" db:"attachment_type"`
 	Edited         bool            `json:"edited" db:"edited"`

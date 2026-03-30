@@ -2,6 +2,7 @@ package cmd
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"strings"
@@ -15,17 +16,20 @@ import (
 const defaultReadLimit = 20
 
 func newSendMessageCommand(rt *Runtime) *cobra.Command {
-	return &cobra.Command{
-		Use:   "send <username> <text>",
+	var kind string
+	cmd := &cobra.Command{
+		Use:   "send <username> <text-or-inline-json>",
 		Short: "Send a message to a user",
 		Args:  cobra.ExactArgs(2),
 		RunE: func(_ *cobra.Command, args []string) error {
-			return runSendMessage(rt, args[0], args[1])
+			return runSendMessage(rt, args[0], args[1], kind)
 		},
 	}
+	cmd.Flags().StringVar(&kind, "kind", "text", "Message kind: text or json_render")
+	return cmd
 }
 
-func runSendMessage(rt *Runtime, username, text string) error {
+func runSendMessage(rt *Runtime, username, text, kind string) error {
 	if err := ensureRuntime(rt); err != nil {
 		return err
 	}
@@ -33,9 +37,9 @@ func runSendMessage(rt *Runtime, username, text string) error {
 		return err
 	}
 
-	trimmedText := strings.TrimSpace(text)
-	if trimmedText == "" {
-		return errors.New("message text is required")
+	trimmedKind := strings.TrimSpace(kind)
+	if trimmedKind == "" {
+		trimmedKind = "text"
 	}
 
 	conversationID, err := resolveConversationIDByUsername(context.Background(), rt, username)
@@ -43,13 +47,58 @@ func runSendMessage(rt *Runtime, username, text string) error {
 		return err
 	}
 
-	message, err := rt.Client.SendMessage(context.Background(), conversationID, trimmedText)
+	request, err := buildSendMessageRequest(text, trimmedKind)
+	if err != nil {
+		return err
+	}
+
+	message, err := rt.Client.SendMessage(context.Background(), conversationID, request)
 	if err != nil {
 		return err
 	}
 
 	_, _ = fmt.Fprintf(rt.Stdout, "sent %s\n", message.ID)
 	return nil
+}
+
+func buildSendMessageRequest(rawText, kind string) (api.SendMessageRequest, error) {
+	switch kind {
+	case "text":
+		trimmedText := strings.TrimSpace(rawText)
+		if trimmedText == "" {
+			return api.SendMessageRequest{}, errors.New("message text is required")
+		}
+		return api.SendMessageRequest{Content: &trimmedText}, nil
+	case "json_render":
+		spec, err := parseInlineJSONObject(rawText)
+		if err != nil {
+			return api.SendMessageRequest{}, err
+		}
+		return api.SendMessageRequest{
+			Kind:           "json_render",
+			JSONRenderSpec: spec,
+		}, nil
+	default:
+		return api.SendMessageRequest{}, errors.New("kind must be text or json_render")
+	}
+}
+
+func parseInlineJSONObject(raw string) (json.RawMessage, error) {
+	trimmed := strings.TrimSpace(raw)
+	if trimmed == "" {
+		return nil, errors.New("json_render inline JSON object is required")
+	}
+
+	var decoded map[string]any
+	if err := json.Unmarshal([]byte(trimmed), &decoded); err != nil {
+		return nil, fmt.Errorf("invalid json_render inline JSON object: %w", err)
+	}
+
+	normalized, err := json.Marshal(decoded)
+	if err != nil {
+		return nil, fmt.Errorf("normalize json_render inline JSON object: %w", err)
+	}
+	return json.RawMessage(normalized), nil
 }
 
 func newReadMessagesCommand(rt *Runtime) *cobra.Command {
@@ -137,6 +186,9 @@ func messageSender(details api.MessageDetails) string {
 func messageText(details api.MessageDetails) string {
 	if details.Message.Deleted {
 		return "deleted message"
+	}
+	if strings.TrimSpace(details.Message.Kind) == "json_render" {
+		return "[json-render]"
 	}
 	if details.Message.Content != nil {
 		content := strings.TrimSpace(*details.Message.Content)

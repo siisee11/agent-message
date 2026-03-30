@@ -1,6 +1,8 @@
 package models
 
 import (
+	"bytes"
+	"encoding/json"
 	"errors"
 	"strings"
 )
@@ -13,9 +15,11 @@ const (
 )
 
 var (
-	ErrMessageContentRequired = errors.New("message content is required")
-	ErrReactionEmojiRequired  = errors.New("emoji is required")
-	ErrPageLimitOutOfRange    = errors.New("limit must be between 1 and 100")
+	ErrMessageContentRequired        = errors.New("message content is required")
+	ErrMessageKindInvalid            = errors.New("message kind must be text or json_render")
+	ErrMessageJSONRenderSpecRequired = errors.New("json_render_spec object is required for json_render messages")
+	ErrReactionEmojiRequired         = errors.New("emoji is required")
+	ErrPageLimitOutOfRange           = errors.New("limit must be between 1 and 100")
 )
 
 // StartConversationRequest is the JSON body for POST /api/conversations.
@@ -29,14 +33,31 @@ func (r StartConversationRequest) Validate() error {
 
 // SendMessageRequest is the JSON body for POST /api/conversations/:id/messages text sends.
 type SendMessageRequest struct {
-	Content string `json:"content"`
+	Content        *string         `json:"content,omitempty"`
+	Kind           MessageKind     `json:"kind,omitempty"`
+	JSONRenderSpec json.RawMessage `json:"json_render_spec,omitempty"`
 }
 
 func (r SendMessageRequest) Validate() error {
-	if strings.TrimSpace(r.Content) == "" {
-		return ErrMessageContentRequired
+	kind := r.Kind
+	if kind == "" {
+		kind = MessageKindText
 	}
-	return nil
+
+	switch kind {
+	case MessageKindText:
+		if r.Content == nil || strings.TrimSpace(*r.Content) == "" {
+			return ErrMessageContentRequired
+		}
+		return nil
+	case MessageKindJSONRender:
+		if !isJSONObject(r.JSONRenderSpec) {
+			return ErrMessageJSONRenderSpecRequired
+		}
+		return nil
+	default:
+		return ErrMessageKindInvalid
+	}
 }
 
 // EditMessageRequest is the JSON body for PATCH /api/messages/:id.
@@ -104,4 +125,20 @@ type MessageDetails struct {
 // UploadResponse is returned by POST /api/upload.
 type UploadResponse struct {
 	URL string `json:"url"`
+}
+
+func isJSONObject(value json.RawMessage) bool {
+	trimmed := bytes.TrimSpace(value)
+	if len(trimmed) == 0 {
+		return false
+	}
+	if trimmed[0] != '{' {
+		return false
+	}
+
+	var decoded map[string]any
+	if err := json.Unmarshal(trimmed, &decoded); err != nil {
+		return false
+	}
+	return true
 }

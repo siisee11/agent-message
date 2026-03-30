@@ -1,6 +1,7 @@
 package api
 
 import (
+	"encoding/json"
 	"errors"
 	"log"
 	"mime"
@@ -223,7 +224,7 @@ func (h *messagesHandler) handleCreateMessage(w http.ResponseWriter, r *http.Req
 		return
 	}
 
-	content, attachmentURL, attachmentType, err := h.parseCreateMessagePayload(w, r)
+	content, kind, jsonRenderSpec, attachmentURL, attachmentType, err := h.parseCreateMessagePayload(w, r)
 	if err != nil {
 		switch {
 		case errors.Is(err, errRequestEntityTooLarge):
@@ -242,6 +243,8 @@ func (h *messagesHandler) handleCreateMessage(w http.ResponseWriter, r *http.Req
 		ConversationID: conversationID,
 		SenderID:       user.ID,
 		Content:        content,
+		Kind:           kind,
+		JSONRenderSpec: jsonRenderSpec,
 		AttachmentURL:  attachmentURL,
 		AttachmentType: attachmentType,
 		CreatedAt:      now,
@@ -385,28 +388,35 @@ func reactionRemovedEventData(reaction models.Reaction) map[string]string {
 	}
 }
 
-func (h *messagesHandler) parseCreateMessagePayload(w http.ResponseWriter, r *http.Request) (*string, *string, *models.AttachmentType, error) {
+func (h *messagesHandler) parseCreateMessagePayload(
+	w http.ResponseWriter,
+	r *http.Request,
+) (*string, models.MessageKind, json.RawMessage, *string, *models.AttachmentType, error) {
 	contentType := strings.TrimSpace(r.Header.Get("Content-Type"))
 	mediaType, _, err := mime.ParseMediaType(contentType)
 	if err != nil {
-		return nil, nil, nil, errors.New("invalid content type")
+		return nil, "", nil, nil, nil, errors.New("invalid content type")
 	}
 
 	switch mediaType {
 	case "application/json":
 		var req models.SendMessageRequest
 		if err := decodeJSONBody(r, &req); err != nil {
-			return nil, nil, nil, errors.New("invalid JSON body")
+			return nil, "", nil, nil, nil, errors.New("invalid JSON body")
 		}
 		if err := req.Validate(); err != nil {
-			return nil, nil, nil, err
+			return nil, "", nil, nil, nil, err
 		}
-		content := strings.TrimSpace(req.Content)
-		return &content, nil, nil, nil
+		if req.Kind == models.MessageKindJSONRender {
+			return nil, models.MessageKindJSONRender, req.JSONRenderSpec, nil, nil, nil
+		}
+		content := strings.TrimSpace(*req.Content)
+		return &content, models.MessageKindText, nil, nil, nil, nil
 	case "multipart/form-data":
-		return h.parseMultipartMessagePayload(w, r)
+		content, attachmentURL, attachmentType, err := h.parseMultipartMessagePayload(w, r)
+		return content, models.MessageKindText, nil, attachmentURL, attachmentType, err
 	default:
-		return nil, nil, nil, errors.New("content type must be application/json or multipart/form-data")
+		return nil, "", nil, nil, nil, errors.New("content type must be application/json or multipart/form-data")
 	}
 }
 

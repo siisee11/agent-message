@@ -108,6 +108,14 @@ var sqliteMigrations = []migration{
 			CREATE INDEX idx_messages_sender_id ON messages(sender_id);
 		`,
 	},
+	{
+		version: 8,
+		name:    "add_message_kind_and_json_render_spec",
+		sql: `
+			ALTER TABLE messages ADD COLUMN kind TEXT NULL CHECK(kind IN ('text', 'json_render') OR kind IS NULL);
+			ALTER TABLE messages ADD COLUMN json_render_spec TEXT NULL;
+		`,
+	},
 }
 
 func (s *SQLiteStore) migrate(ctx context.Context) error {

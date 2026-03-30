@@ -2,3 +2,4 @@
 .worktrees/
 server/*.sqlite
 server/*.sqlite-*
+agent-messenger

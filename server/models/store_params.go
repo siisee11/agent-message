@@ -1,6 +1,9 @@
 package models
 
-import "time"
+import (
+	"encoding/json"
+	"time"
+)
 
 // CreateUserParams is a persistence boundary shape for inserting users.
 type CreateUserParams struct {
@@ -63,6 +66,8 @@ type CreateMessageParams struct {
 	ConversationID string
 	SenderID       string
 	Content        *string
+	Kind           MessageKind
+	JSONRenderSpec json.RawMessage
 	AttachmentURL  *string
 	AttachmentType *AttachmentType
 	CreatedAt      time.Time

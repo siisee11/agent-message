@@ -1,6 +1,13 @@
 package models
 
-import "testing"
+import (
+	"encoding/json"
+	"testing"
+)
+
+func stringPtr(value string) *string {
+	return &value
+}
 
 func TestStartConversationRequestValidate(t *testing.T) {
 	tests := []struct {
@@ -55,7 +62,7 @@ func TestMessageRequestsValidate(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run("send_"+tt.name, func(t *testing.T) {
-			err := (SendMessageRequest{Content: tt.content}).Validate()
+			err := (SendMessageRequest{Content: stringPtr(tt.content)}).Validate()
 			if tt.wantErr && err == nil {
 				t.Fatalf("expected validation error")
 			}
@@ -73,6 +80,24 @@ func TestMessageRequestsValidate(t *testing.T) {
 				t.Fatalf("expected no validation error, got %v", err)
 			}
 		})
+	}
+}
+
+func TestSendMessageRequestValidateJSONRender(t *testing.T) {
+	validSpec := json.RawMessage(`{"root":"stack-1","elements":{"stack-1":{"type":"Stack"}}}`)
+
+	if err := (SendMessageRequest{
+		Kind:           MessageKindJSONRender,
+		JSONRenderSpec: validSpec,
+	}).Validate(); err != nil {
+		t.Fatalf("expected valid json_render request, got %v", err)
+	}
+
+	if err := (SendMessageRequest{
+		Kind:           MessageKindJSONRender,
+		JSONRenderSpec: json.RawMessage(`["not-an-object"]`),
+	}).Validate(); err == nil {
+		t.Fatalf("expected validation error for non-object json_render_spec")
 	}
 }
 

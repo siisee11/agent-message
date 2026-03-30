@@ -92,6 +92,9 @@ func watchMessageText(message api.Message) string {
 	if message.Deleted {
 		return "deleted message"
 	}
+	if strings.TrimSpace(message.Kind) == "json_render" {
+		return "[json-render]"
+	}
 	if message.Content != nil {
 		content := strings.TrimSpace(*message.Content)
 		if content != "" {

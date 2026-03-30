@@ -3,6 +3,7 @@ package store
 import (
 	"context"
 	"database/sql"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"slices"
@@ -497,7 +498,7 @@ func (s *PostgresStore) ListMessagesByConversation(ctx context.Context, params m
 
 	query := `
 		SELECT
-			m.id, m.conversation_id, m.sender_id, m.content, m.attachment_url, m.attachment_type, m.edited, m.deleted, m.created_at, m.updated_at,
+			m.id, m.conversation_id, m.sender_id, m.content, m.kind, m.json_render_spec, m.attachment_url, m.attachment_type, m.edited, m.deleted, m.created_at, m.updated_at,
 			u.id, u.username, u.created_at
 		FROM messages m
 		INNER JOIN users u ON u.id = m.sender_id
@@ -530,6 +531,8 @@ func (s *PostgresStore) ListMessagesByConversation(ctx context.Context, params m
 		var (
 			details             models.MessageDetails
 			content             sql.NullString
+			kind                sql.NullString
+			jsonRenderSpec      sql.NullString
 			attachmentURL       sql.NullString
 			attachmentType      sql.NullString
 			edited              int
@@ -543,6 +546,8 @@ func (s *PostgresStore) ListMessagesByConversation(ctx context.Context, params m
 			&details.Message.ConversationID,
 			&details.Message.SenderID,
 			&content,
+			&kind,
+			&jsonRenderSpec,
 			&attachmentURL,
 			&attachmentType,
 			&edited,
@@ -557,6 +562,12 @@ func (s *PostgresStore) ListMessagesByConversation(ctx context.Context, params m
 		}
 
 		details.Message.Content = nullStringPointer(content)
+		if kind.Valid {
+			details.Message.Kind = models.MessageKind(kind.String)
+		}
+		if jsonRenderSpec.Valid {
+			details.Message.JSONRenderSpec = json.RawMessage(jsonRenderSpec.String)
+		}
 		details.Message.AttachmentURL = nullStringPointer(attachmentURL)
 		if attachmentType.Valid {
 			typed := models.AttachmentType(attachmentType.String)
@@ -611,14 +622,22 @@ func (s *PostgresStore) CreateMessage(ctx context.Context, params models.CreateM
 
 	const query = `
 		INSERT INTO messages (
-			id, conversation_id, sender_id, content, attachment_url, attachment_type, edited, deleted, created_at, updated_at
+			id, conversation_id, sender_id, content, kind, json_render_spec, attachment_url, attachment_type, edited, deleted, created_at, updated_at
 		)
-		VALUES (?, ?, ?, ?, ?, ?, 0, 0, ?, ?)
+		VALUES (?, ?, ?, ?, ?, ?, ?, ?, 0, 0, ?, ?)
 	`
 
 	var attachmentType any
 	if params.AttachmentType != nil {
 		attachmentType = string(*params.AttachmentType)
+	}
+	var kind any
+	if params.Kind != "" {
+		kind = string(params.Kind)
+	}
+	var jsonRenderSpec any
+	if len(params.JSONRenderSpec) > 0 {
+		jsonRenderSpec = string(params.JSONRenderSpec)
 	}
 	_, err := s.execContext(
 		ctx,
@@ -627,6 +646,8 @@ func (s *PostgresStore) CreateMessage(ctx context.Context, params models.CreateM
 		params.ConversationID,
 		params.SenderID,
 		params.Content,
+		kind,
+		jsonRenderSpec,
 		params.AttachmentURL,
 		attachmentType,
 		formatTime(params.CreatedAt),
@@ -674,7 +695,7 @@ func (s *PostgresStore) UpdateMessage(ctx context.Context, params models.UpdateM
 func (s *PostgresStore) SoftDeleteMessage(ctx context.Context, params models.SoftDeleteMessageParams) (models.Message, error) {
 	const query = `
 		UPDATE messages
-		SET content = NULL, attachment_url = NULL, attachment_type = NULL, deleted = 1, updated_at = ?
+		SET content = NULL, json_render_spec = NULL, attachment_url = NULL, attachment_type = NULL, deleted = 1, updated_at = ?
 		WHERE id = ? AND sender_id = ?
 	`
 	res, err := s.execContext(
@@ -835,7 +856,7 @@ func (s *PostgresStore) getUserByQuery(ctx context.Context, query string, arg st
 
 func (s *PostgresStore) getMessageByID(ctx context.Context, messageID string) (models.Message, error) {
 	const query = `
-		SELECT id, conversation_id, sender_id, content, attachment_url, attachment_type, edited, deleted, created_at, updated_at
+		SELECT id, conversation_id, sender_id, content, kind, json_render_spec, attachment_url, attachment_type, edited, deleted, created_at, updated_at
 		FROM messages
 		WHERE id = ?
 	`
@@ -844,6 +865,8 @@ func (s *PostgresStore) getMessageByID(ctx context.Context, messageID string) (m
 	var (
 		message        models.Message
 		content        sql.NullString
+		kind           sql.NullString
+		jsonRenderSpec sql.NullString
 		attachmentURL  sql.NullString
 		attachmentType sql.NullString
 		edited         int
@@ -856,6 +879,8 @@ func (s *PostgresStore) getMessageByID(ctx context.Context, messageID string) (m
 		&message.ConversationID,
 		&message.SenderID,
 		&content,
+		&kind,
+		&jsonRenderSpec,
 		&attachmentURL,
 		&attachmentType,
 		&edited,
@@ -870,6 +895,12 @@ func (s *PostgresStore) getMessageByID(ctx context.Context, messageID string) (m
 	}
 
 	message.Content = nullStringPointer(content)
+	if kind.Valid {
+		message.Kind = models.MessageKind(kind.String)
+	}
+	if jsonRenderSpec.Valid {
+		message.JSONRenderSpec = json.RawMessage(jsonRenderSpec.String)
+	}
 	message.AttachmentURL = nullStringPointer(attachmentURL)
 	if attachmentType.Valid {
 		typed := models.AttachmentType(attachmentType.String)

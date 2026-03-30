@@ -104,6 +104,33 @@ func TestMessagesEndpoints(t *testing.T) {
 		}
 	})
 
+	t.Run("send json_render message with inline spec", func(t *testing.T) {
+		req := httptest.NewRequest(
+			http.MethodPost,
+			"/api/conversations/"+conversationID+"/messages",
+			bytes.NewBufferString(`{"kind":"json_render","json_render_spec":{"root":"stack-1","elements":{"stack-1":{"type":"Stack"}}}}`),
+		)
+		req.Header.Set("Authorization", "Bearer "+alice.Token)
+		req.Header.Set("Content-Type", "application/json")
+		resp := httptest.NewRecorder()
+		router.ServeHTTP(resp, req)
+
+		if resp.Code != http.StatusCreated {
+			t.Fatalf("expected %d, got %d body=%s", http.StatusCreated, resp.Code, resp.Body.String())
+		}
+
+		var message models.Message
+		if err := json.NewDecoder(resp.Body).Decode(&message); err != nil {
+			t.Fatalf("decode json_render message: %v", err)
+		}
+		if message.Kind != models.MessageKindJSONRender {
+			t.Fatalf("expected json_render kind, got %q", message.Kind)
+		}
+		if string(message.JSONRenderSpec) == "" {
+			t.Fatalf("expected json_render_spec in response, got %+v", message)
+		}
+	})
+
 	t.Run("reject unsupported content type", func(t *testing.T) {
 		req := httptest.NewRequest(http.MethodPost, "/api/conversations/"+conversationID+"/messages", bytes.NewBufferString("hello"))
 		req.Header.Set("Authorization", "Bearer "+alice.Token)

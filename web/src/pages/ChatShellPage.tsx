@@ -84,7 +84,7 @@ function isConversationWithUser(summary: ConversationSummary, userId: string): b
   return summary.other_user.id === userId
 }
 
-export function ChatShellPage(): JSX.Element {
+export function ChatShellPage() {
   const navigate = useNavigate()
   const queryClient = useQueryClient()
   const { user, logout } = useAuth()
@@ -154,7 +154,7 @@ export function ChatShellPage(): JSX.Element {
     startConversationMutation.mutate(username)
   }
 
-  function renderConversationItem(summary: ConversationSummary): JSX.Element {
+  function renderConversationItem(summary: ConversationSummary) {
     const preview = summarizeLastMessage(summary.last_message)
     const timestamp = formatLastMessageTime(summary.last_message)
     const conversationId = summary.conversation.id

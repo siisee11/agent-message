@@ -54,7 +54,7 @@ function writeStoredToken(token: string | null): void {
   }
 }
 
-export function AuthProvider({ children }: PropsWithChildren): JSX.Element {
+export function AuthProvider({ children }: PropsWithChildren) {
   const [status, setStatus] = useState<AuthStatus>('loading')
   const [token, setToken] = useState<string | null>(null)
   const [user, setUser] = useState<UserProfile | null>(null)

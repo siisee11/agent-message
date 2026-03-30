@@ -7,7 +7,7 @@ import { RealtimeProvider } from './realtime'
 import { ProtectedRoute } from './routes'
 import styles from './App.module.css'
 
-export function App(): JSX.Element {
+export function App() {
   return (
     <div className={styles.app}>
       <RealtimeProvider>

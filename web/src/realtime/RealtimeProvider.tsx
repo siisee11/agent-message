@@ -30,7 +30,7 @@ interface RealtimeContextValue {
 
 const RealtimeContext = createContext<RealtimeContextValue | undefined>(undefined)
 
-export function RealtimeProvider({ children }: PropsWithChildren): JSX.Element {
+export function RealtimeProvider({ children }: PropsWithChildren) {
   const queryClient = useQueryClient()
   const { isAuthenticated, token, user } = useAuth()
   const [messageReactions, setMessageReactions] = useState<MessageReactionsState>({})

@@ -1,6 +1,6 @@
 import styles from './ChatViewPage.module.css'
 
-export function ChatIndexPage(): JSX.Element {
+export function ChatIndexPage() {
   return (
     <section className={styles.page}>
       <div className={styles.card}>

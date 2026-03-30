@@ -39,7 +39,7 @@ Referenced but missing (noted once):
 - `docs/PLANS.md`
 
 ## Milestones
-- [ ] M1. Upgrade `web/` to React 19 and align related dependencies/tooling until build and typecheck are green (status: not started)
+- [x] M1. Upgrade `web/` to React 19 and align related dependencies/tooling until build and typecheck are green (status: completed)
 - [ ] M2. Introduce explicit message-kind protocol/types and parsing helpers for deterministic `text` vs `json_render` handling with backward-compatible text defaults (status: not started)
 - [ ] M3. Implement DM bubble render branching in `DmConversationPage.tsx` with deleted-message precedence, text bubble parity, and minimal read-only json-render registry rendering (status: not started)
 - [ ] M4. Update editability and preview behavior: disable edit affordances/flows for `json_render` messages, keep delete allowed, and add compact conversation preview fallback in `ChatShellPage.tsx` (status: not started)
@@ -53,7 +53,20 @@ Referenced but missing (noted once):
   - `base_branch=main`
   - `worktree_id=react19-json-render-chat-fd2a1bcf`
 - Reviewed the repository docs listed above and scoped implementation milestones.
-- No code changes started yet.
+- Completed M1 (React 19 upgrade in `web/`):
+  - Updated `web/package.json` to React 19 dependency ranges:
+    - `react` / `react-dom` from `^18.3.1` to `^19.0.0`
+    - `@types/react` / `@types/react-dom` from `^18.x` to `^19.0.0`
+  - Regenerated `web/package-lock.json` via `npm install` in `web/`.
+  - Updated explicit `JSX.Element` return annotations to inferred return types in:
+    - `web/src/App.tsx`
+    - `web/src/auth/AuthProvider.tsx`
+    - `web/src/realtime/RealtimeProvider.tsx`
+    - `web/src/pages/ChatIndexPage.tsx`
+    - `web/src/pages/ChatShellPage.tsx`
+    - `web/src/pages/DmConversationPage.tsx`
+    - `web/src/routes/ProtectedRoute.tsx`
+  - Verified build + typecheck pass with `cd web && npm run build`.
 
 ## Key decisions
 - Use an explicit message-kind protocol field for deterministic rendering; do not parse arbitrary text as JSON specs.
@@ -61,10 +74,12 @@ Referenced but missing (noted once):
 - Keep deleted placeholder rendering as the highest-precedence branch.
 - Keep json-render handling intentionally minimal and read-only for this iteration.
 - Preserve existing attachment and reaction behavior without protocol drift.
+- For React 19 type compatibility, prefer inferred component return types over global `JSX.Element` annotations.
 
 ## Remaining issues / open questions
 - Confirm exact server payload/source field name for message kind if current API types differ from planned `text` / `json_render` naming.
 - Confirm the compact preview label string for json-render messages (for example `[json-render]`) before final polish if product wording differs.
+- React 19 install emitted a transient peer-resolution warning from stale `18.x` metadata during dependency resolution, but final tree is resolved to React/ReactDOM 19.x and build is green.
 
 ## Links to related documents
 - `AGENTS.md`

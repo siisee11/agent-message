@@ -123,7 +123,7 @@ function groupReactionsByEmoji(
   return Array.from(grouped.values())
 }
 
-export function DmConversationPage(): JSX.Element {
+export function DmConversationPage() {
   const navigate = useNavigate()
   const { conversationId } = useParams()
   const { user } = useAuth()

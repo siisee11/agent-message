@@ -39,7 +39,7 @@ Referenced but missing (noted once):
 - [x] M2. Implement typed API client in `web/src/api/` for auth/users/conversations/messages/reactions/upload endpoints using shared request/response types and centralized auth token handling (status: completed)
 - [x] M3. Implement auth state management (provider + hooks + token persistence) and `/login` page with username/PIN form, login-first flow, and auto-register fallback on first login (status: completed)
 - [x] M4. Implement protected route wrapper and minimal route wiring so unauthenticated users are redirected to `/login` and authenticated users can reach the protected app entry route (status: completed)
-- [ ] M5. Implement `web/src/hooks/useWebSocket.ts` with token-based connection, reconnect/backoff behavior, event parsing callbacks, and lifecycle cleanup; then run web build/tests and fix issues (status: not started)
+- [x] M5. Implement `web/src/hooks/useWebSocket.ts` with token-based connection, reconnect/backoff behavior, event parsing callbacks, and lifecycle cleanup; then run web build/tests and fix issues (status: completed)
 
 ## Current progress
 - Verified worktree initialization with:
@@ -85,6 +85,28 @@ Referenced but missing (noted once):
     - If unauthenticated, redirect to `/login` with `state.from` preserving the attempted location.
     - If authenticated, render protected route content through `<Outlet />`.
   - Updated `src/App.tsx` route wiring so app entry route (`/`) is nested under `ProtectedRoute`.
+- Completed M5 WebSocket hook and final validation:
+  - Added `web/src/hooks/useWebSocket.ts` with:
+    - Token-based `/ws?token=...` connection URL handling.
+    - Configurable reconnect backoff (`initialRetryDelayMs`, exponential growth, `maxRetryDelayMs`, optional `maxReconnectAttempts`).
+    - Typed server event parsing and event-specific callbacks for:
+      - `message.new`
+      - `message.edited`
+      - `message.deleted`
+      - `reaction.added`
+      - `reaction.removed`
+    - Lifecycle-safe cleanup for socket close and reconnect timers on unmount/dependency change.
+    - Outbound helpers: generic `sendEvent` and typed `sendReadEvent(conversationId)`.
+  - Added hook exports in `web/src/hooks/index.ts`.
+  - Installed declared web dependencies successfully (`npm install`, `npm install --include=dev`) and generated lockfile (`web/package-lock.json`).
+  - Ran build:
+    - Initial failure: `tsc: command not found` due missing dev dependencies.
+    - Resolved by installing dev dependencies.
+    - Second failure: TypeScript narrowing errors in hook callback dispatch.
+    - Resolved by adding explicit event type guards.
+    - Final `npm run build` succeeded.
+  - Attempted test run: `npm run test` reports missing script (no web test script is currently defined).
+  - Added ignore patterns in `web/.gitignore` for local TypeScript build artifacts (`*.tsbuildinfo`, `vite.config.js`, `vite.config.d.ts`).
 
 ## Key decisions
 - Keep implementation strictly bounded to Phase 4 deliverables from `PLAN.md`.
@@ -95,14 +117,15 @@ Referenced but missing (noted once):
   - Styling: CSS modules + lightweight global CSS (no additional styling framework dependency)
 - Define all API payloads as TypeScript types and centralize HTTP concerns (base URL, auth header injection, JSON handling, error normalization) in one API client layer.
 - Keep WebSocket hook focused on connectivity contract (connect/reconnect/cleanup/event dispatch) and not on Phase 5 UI concerns.
-- Because npm registry access is blocked in this sandbox, scaffold files are created manually to match Vite React+TS conventions and dependencies are declared in `package.json` for later installation in a network-enabled step.
+- Initial scaffold iteration proceeded without npm registry access, so files were created manually to match Vite React+TS conventions; dependencies were later installed once network access succeeded.
 - API base URL decision: default to same-origin paths with optional override via `VITE_API_BASE_URL`; token handling is centralized in `ApiClient` through `setAuthToken` and optional dynamic `getToken`.
 - Auth flow decision: treat `/login` as login-first and attempt auto-register only on `401`; when register fallback conflicts (`409`), report invalid credentials rather than silently overriding an existing account.
 - Protected-route decision: route guard lives at router layer (`src/routes/ProtectedRoute.tsx`) so auth checks are centralized and reusable for additional protected routes in later phases.
+- WebSocket hook decision: expose a strongly-typed event callback surface while still forwarding unknown event types through a generic `onEvent` callback for forward compatibility.
 
 ## Remaining issues / open questions
-- npm dependency installation is currently blocked by network restrictions (`getaddrinfo ENOTFOUND registry.npmjs.org`), so `npm install`, `npm run build`, and web tests cannot run in this environment until dependencies are available.
-- Remaining milestone: M5 reconnecting WebSocket hook and final web build/tests once dependency installation is possible.
+- No remaining Phase 4 implementation milestones.
+- Open follow-up (non-blocking for Phase 4): web package currently has no `test` script, so only build validation is available in this phase.
 
 ## Links to related documents
 - `AGENTS.md`

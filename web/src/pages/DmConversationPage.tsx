@@ -58,6 +58,17 @@ interface ReactionGroup {
   reactedByMe: boolean
 }
 
+function canDeleteMessage(message: Message, currentUserId: string | undefined): boolean {
+  return message.sender_id === currentUserId && !message.deleted
+}
+
+function canEditMessage(message: Message, currentUserId: string | undefined): boolean {
+  if (!canDeleteMessage(message, currentUserId)) {
+    return false
+  }
+  return parseMessageContent(message).kind === 'text'
+}
+
 function resolveErrorMessage(error: unknown, fallback: string): string {
   if (error instanceof ApiError) {
     return error.message
@@ -376,7 +387,7 @@ export function DmConversationPage() {
   }
 
   function handleOpenContextMenu(event: React.MouseEvent, details: MessageDetails): void {
-    if (details.message.sender_id !== user?.id || details.message.deleted) {
+    if (!canDeleteMessage(details.message, user?.id)) {
       return
     }
     event.preventDefault()
@@ -384,7 +395,7 @@ export function DmConversationPage() {
   }
 
   function handleToggleActionMenu(button: HTMLButtonElement, details: MessageDetails): void {
-    if (details.message.sender_id !== user?.id || details.message.deleted) {
+    if (!canDeleteMessage(details.message, user?.id)) {
       return
     }
     if (actionMenu?.messageId === details.message.id) {
@@ -396,6 +407,12 @@ export function DmConversationPage() {
   }
 
   function beginEdit(details: MessageDetails): void {
+    if (!canEditMessage(details.message, user?.id)) {
+      setComposerError('json-render 메시지는 수정할 수 없습니다.')
+      setActionMenu(null)
+      return
+    }
+
     setEditingTarget({
       messageId: details.message.id,
     })
@@ -432,6 +449,14 @@ export function DmConversationPage() {
 
     const trimmedContent = composerText.trim()
     if (editingTarget) {
+      const editingDetails = messagesAscending.find((details) => details.message.id === editingTarget.messageId)
+      if (!editingDetails || !canEditMessage(editingDetails.message, user?.id)) {
+        setEditingTarget(null)
+        setComposerText('')
+        setComposerError('json-render 메시지는 수정할 수 없습니다.')
+        return
+      }
+
       if (trimmedContent === '') {
         setComposerError('수정 메시지는 비어 있을 수 없습니다.')
         return
@@ -562,7 +587,7 @@ export function DmConversationPage() {
                             {!details.message.deleted && details.message.edited ? (
                               <span className={styles.editedBadge}>[수정됨]</span>
                             ) : null}
-                            {details.message.sender_id === user?.id && !details.message.deleted ? (
+                            {canDeleteMessage(details.message, user?.id) ? (
                               <button
                                 aria-label="Message actions"
                                 className={styles.messageActionsTrigger}
@@ -750,14 +775,16 @@ export function DmConversationPage() {
           ref={actionMenuRef}
           style={{ left: `${actionMenu.x}px`, top: `${actionMenu.y}px` }}
         >
-          <button
-            className={styles.contextMenuAction}
-            disabled={disableComposerActions}
-            onClick={() => beginEdit(actionMenuMessage)}
-            type="button"
-          >
-            Edit
-          </button>
+          {canEditMessage(actionMenuMessage.message, user?.id) ? (
+            <button
+              className={styles.contextMenuAction}
+              disabled={disableComposerActions}
+              onClick={() => beginEdit(actionMenuMessage)}
+              type="button"
+            >
+              Edit
+            </button>
+          ) : null}
           <button
             className={`${styles.contextMenuAction} ${styles.contextMenuActionDanger}`}
             disabled={disableComposerActions}

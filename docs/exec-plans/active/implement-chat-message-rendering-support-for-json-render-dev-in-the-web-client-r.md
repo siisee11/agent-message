@@ -42,7 +42,7 @@ Referenced but missing (noted once):
 - [x] M1. Upgrade `web/` to React 19 and align related dependencies/tooling until build and typecheck are green (status: completed)
 - [x] M2. Introduce explicit message-kind protocol/types and parsing helpers for deterministic `text` vs `json_render` handling with backward-compatible text defaults (status: completed)
 - [x] M3. Implement DM bubble render branching in `DmConversationPage.tsx` with deleted-message precedence, text bubble parity, and minimal read-only json-render registry rendering (status: completed)
-- [ ] M4. Update editability and preview behavior: disable edit affordances/flows for `json_render` messages, keep delete allowed, and add compact conversation preview fallback in `ChatShellPage.tsx` (status: not started)
+- [x] M4. Update editability and preview behavior: disable edit affordances/flows for `json_render` messages, keep delete allowed, and add compact conversation preview fallback in `ChatShellPage.tsx` (status: completed)
 - [ ] M5. Add/update tests for message-kind parsing, render branch selection, preview fallback, and editability constraints; run web verification commands and fix regressions (status: not started)
 
 ## Current progress
@@ -97,6 +97,19 @@ Referenced but missing (noted once):
     - deleted placeholder branch still precedes both and remains dominant
   - Kept attachment rendering and reaction rendering branches unchanged.
   - Verified build + typecheck pass with `cd web && npm run build`.
+- Completed M4 (preview + editability behavior updates):
+  - Updated conversation list preview logic in `web/src/pages/ChatShellPage.tsx`:
+    - Added explicit protocol parsing with `parseMessageContent`.
+    - Added compact json-render preview fallback label: `[json-render]`.
+    - Prevented raw json spec text from appearing in list previews for `json_render` messages.
+    - Preserved deleted-message precedence in preview (`삭제된 메시지입니다` still dominates).
+  - Updated message action/editability behavior in `web/src/pages/DmConversationPage.tsx`:
+    - Added `canDeleteMessage` and `canEditMessage` checks.
+    - Kept delete affordance available for sender-owned, non-deleted messages regardless of kind.
+    - Restricted edit affordance to sender-owned, non-deleted `text` messages only.
+    - Removed edit action from context menu for `json_render` messages.
+    - Added defensive guard rails in `beginEdit` and submit-time edit flow to block stale/forced edits of `json_render` messages.
+  - Verified build + typecheck pass with `cd web && npm run build`.
 
 ## Key decisions
 - Use an explicit message-kind protocol field for deterministic rendering; do not parse arbitrary text as JSON specs.
@@ -107,9 +120,9 @@ Referenced but missing (noted once):
 - For React 19 type compatibility, prefer inferred component return types over global `JSX.Element` annotations.
 - Normalize protocol from either `kind` or `message_kind` while keeping `text` as the fallback for absent or unexpected values.
 - Use `@json-render/react` `Renderer` with a minimal component registry and no action handlers for read-only json-render message rendering.
+- Use `[json-render]` as the compact preview fallback label in conversation list entries for `json_render` messages.
 
 ## Remaining issues / open questions
-- Confirm the compact preview label string for json-render messages (for example `[json-render]`) before final polish if product wording differs.
 - React 19 install emitted a transient peer-resolution warning from stale `18.x` metadata during dependency resolution, but final tree is resolved to React/ReactDOM 19.x and build is green.
 - Json-render payload shape is still accepted as `unknown` at the API edge; runtime rendering currently expects flat json-render spec shape (`root` + `elements`) and falls back to a compact placeholder when invalid.
 

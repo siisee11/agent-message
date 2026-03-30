@@ -1,0 +1,78 @@
+.wrapper {
+  width: min(100%, 440px);
+  padding: 1.5rem;
+  border: 1px solid #d6dff4;
+  border-radius: 14px;
+  background: #ffffff;
+  box-shadow: 0 12px 30px -24px #1d3e8a;
+}
+
+.title {
+  margin: 0 0 0.4rem;
+}
+
+.subtitle {
+  margin: 0 0 1rem;
+  color: #344b74;
+}
+
+.form {
+  display: grid;
+  gap: 0.8rem;
+}
+
+.field {
+  display: grid;
+  gap: 0.35rem;
+}
+
+.label {
+  font-size: 0.9rem;
+  font-weight: 600;
+}
+
+.input {
+  border: 1px solid #c4d2f1;
+  border-radius: 8px;
+  padding: 0.55rem 0.7rem;
+  font-size: 0.95rem;
+}
+
+.input:focus {
+  outline: 2px solid #a8bdf0;
+  border-color: #5b7dd9;
+}
+
+.submit {
+  border: 0;
+  border-radius: 8px;
+  padding: 0.65rem 0.9rem;
+  background: #2454d6;
+  color: #ffffff;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.submit:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.hint {
+  margin: 0;
+  font-size: 0.85rem;
+  color: #455c88;
+}
+
+.error {
+  margin: 0;
+  font-size: 0.9rem;
+  color: #9d1930;
+}
+
+.success {
+  margin: 0;
+  font-size: 0.9rem;
+  color: #1d6a3b;
+}
+

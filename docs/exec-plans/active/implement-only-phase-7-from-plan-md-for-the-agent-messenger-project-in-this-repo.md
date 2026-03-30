@@ -57,7 +57,7 @@ Referenced but missing (noted once):
   - Add integration test coverage for critical auth/conversation/message/reaction/upload flows against the router/server stack.
   - Cover both success and key validation/error paths for newly tightened behavior.
 
-- [ ] M5. Add Docker Compose for local production-like server + PostgreSQL runs (status: not started)
+- [x] M5. Add Docker Compose for local production-like server + PostgreSQL runs (status: completed)
   - Provide `docker-compose` configuration with server and PostgreSQL services.
   - Wire env/config defaults for local compose startup and storage.
 
@@ -126,6 +126,29 @@ Referenced but missing (noted once):
     - unsupported file type on `/api/upload`,
     - unsupported multipart attachment type on message send.
   - Validation run: `cd server && go test ./...` (pass).
+- Completed M5 (Docker Compose for server + PostgreSQL):
+  - Added root compose stack for local production-like runs:
+    - `docker-compose.yml`
+  - Added container build definition for server service:
+    - `server/Dockerfile`
+  - Compose wiring includes:
+    - `postgres` service (`postgres:16-alpine`) with DB/user/password env, healthcheck, and persistent volume.
+    - `server` service built from repo root using `server/Dockerfile`.
+    - Server env defaults for Postgres backend:
+      - `DB_DRIVER=postgres`
+      - `POSTGRES_DSN=postgres://agent:agent@postgres:5432/agent_messenger?sslmode=disable`
+      - `UPLOAD_DIR=/var/lib/agent-messenger/uploads`
+      - `SERVER_ADDR=:8080`
+      - `CORS_ALLOWED_ORIGINS` for local web dev.
+    - Port mappings:
+      - `8080:8080` (server)
+      - `5432:5432` (postgres)
+    - Persistent volumes:
+      - postgres data
+      - uploaded files
+  - Validation runs:
+    - `docker compose config` (pass).
+    - `cd server && go test ./...` (pass).
 
 ## Key decisions
 - Keep scope strictly bounded to Phase 7 tasks from `PLAN.md`.
@@ -143,9 +166,10 @@ Referenced but missing (noted once):
   - Username prefix search query uses a relaxed variant (no minimum length, same charset, same maximum length).
   - Upload file type enforcement is centralized in `saveUploadedFile`, so `/api/upload` and multipart message attachment flows stay aligned.
 - For M4 testing strategy, keep integration tests in `server/` package and run against `httptest.NewServer` over HTTP to exercise router middleware/handlers/store together without introducing external service dependencies.
+- For M5 deployment scaffolding, use a two-service compose stack (app + db) with healthcheck-gated startup and persistent volumes to approximate a local production baseline without adding orchestration complexity.
 
 ## Remaining issues / open questions
-- Remaining Phase 7 milestones pending: M5-M6.
+- Remaining Phase 7 milestones pending: M6.
 - Confirm exact repository location/creation path for the top-level `README.md` quickstart update if a root `README.md` is absent in current tree state.
 
 ## Links to related documents

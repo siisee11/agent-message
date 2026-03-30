@@ -36,7 +36,7 @@ Referenced but missing (noted once):
 - `docs/PLANS.md`
 
 ## Milestones
-- [ ] M1. Implement chat shell routing and sidebar foundation (status: not started)
+- [x] M1. Implement chat shell routing and sidebar foundation (status: completed)
   - Wire protected app layout for sidebar + main pane.
   - Implement conversation list rendering with partner name and last-message preview.
   - Add start-new-DM entry UI and create/open flow using existing typed API client.
@@ -75,17 +75,31 @@ Referenced but missing (noted once):
   - `base_branch=main`
   - `worktree_id=phase-5-web-client-chat-ui-a3cdc51d`
 - Relevant docs have been reviewed for Phase 5 planning.
-- Milestones M1-M6 are currently not started.
+- Milestone M1 is complete:
+  - Replaced the Phase 4 placeholder protected route with nested chat routes:
+    - `/` renders chat shell + empty-state pane
+    - `/dm/:conversationId` renders chat shell + active-conversation placeholder pane
+  - Implemented sidebar conversation query using `apiClient.listConversations()` with:
+    - participant username rendering (`other_user.username`)
+    - last-message preview rendering including deleted and attachment markers
+  - Implemented start-new-DM flow in sidebar:
+    - username search via `apiClient.searchUsers()`
+    - create/open via `apiClient.startConversation({ username })`
+    - navigation to created/existing conversation route on success
+  - Added sidebar account/logout action using existing auth context.
+  - Verified web build passes: `npm run build` (after installing `web/` dependencies with `npm ci` in this worktree).
+- Milestones M2-M6 remain not started.
 
 ## Key decisions
 - Keep implementation strictly bounded to Phase 5 UI and required integration wiring.
 - Reuse existing server/API/websocket contracts and existing Phase 4 web foundation instead of introducing new protocol changes.
 - Sequence work so each milestone is implementable in one coding-loop iteration with verifiable outcomes.
 - Prioritize stable message timeline behavior (pagination + realtime merges) before polishing interaction details.
+- Keep `/dm/:conversationId` as a route-level placeholder in M1 so sidebar navigation works now while deferring message loading/pagination logic strictly to M2.
 
 ## Remaining issues / open questions
-- Confirm whether existing Phase 4 code already includes reusable primitives for menu/overlay/emoji picker, or whether minimal in-house UI components should be implemented in Phase 5 scope.
-- Confirm whether any additional backend fields (already available in responses) need frontend type adjustments for reaction/user display composition.
+- M2 must implement actual conversation detail and cursor-based message timeline data loading for `/dm/:conversationId` (currently placeholder only).
+- M2 must establish initial timeline UX rules (initial anchor and load-older trigger behavior) on top of the new shell routing.
 
 ## Links to related documents
 - `AGENTS.md`

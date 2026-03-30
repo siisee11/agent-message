@@ -1,35 +1,25 @@
-import { Link, Route, Routes } from 'react-router-dom'
-import { FoundationPage } from './pages/FoundationPage'
+import { Route, Routes } from 'react-router-dom'
+import { ChatIndexPage } from './pages/ChatIndexPage'
+import { ChatShellPage } from './pages/ChatShellPage'
+import { DmConversationPage } from './pages/DmConversationPage'
 import { LoginPage } from './pages/LoginPage'
 import { NotFoundPage } from './pages/NotFoundPage'
 import { ProtectedRoute } from './routes'
 import styles from './App.module.css'
 
-export function App() {
+export function App(): JSX.Element {
   return (
-    <div className={styles.layout}>
-      <header className={styles.header}>
-        <h1 className={styles.title}>Agent Messenger</h1>
-        <nav aria-label="Primary">
-          <Link className={styles.navLink} to="/">
-            Home
-          </Link>
-          {' · '}
-          <Link className={styles.navLink} to="/login">
-            Login
-          </Link>
-        </nav>
-      </header>
-
-      <main className={styles.main}>
-        <Routes>
-          <Route element={<LoginPage />} path="/login" />
-          <Route element={<ProtectedRoute />}>
-            <Route element={<FoundationPage />} path="/" />
+    <div className={styles.app}>
+      <Routes>
+        <Route element={<LoginPage />} path="/login" />
+        <Route element={<ProtectedRoute />}>
+          <Route element={<ChatShellPage />}>
+            <Route element={<ChatIndexPage />} index />
+            <Route element={<DmConversationPage />} path="dm/:conversationId" />
           </Route>
-          <Route element={<NotFoundPage />} path="*" />
-        </Routes>
-      </main>
+        </Route>
+        <Route element={<NotFoundPage />} path="*" />
+      </Routes>
     </div>
   )
 }

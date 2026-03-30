@@ -1,0 +1,31 @@
+.page {
+  min-height: 100%;
+  display: grid;
+  place-items: center;
+  padding: 1rem;
+}
+
+.card {
+  width: min(100%, 620px);
+  padding: 1.2rem;
+  border: 1px solid #d4e2fb;
+  border-radius: 14px;
+  background: #ffffff;
+  box-shadow: 0 14px 28px -24px #103579;
+}
+
+.title {
+  margin: 0;
+  color: #13284d;
+}
+
+.copy {
+  margin: 0.65rem 0 0;
+  color: #354e7d;
+}
+
+.hint {
+  margin: 0.8rem 0 0;
+  font-size: 0.9rem;
+  color: #4a6697;
+}

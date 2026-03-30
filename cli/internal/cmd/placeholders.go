@@ -6,24 +6,6 @@ import (
 	"github.com/spf13/cobra"
 )
 
-func newListConversationsCommand(_ *Runtime) *cobra.Command {
-	return &cobra.Command{
-		Use:   "ls",
-		Short: "List your direct-message conversations",
-		Args:  cobra.NoArgs,
-		RunE:  notImplemented("ls"),
-	}
-}
-
-func newOpenConversationCommand(_ *Runtime) *cobra.Command {
-	return &cobra.Command{
-		Use:   "open <username>",
-		Short: "Open a conversation with a user",
-		Args:  cobra.ExactArgs(1),
-		RunE:  notImplemented("open"),
-	}
-}
-
 func newSendMessageCommand(_ *Runtime) *cobra.Command {
 	return &cobra.Command{
 		Use:   "send <username> <text>",

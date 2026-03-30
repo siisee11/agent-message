@@ -43,7 +43,7 @@ Referenced but missing (noted once):
   - Persist returned token and server URL in config.
   - `logout` clears token and calls server logout endpoint when possible.
 
-- [ ] M3. Implement conversation commands and username-to-conversation resolution (status: not started)
+- [x] M3. Implement conversation commands and username-to-conversation resolution (status: completed)
   - `ls` lists user conversations.
   - `open <username>` get-or-create DM via conversations API.
   - Add shared helper used by `send/read/watch` to resolve DM conversation by username.
@@ -88,6 +88,16 @@ Referenced but missing (noted once):
 - Additional validation run after M2:
   - `cd cli && GOCACHE=/tmp/go-cache GOMODCACHE=/tmp/go-mod go test ./...`
   - `cd cli && GOCACHE=/tmp/go-cache GOMODCACHE=/tmp/go-mod go build ./...`
+- Completed M3 conversation commands/resolver:
+  - Implemented `ls` and `open` command handlers in `cli/internal/cmd/conversations.go`.
+  - `ls` now calls `GET /api/conversations` and prints one line per conversation as `<conversation_id> <other_username>`.
+  - `open <username>` now resolves (get-or-create) DM via `POST /api/conversations` and prints `<conversation_id> <username>`.
+  - Added shared helpers `resolveConversationByUsername` and `resolveConversationIDByUsername` for reuse by upcoming `send/read/watch` milestones.
+  - Added auth gating helper `ensureLoggedIn` used by conversation operations.
+  - Added `cli/internal/cmd/conversations_test.go` covering list output, open behavior, conversation-id resolution, and not-logged-in guard.
+- Additional validation run after M3:
+  - `cd cli && GOCACHE=/tmp/go-cache GOMODCACHE=/tmp/go-mod go test ./...`
+  - `cd cli && GOCACHE=/tmp/go-cache GOMODCACHE=/tmp/go-mod go build ./...`
 
 ## Key decisions
 - Keep implementation bounded to Phase 6 CLI deliverable and existing server/API/WS contracts.
@@ -96,9 +106,10 @@ Referenced but missing (noted once):
 - Prefer deterministic, parseable CLI output where required by SPEC while keeping human-readable defaults for core commands.
 - Use a local Cobra-compatible shim (`replace github.com/spf13/cobra => ./third_party/cobra`) due offline dependency constraints in this environment.
 - For `logout`, prioritize local token invalidation durability: clear and persist local token even when remote `/api/auth/logout` returns an error.
+- Keep conversation command output stable and simple (`<conversation_id> <username>`) to support scripting and easier manual inspection.
 
 ## Remaining issues / open questions
-- M3+ command behavior is still stubbed and must be implemented sequentially.
+- M4+ command behavior is still stubbed and must be implemented sequentially.
 - Decide whether to keep the local Cobra shim or switch to upstream `github.com/spf13/cobra` when networked module fetch is available.
 
 ## Links to related documents

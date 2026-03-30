@@ -36,7 +36,7 @@ Referenced but missing (noted once):
 
 ## Milestones
 - [x] M1. Scaffold `web/` with Vite React + TypeScript, configure baseline project structure, and install minimal dependencies for routing/data-fetching/styling (status: completed with install blocker documented)
-- [ ] M2. Implement typed API client in `web/src/api/` for auth/users/conversations/messages/reactions/upload endpoints using shared request/response types and centralized auth token handling (status: not started)
+- [x] M2. Implement typed API client in `web/src/api/` for auth/users/conversations/messages/reactions/upload endpoints using shared request/response types and centralized auth token handling (status: completed)
 - [ ] M3. Implement auth state management (provider + hooks + token persistence) and `/login` page with username/PIN form, login-first flow, and auto-register fallback on first login (status: not started)
 - [ ] M4. Implement protected route wrapper and minimal route wiring so unauthenticated users are redirected to `/login` and authenticated users can reach the protected app entry route (status: not started)
 - [ ] M5. Implement `web/src/hooks/useWebSocket.ts` with token-based connection, reconnect/backoff behavior, event parsing callbacks, and lifecycle cleanup; then run web build/tests and fix issues (status: not started)
@@ -57,6 +57,17 @@ Referenced but missing (noted once):
   - Added baseline styling (`global.css` + CSS modules) and placeholder routed pages.
   - Created foundation directories for upcoming work: `src/api`, `src/auth`, `src/hooks`, `src/routes`.
 - Attempted automated scaffold with `npm create vite@latest web -- --template react-ts`; failed due network resolution error to `registry.npmjs.org` in this environment.
+- Completed M2 typed API client implementation under `web/src/api/`:
+  - Added API contract types in `web/src/api/types.ts` aligned to current server JSON fields for auth, users, conversations, messages, reactions, and upload.
+  - Added `ApiClient` in `web/src/api/client.ts` covering all Phase 4 REST endpoints:
+    - Auth: register/login/logout
+    - Users: search users, get current user
+    - Conversations: list, start DM, fetch detail
+    - Messages: list, create (JSON + multipart), edit, delete
+    - Reactions: toggle and remove by emoji
+    - Upload: multipart upload helper
+  - Centralized HTTP behavior in one layer: base URL construction, query serialization, bearer token injection, typed JSON responses, and normalized API error handling via `ApiError`.
+  - Added API exports in `web/src/api/index.ts` for client + types.
 
 ## Key decisions
 - Keep implementation strictly bounded to Phase 4 deliverables from `PLAN.md`.
@@ -68,10 +79,11 @@ Referenced but missing (noted once):
 - Define all API payloads as TypeScript types and centralize HTTP concerns (base URL, auth header injection, JSON handling, error normalization) in one API client layer.
 - Keep WebSocket hook focused on connectivity contract (connect/reconnect/cleanup/event dispatch) and not on Phase 5 UI concerns.
 - Because npm registry access is blocked in this sandbox, scaffold files are created manually to match Vite React+TS conventions and dependencies are declared in `package.json` for later installation in a network-enabled step.
+- API base URL decision: default to same-origin paths with optional override via `VITE_API_BASE_URL`; token handling is centralized in `ApiClient` through `setAuthToken` and optional dynamic `getToken`.
 
 ## Remaining issues / open questions
 - npm dependency installation is currently blocked by network restrictions (`getaddrinfo ENOTFOUND registry.npmjs.org`), so `npm install`, `npm run build`, and web tests cannot run in this environment until dependencies are available.
-- Confirm whether the web app should default API base URL to same-origin (`""`) or an explicit local server URL (for example `http://localhost:8080`) via env var.
+- Remaining milestones: M3 auth state + login flow, M4 protected route wiring, M5 reconnecting WebSocket hook and final web build/tests once dependency installation is possible.
 
 ## Links to related documents
 - `AGENTS.md`

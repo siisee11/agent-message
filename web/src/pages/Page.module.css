@@ -1,0 +1,29 @@
+.card {
+  width: min(100%, 680px);
+  padding: 1.5rem;
+  border: 1px solid #d6dff4;
+  border-radius: 14px;
+  background: #ffffff;
+  box-shadow: 0 12px 30px -24px #1d3e8a;
+}
+
+.card h2 {
+  margin-top: 0;
+  margin-bottom: 0.6rem;
+}
+
+.card p {
+  margin-top: 0;
+  margin-bottom: 1rem;
+  line-height: 1.5;
+}
+
+.link {
+  color: #2454d6;
+  text-decoration: none;
+  font-weight: 600;
+}
+
+.link:hover {
+  text-decoration: underline;
+}

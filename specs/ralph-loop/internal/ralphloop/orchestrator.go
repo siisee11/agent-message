@@ -27,6 +27,8 @@ type mainRunResult struct {
 	PlanPath     string `json:"plan_path"`
 	Iterations   int    `json:"iterations"`
 	PRURL        string `json:"pr_url,omitempty"`
+	LandedToBase bool   `json:"landed_to_base,omitempty"`
+	LandedHead   string `json:"landed_head,omitempty"`
 	FinalStatus  string `json:"final_status"`
 	Preserved    bool   `json:"preserve_worktree"`
 	Completed    bool   `json:"completed"`
@@ -298,6 +300,31 @@ func runMain(ctx context.Context, repoRoot string, options MainOptions, stdout i
 	codingClient = nil
 
 	if options.SkipPR {
+		if options.LandBase {
+			_, _ = fmt.Fprintf(stdout, "Phase 3/3: land work branch onto %s\n", worktree.BaseBranch)
+			landed, landErr := landWorkBranch(ctx, repoRoot, worktree.BaseBranch, worktree.WorkBranch)
+			if landErr != nil {
+				return result, withLogTail(landErr, logFile)
+			}
+			result.LandedToBase = true
+			result.LandedHead = landed.Head
+			if telemetry != nil {
+				telemetry.SetMetric("ralph_loop_active_phase", "")
+				telemetry.SetMetric("ralph_loop_last_commit", landed.Head)
+				telemetry.Log("info", "base branch landing completed", map[string]any{
+					"base_branch":  worktree.BaseBranch,
+					"work_branch":  worktree.WorkBranch,
+					"land_method":  landed.Method,
+					"landed_head":  landed.Head,
+					"commit_count": landed.CommitCount,
+				})
+			}
+			_, _ = fmt.Fprintf(stdout, "Landed %d commit(s) onto %s via %s at %s\n", landed.CommitCount, worktree.BaseBranch, landed.Method, landed.Head)
+			_, _ = fmt.Fprintln(stdout, "Ralph Loop completed.")
+			result.FinalStatus = "completed"
+			result.Completed = true
+			return result, nil
+		}
 		if telemetry != nil {
 			telemetry.SetMetric("ralph_loop_active_phase", "")
 			telemetry.Log("info", "pr phase skipped", map[string]any{
@@ -305,6 +332,7 @@ func runMain(ctx context.Context, repoRoot string, options MainOptions, stdout i
 			})
 		}
 		_, _ = fmt.Fprintln(stdout, "Phase 3/3: PR agent skipped")
+		_, _ = fmt.Fprintf(stdout, "Base branch %s was not updated. Re-run with --skip-pr --land-base to land commits locally.\n", worktree.BaseBranch)
 		_, _ = fmt.Fprintln(stdout, "Ralph Loop completed.")
 		result.FinalStatus = "completed"
 		result.Completed = true

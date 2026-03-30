@@ -6,7 +6,7 @@ import (
 )
 
 func TestParseMainCommandFromFlags(t *testing.T) {
-	command, err := ParseCommand([]string{"implement the feature", "--max-iterations", "5", "--skip-pr"}, strings.NewReader(""), OutputJSON)
+	command, err := ParseCommand([]string{"implement the feature", "--max-iterations", "5", "--skip-pr", "--land-base"}, strings.NewReader(""), OutputJSON)
 	if err != nil {
 		t.Fatalf("ParseCommand() error = %v", err)
 	}
@@ -21,6 +21,9 @@ func TestParseMainCommandFromFlags(t *testing.T) {
 	}
 	if !command.MainOptions.SkipPR {
 		t.Fatal("expected skip_pr to be true")
+	}
+	if !command.MainOptions.LandBase {
+		t.Fatal("expected land_base to be true")
 	}
 }
 
@@ -52,5 +55,26 @@ func TestDetectOutputFormatDefaultsToJSONForNonTTY(t *testing.T) {
 func TestSandboxOutputPathRejectsEscape(t *testing.T) {
 	if _, err := sandboxOutputPath("/tmp/project", "../escape.json"); err == nil {
 		t.Fatal("expected escape path to be rejected")
+	}
+}
+
+func TestValidateCommandRejectsLandBaseWithoutSkipPR(t *testing.T) {
+	command := ParsedCommand{
+		Kind: commandMain,
+		Common: CommonOptions{
+			Output:   OutputJSON,
+			Page:     1,
+			PageSize: 50,
+		},
+		MainOptions: MainOptions{
+			Prompt:         "implement feature",
+			WorkBranch:     "ralph-implement-feature",
+			MaxIterations:  1,
+			TimeoutSeconds: 1,
+			LandBase:       true,
+		},
+	}
+	if err := validateCommand(command, "/tmp"); err == nil {
+		t.Fatal("expected land_base without skip_pr to be rejected")
 	}
 }

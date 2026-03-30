@@ -52,6 +52,7 @@ func commandSchemas() []commandSchema {
 				schemaField{Name: "sandbox", Description: "Codex sandbox policy", Type: "string", Default: "workspace-write"},
 				schemaField{Name: "preserve_worktree", Description: "Keep the generated worktree", Type: "boolean", Default: false},
 				schemaField{Name: "skip_pr", Description: "Stop after the coding loop without running the PR agent", Type: "boolean", Default: false},
+				schemaField{Name: "land_base", Description: "After coding completes, land the work branch commits onto the local base branch. Requires skip_pr.", Type: "boolean", Default: false},
 				schemaField{Name: "dry_run", Description: "Validate and describe the request", Type: "boolean", Default: false},
 			),
 			RawPayload: []schemaField{
@@ -66,6 +67,7 @@ func commandSchemas() []commandSchema {
 				{Name: "sandbox", Description: "Codex sandbox policy", Type: "string", Default: "workspace-write"},
 				{Name: "preserve_worktree", Description: "Keep the generated worktree", Type: "boolean", Default: false},
 				{Name: "skip_pr", Description: "Stop after the coding loop without running the PR agent", Type: "boolean", Default: false},
+				{Name: "land_base", Description: "After coding completes, land the work branch commits onto the local base branch. Requires skip_pr.", Type: "boolean", Default: false},
 				{Name: "dry_run", Description: "Validate and describe the request", Type: "boolean", Default: false},
 				{Name: "output", Description: "Output format", Type: "string", Enum: []string{"text", "json", "ndjson"}},
 			},

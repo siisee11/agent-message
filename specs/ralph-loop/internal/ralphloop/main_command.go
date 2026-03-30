@@ -23,6 +23,7 @@ func executeMainCommand(runCtx runContext) int {
 		"sandbox":           runCtx.command.MainOptions.Sandbox,
 		"preserve_worktree": runCtx.command.MainOptions.PreserveWorktree,
 		"skip_pr":           runCtx.command.MainOptions.SkipPR,
+		"land_base":         runCtx.command.MainOptions.LandBase,
 		"dry_run":           runCtx.command.MainOptions.DryRun,
 	}
 	sideEffects := []string{
@@ -33,6 +34,8 @@ func executeMainCommand(runCtx runContext) int {
 	}
 	if !runCtx.command.MainOptions.SkipPR {
 		sideEffects = append(sideEffects, "run the PR agent")
+	} else if runCtx.command.MainOptions.LandBase {
+		sideEffects = append(sideEffects, "land completed commits onto the local base branch")
 	}
 	if runCtx.command.MainOptions.DryRun {
 		return writeDryRun(runCtx, request, sideEffects)
@@ -77,6 +80,8 @@ func executeMainCommand(runCtx runContext) int {
 		"iterations":        result.Iterations,
 		"pr_url":            result.PRURL,
 		"final_status":      result.FinalStatus,
+		"landed_to_base":    result.LandedToBase,
+		"landed_head":       result.LandedHead,
 		"events":            events,
 		"naming_source":     result.NamingSource,
 		"naming_reason":     result.NamingReason,
@@ -114,14 +119,16 @@ func parseBufferedEvents(buffer string, result mainRunResult) []map[string]any {
 		})
 	}
 	events = append(events, map[string]any{
-		"command":       "main",
-		"event":         "run.completed",
-		"status":        result.FinalStatus,
-		"worktree_path": result.WorktreePath,
-		"work_branch":   result.WorkBranch,
-		"plan_path":     result.PlanPath,
-		"iterations":    result.Iterations,
-		"pr_url":        result.PRURL,
+		"command":        "main",
+		"event":          "run.completed",
+		"status":         result.FinalStatus,
+		"worktree_path":  result.WorktreePath,
+		"work_branch":    result.WorkBranch,
+		"plan_path":      result.PlanPath,
+		"iterations":     result.Iterations,
+		"pr_url":         result.PRURL,
+		"landed_to_base": result.LandedToBase,
+		"landed_head":    result.LandedHead,
 	})
 	return events
 }

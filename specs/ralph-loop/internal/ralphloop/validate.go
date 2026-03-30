@@ -24,6 +24,9 @@ func validateCommand(command ParsedCommand, invokeCwd string) error {
 		if command.MainOptions.TimeoutSeconds <= 0 {
 			return fmt.Errorf("invalid value for timeout: must be > 0")
 		}
+		if command.MainOptions.LandBase && !command.MainOptions.SkipPR {
+			return fmt.Errorf("invalid option combination: land_base requires skip_pr")
+		}
 	case commandInit:
 		if command.InitOptions.WorkBranch != "" {
 			if err := validateResourceIdentifier(command.InitOptions.WorkBranch, "work_branch"); err != nil {

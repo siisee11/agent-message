@@ -58,6 +58,8 @@ Main options:
   --approval-policy <p>    Codex approval policy (default: never)
   --sandbox <policy>       Codex sandbox policy (default: workspace-write)
   --preserve-worktree      Keep the generated worktree on exit for debugging
+  --skip-pr                Stop after the coding loop without running the PR agent
+  --land-base              After coding completes, land the work branch onto the local base branch; requires --skip-pr
   --dry-run                Validate and describe the request without side effects
 
 Init options:
@@ -144,7 +146,7 @@ Recommended behavior:
 - `ralph-loop init --output json` returns a single object with worktree metadata, install/build status, runtime root, and any structured error.
 - `ralph-loop init` in default `text` mode still reserves stdout for the final success JSON object; progress and diagnostics go to stderr.
 - `ralph-loop init --output ndjson` may emit structured step events and must end with a terminal record containing the same metadata as the JSON mode success object.
-- `ralph-loop "<prompt>" --output json` returns a single object describing the run result, including final status, worktree metadata, iteration count, plan path, PR URL if created, and any structured error.
+- `ralph-loop "<prompt>" --output json` returns a single object describing the run result, including final status, worktree metadata, iteration count, plan path, PR URL if created, local base-branch landing metadata if requested, and any structured error.
 - `ralph-loop "<prompt>" --output ndjson` streams lifecycle events as they happen and ends with a terminal event.
 - `ralph-loop ls --output json` returns a JSON array of running sessions.
 - `ralph-loop ls --output ndjson` emits one session object per line.
@@ -157,7 +159,7 @@ Example NDJSON events:
 {"command":"main","event":"run.started","status":"running","ts":"2026-03-15T12:00:00Z","worktree_path":"/repo/.worktrees/ralph-foo","work_branch":"ralph-foo"}
 {"command":"main","event":"phase.started","phase":"setup","status":"running","ts":"2026-03-15T12:00:01Z"}
 {"command":"main","event":"iteration.completed","phase":"coding","iteration":1,"status":"ok","commit":"abc1234","ts":"2026-03-15T12:03:10Z"}
-{"command":"main","event":"run.completed","status":"completed","iterations":3,"plan_path":"/repo/docs/exec-plans/completed/foo.md","pr_url":"https://github.com/org/repo/pull/123","ts":"2026-03-15T12:14:22Z"}
+{"command":"main","event":"run.completed","status":"completed","iterations":3,"plan_path":"/repo/docs/exec-plans/completed/foo.md","pr_url":"https://github.com/org/repo/pull/123","landed_to_base":false,"ts":"2026-03-15T12:14:22Z"}
 ```
 
 Example structured error:

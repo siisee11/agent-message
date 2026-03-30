@@ -165,11 +165,13 @@ func newTestRuntime(
 		t.Fatalf("create api client: %v", err)
 	}
 	client.SetHTTPClient(&http.Client{Transport: roundTripFunc(func(req *http.Request) (*http.Response, error) {
-		body, err := io.ReadAll(req.Body)
-		if err != nil {
-			t.Fatalf("read request body: %v", err)
-		}
+		var body []byte
 		if req.Body != nil {
+			var err error
+			body, err = io.ReadAll(req.Body)
+			if err != nil {
+				t.Fatalf("read request body: %v", err)
+			}
 			_ = req.Body.Close()
 		}
 		return transport(req, body)

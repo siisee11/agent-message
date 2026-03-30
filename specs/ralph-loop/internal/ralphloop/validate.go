@@ -37,6 +37,9 @@ func validateCommand(command ParsedCommand, invokeCwd string) error {
 		if err := validateSelector(command.TailOptions.Selector); err != nil {
 			return err
 		}
+		if command.TailOptions.Lines <= 0 {
+			return fmt.Errorf("invalid value for lines: must be > 0")
+		}
 	case commandList:
 		if err := validateSelector(command.ListOptions.Selector); err != nil {
 			return err
@@ -103,17 +106,7 @@ func containsControlChars(value string) bool {
 }
 
 func sanitizeText(value string) string {
-	replacer := strings.NewReplacer(
-		"\x00", "",
-		"\r", "",
-		"\u2028", " ",
-		"\u2029", " ",
-		"<system>", "[system]",
-		"</system>", "[/system]",
-		"<assistant>", "[assistant]",
-		"</assistant>", "[/assistant]",
-	)
-	return strings.TrimSpace(replacer.Replace(value))
+	return sanitizeUntrustedText(value).Text
 }
 
 func sandboxOutputPath(invokeCwd string, requested string) (string, error) {

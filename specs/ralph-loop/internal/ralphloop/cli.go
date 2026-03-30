@@ -1,7 +1,6 @@
 package ralphloop
 
 import (
-	"bytes"
 	"context"
 	"encoding/json"
 	"errors"
@@ -11,7 +10,6 @@ import (
 	"os/exec"
 	"path/filepath"
 	"regexp"
-	"strconv"
 	"strings"
 )
 
@@ -232,74 +230,7 @@ func parseMainCommand(args []string, stdin io.Reader, defaultOutput OutputFormat
 			PreserveWorktree: false,
 		},
 	}
-	payload, positionals, err := parseArgsAndPayload(args, stdin, &command.Common, func(arg string, index *int, all []string) error {
-		switch arg {
-		case "--help", "-h":
-			return &usageError{message: mainUsage}
-		case "--model":
-			value, err := requireValue(all, index, arg)
-			if err != nil {
-				return err
-			}
-			command.MainOptions.Model = value
-		case "--base-branch":
-			value, err := requireValue(all, index, arg)
-			if err != nil {
-				return err
-			}
-			command.MainOptions.BaseBranch = value
-		case "--max-iterations":
-			value, err := requireValue(all, index, arg)
-			if err != nil {
-				return err
-			}
-			parsed, err := strconv.Atoi(value)
-			if err != nil {
-				return fmt.Errorf("invalid value for --max-iterations: %s", value)
-			}
-			command.MainOptions.MaxIterations = parsed
-		case "--work-branch":
-			value, err := requireValue(all, index, arg)
-			if err != nil {
-				return err
-			}
-			command.MainOptions.WorkBranch = value
-			command.MainOptions.WorkBranchProvided = true
-		case "--timeout":
-			value, err := requireValue(all, index, arg)
-			if err != nil {
-				return err
-			}
-			parsed, err := strconv.Atoi(value)
-			if err != nil {
-				return fmt.Errorf("invalid value for --timeout: %s", value)
-			}
-			command.MainOptions.TimeoutSeconds = parsed
-		case "--approval-policy":
-			value, err := requireValue(all, index, arg)
-			if err != nil {
-				return err
-			}
-			command.MainOptions.ApprovalPolicy = value
-		case "--sandbox":
-			value, err := requireValue(all, index, arg)
-			if err != nil {
-				return err
-			}
-			command.MainOptions.Sandbox = value
-		case "--preserve-worktree":
-			command.MainOptions.PreserveWorktree = true
-		case "--skip-pr":
-			command.MainOptions.SkipPR = true
-		case "--land-base":
-			command.MainOptions.LandBase = true
-		case "--dry-run":
-			command.MainOptions.DryRun = true
-		default:
-			return errUnknownOptionOrPositional(arg)
-		}
-		return nil
-	})
+	payload, positionals, err := parseArgsAndPayload(args, stdin, &command, descriptorFor(command.Kind))
 	if err != nil {
 		return ParsedCommand{}, err
 	}
@@ -333,30 +264,7 @@ func parseInitCommand(args []string, stdin io.Reader, defaultOutput OutputFormat
 			BaseBranch: "main",
 		},
 	}
-	payload, positionals, err := parseArgsAndPayload(args, stdin, &command.Common, func(arg string, index *int, all []string) error {
-		switch arg {
-		case "--help", "-h":
-			return &usageError{message: mainUsage}
-		case "--base-branch":
-			value, err := requireValue(all, index, arg)
-			if err != nil {
-				return err
-			}
-			command.InitOptions.BaseBranch = value
-		case "--work-branch":
-			value, err := requireValue(all, index, arg)
-			if err != nil {
-				return err
-			}
-			command.InitOptions.WorkBranch = value
-			command.InitOptions.WorkBranchProvided = true
-		case "--dry-run":
-			command.InitOptions.DryRun = true
-		default:
-			return errUnknownOptionOrPositional(arg)
-		}
-		return nil
-	})
+	payload, positionals, err := parseArgsAndPayload(args, stdin, &command, descriptorFor(command.Kind))
 	if err != nil {
 		return ParsedCommand{}, err
 	}
@@ -383,29 +291,7 @@ func parseTailCommand(args []string, stdin io.Reader, defaultOutput OutputFormat
 			Lines: 40,
 		},
 	}
-	payload, positionals, err := parseArgsAndPayload(args, stdin, &command.Common, func(arg string, index *int, all []string) error {
-		switch arg {
-		case "--help", "-h":
-			return &usageError{message: mainUsage}
-		case "--follow", "-f":
-			command.TailOptions.Follow = true
-		case "--raw":
-			command.TailOptions.Raw = true
-		case "--lines", "-n":
-			value, err := requireValue(all, index, arg)
-			if err != nil {
-				return err
-			}
-			parsed, err := strconv.Atoi(value)
-			if err != nil || parsed <= 0 {
-				return fmt.Errorf("invalid value for %s: %s", arg, value)
-			}
-			command.TailOptions.Lines = parsed
-		default:
-			return errUnknownOptionOrPositional(arg)
-		}
-		return nil
-	})
+	payload, positionals, err := parseArgsAndPayload(args, stdin, &command, descriptorFor(command.Kind))
 	if err != nil {
 		return ParsedCommand{}, err
 	}
@@ -432,14 +318,7 @@ func parseListCommand(args []string, stdin io.Reader, defaultOutput OutputFormat
 			PageSize: 50,
 		},
 	}
-	payload, positionals, err := parseArgsAndPayload(args, stdin, &command.Common, func(arg string, index *int, all []string) error {
-		switch arg {
-		case "--help", "-h":
-			return &usageError{message: mainUsage}
-		default:
-			return errUnknownOptionOrPositional(arg)
-		}
-	})
+	payload, positionals, err := parseArgsAndPayload(args, stdin, &command, descriptorFor(command.Kind))
 	if err != nil {
 		return ParsedCommand{}, err
 	}
@@ -466,21 +345,7 @@ func parseSchemaCommand(args []string, stdin io.Reader, defaultOutput OutputForm
 			PageSize: 50,
 		},
 	}
-	payload, positionals, err := parseArgsAndPayload(args, stdin, &command.Common, func(arg string, index *int, all []string) error {
-		switch arg {
-		case "--help", "-h":
-			return &usageError{message: mainUsage}
-		case "--command":
-			value, err := requireValue(all, index, arg)
-			if err != nil {
-				return err
-			}
-			command.SchemaOptions.Command = value
-		default:
-			return errUnknownOptionOrPositional(arg)
-		}
-		return nil
-	})
+	payload, positionals, err := parseArgsAndPayload(args, stdin, &command, descriptorFor(command.Kind))
 	if err != nil {
 		return ParsedCommand{}, err
 	}
@@ -498,25 +363,28 @@ func parseSchemaCommand(args []string, stdin io.Reader, defaultOutput OutputForm
 	return command, nil
 }
 
-func parseArgsAndPayload(args []string, stdin io.Reader, common *CommonOptions, handleCommandFlag func(arg string, index *int, all []string) error) (map[string]any, []string, error) {
+func parseArgsAndPayload(args []string, stdin io.Reader, command *ParsedCommand, descriptor commandDescriptor) (map[string]any, []string, error) {
 	positionals := make([]string, 0, len(args))
 	var payloadText string
 	for index := 0; index < len(args); index++ {
 		arg := args[index]
-		if handled, err := consumeCommonOption(common, args, &index, stdin, arg, &payloadText); handled || err != nil {
+		if arg == "--help" || arg == "-h" {
+			return nil, nil, &usageError{message: mainUsage}
+		}
+		if handled, err := consumeOptionSpec(commonOptionSpecs(), command, args, &index, stdin, arg, &payloadText); handled || err != nil {
 			if err != nil {
 				return nil, nil, err
 			}
 			continue
 		}
-		if strings.HasPrefix(arg, "--") {
-			if err := handleCommandFlag(arg, &index, args); err != nil {
-				if _, ok := err.(*unknownOptionError); ok {
-					return nil, nil, fmt.Errorf("unknown option: %s", arg)
-				}
+		if handled, err := consumeOptionSpec(descriptor.OptionSpecs, command, args, &index, stdin, arg, &payloadText); handled || err != nil {
+			if err != nil {
 				return nil, nil, err
 			}
 			continue
+		}
+		if strings.HasPrefix(arg, "--") || strings.HasPrefix(arg, "-") {
+			return nil, nil, fmt.Errorf("unknown option: %s", arg)
 		}
 		positionals = append(positionals, arg)
 	}
@@ -531,72 +399,25 @@ func parseArgsAndPayload(args []string, stdin io.Reader, common *CommonOptions, 
 	return payload, positionals, nil
 }
 
-func consumeCommonOption(common *CommonOptions, args []string, index *int, stdin io.Reader, arg string, payloadText *string) (bool, error) {
-	switch arg {
-	case "--json":
-		value, err := requireValue(args, index, arg)
-		if err != nil {
-			return true, err
+func consumeOptionSpec(specs []optionSpec, command *ParsedCommand, args []string, index *int, stdin io.Reader, arg string, payloadText *string) (bool, error) {
+	for _, spec := range specs {
+		if !matchesOptionSpec(spec, arg) {
+			continue
 		}
-		if value == "-" {
-			data, err := io.ReadAll(stdin)
+		value := ""
+		if spec.RequiresValue {
+			next, err := requireValue(args, index, arg)
 			if err != nil {
 				return true, err
 			}
-			*payloadText = string(data)
-			return true, nil
+			value = next
 		}
-		*payloadText = value
-		return true, nil
-	case "--output":
-		value, err := requireValue(args, index, arg)
-		if err != nil {
+		if err := spec.Apply(command, value, stdin, payloadText); err != nil {
 			return true, err
 		}
-		common.Output = OutputFormat(value)
 		return true, nil
-	case "--output-file":
-		value, err := requireValue(args, index, arg)
-		if err != nil {
-			return true, err
-		}
-		common.OutputFile = value
-		return true, nil
-	case "--fields":
-		value, err := requireValue(args, index, arg)
-		if err != nil {
-			return true, err
-		}
-		common.Fields = splitCSV(value)
-		return true, nil
-	case "--page":
-		value, err := requireValue(args, index, arg)
-		if err != nil {
-			return true, err
-		}
-		parsed, err := strconv.Atoi(value)
-		if err != nil {
-			return true, fmt.Errorf("invalid value for --page: %s", value)
-		}
-		common.Page = parsed
-		return true, nil
-	case "--page-size":
-		value, err := requireValue(args, index, arg)
-		if err != nil {
-			return true, err
-		}
-		parsed, err := strconv.Atoi(value)
-		if err != nil {
-			return true, fmt.Errorf("invalid value for --page-size: %s", value)
-		}
-		common.PageSize = parsed
-		return true, nil
-	case "--page-all":
-		common.PageAll = true
-		return true, nil
-	default:
-		return false, nil
 	}
+	return false, nil
 }
 
 func mergeJSONPayload(payload map[string]any, target any, common *CommonOptions) error {
@@ -631,25 +452,11 @@ func mergeJSONPayload(payload map[string]any, target any, common *CommonOptions)
 		common.PageAll = rawPageAll
 		delete(clone, "page_all")
 	}
-	delete(clone, "command")
 	encoded, err := json.Marshal(clone)
 	if err != nil {
 		return err
 	}
 	return json.Unmarshal(encoded, target)
-}
-
-type unknownOptionError struct{}
-
-func (err *unknownOptionError) Error() string {
-	return "unknown option"
-}
-
-func errUnknownOptionOrPositional(arg string) error {
-	if strings.HasPrefix(arg, "--") {
-		return &unknownOptionError{}
-	}
-	return nil
 }
 
 func requireValue(args []string, index *int, flag string) (string, error) {
@@ -712,13 +519,16 @@ func writeCommandError(stdout io.Writer, stderr io.Writer, format OutputFormat, 
 		_, _ = fmt.Fprintln(stderr, err.Error())
 		return 1
 	}
+	messageResult := sanitizeUntrustedText(err.Error())
+	errorRecord := map[string]any{
+		"code":    classifyError(err),
+		"message": messageResult.Text,
+	}
+	applySanitizationMetadata(errorRecord, messageResult)
 	payload := map[string]any{
 		"command": command,
 		"status":  "failed",
-		"error": map[string]any{
-			"code":    classifyError(err),
-			"message": sanitizeText(err.Error()),
-		},
+		"error":   errorRecord,
 	}
 	_ = writeStructuredOutput(stdout, format, payload)
 	return 1
@@ -816,16 +626,14 @@ func jsonNumberToInt(value any) (int, bool) {
 	}
 }
 
-func readJSONPayload(stdin io.Reader) (map[string]any, error) {
-	data, err := io.ReadAll(stdin)
-	if err != nil {
-		return nil, err
+func matchesOptionSpec(spec optionSpec, arg string) bool {
+	if arg == spec.Flag {
+		return true
 	}
-	payload := map[string]any{}
-	decoder := json.NewDecoder(bytes.NewReader(data))
-	decoder.UseNumber()
-	if err := decoder.Decode(&payload); err != nil {
-		return nil, err
+	for _, alias := range spec.Field.Alias {
+		if arg == alias {
+			return true
+		}
 	}
-	return payload, nil
+	return false
 }

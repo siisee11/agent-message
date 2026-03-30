@@ -88,7 +88,12 @@ func executeMainCommand(runCtx runContext) int {
 		"preserve_worktree": result.Preserved,
 	}
 	if strings.TrimSpace(stderrBuffer.String()) != "" {
-		payload["stderr"] = sanitizeText(stderrBuffer.String())
+		stderrResult := sanitizeUntrustedText(stderrBuffer.String())
+		payload["stderr"] = stderrResult.Text
+		payload["stderr_sanitized"] = stderrResult.Changed
+		if stderrResult.Changed && len(stderrResult.Reasons) > 0 {
+			payload["stderr_sanitization_changes"] = stderrResult.Reasons
+		}
 	}
 	return writeCommandResult(runCtx, payload)
 }
@@ -111,12 +116,15 @@ func parseBufferedEvents(buffer string, result mainRunResult) []map[string]any {
 				continue
 			}
 		}
-		events = append(events, map[string]any{
+		messageResult := sanitizeUntrustedText(line)
+		record := map[string]any{
 			"command": "main",
 			"event":   "log",
 			"status":  "running",
-			"message": sanitizeText(line),
-		})
+			"message": messageResult.Text,
+		}
+		applySanitizationMetadata(record, messageResult)
+		events = append(events, record)
 	}
 	events = append(events, map[string]any{
 		"command":        "main",

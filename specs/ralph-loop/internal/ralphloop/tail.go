@@ -71,12 +71,17 @@ func executeTailCommand(runCtx runContext) int {
 	}
 	items := make([]map[string]any, 0, len(lines))
 	for index, line := range lines {
+		textResult := sanitizeUntrustedText(line)
 		record := map[string]any{
 			"line_number": index + 1,
-			"text":        line,
+			"text":        textResult.Text,
 		}
 		if !runCtx.command.TailOptions.Raw {
-			record["summary"] = formatLiveLine(line)
+			summaryResult := sanitizeUntrustedText(formatLiveLine(line))
+			record["summary"] = summaryResult.Text
+			applySanitizationMetadata(record, mergeSanitizationResults(textResult, summaryResult))
+		} else {
+			applySanitizationMetadata(record, textResult)
 		}
 		items = append(items, record)
 	}
@@ -191,7 +196,7 @@ func formatTailOutput(logPath string, lines int) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	return fmt.Sprintf("Showing Ralph Loop log: %s\n%s", logPath, body), nil
+	return fmt.Sprintf("Showing Ralph Loop log: %s\n%s", logPath, sanitizeText(body)), nil
 }
 
 func readTailFile(path string, lines int) (string, error) {
@@ -240,6 +245,7 @@ func followLog(ctx context.Context, path string, lines int, raw bool, stdout io.
 		if !raw {
 			output = formatLiveLine(line)
 		}
+		output = sanitizeText(output)
 		if strings.TrimSpace(output) == "" {
 			continue
 		}
@@ -271,13 +277,16 @@ func followLogNDJSON(ctx context.Context, path string, lines int, stdout io.Writ
 	scanner := bufio.NewScanner(pipe)
 	scanner.Buffer(make([]byte, 0, 64*1024), 1024*1024)
 	for scanner.Scan() {
+		textResult := sanitizeUntrustedText(scanner.Text())
+		summaryResult := sanitizeUntrustedText(formatLiveLine(scanner.Text()))
 		record := map[string]any{
 			"command":  "tail",
 			"status":   "streaming",
 			"log_path": path,
-			"text":     scanner.Text(),
-			"summary":  formatLiveLine(scanner.Text()),
+			"text":     textResult.Text,
+			"summary":  summaryResult.Text,
 		}
+		applySanitizationMetadata(record, mergeSanitizationResults(textResult, summaryResult))
 		if err := writeJSONLine(stdout, record); err != nil {
 			return err
 		}
@@ -313,6 +322,17 @@ func formatLiveLine(line string) string {
 		return ""
 	}
 	return strings.TrimSpace(prefix + " " + summary)
+}
+
+func mergeSanitizationResults(results ...sanitizationResult) sanitizationResult {
+	merged := sanitizationResult{}
+	reasons := make([]string, 0, len(results))
+	for _, result := range results {
+		merged.Changed = merged.Changed || result.Changed
+		reasons = append(reasons, result.Reasons...)
+	}
+	merged.Reasons = uniqueStrings(reasons)
+	return merged
 }
 
 type logEnvelope struct {

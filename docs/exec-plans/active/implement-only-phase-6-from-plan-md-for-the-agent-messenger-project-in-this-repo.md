@@ -38,7 +38,7 @@ Referenced but missing (noted once):
   - Add shared REST client wrappers for existing server endpoints used by Phase 6.
   - Implement config load/save for `~/.msgr/config` and safe defaults.
 
-- [ ] M2. Implement auth commands and token lifecycle (status: not started)
+- [x] M2. Implement auth commands and token lifecycle (status: completed)
   - `register <username> <pin>` and `login <username> <pin>` against `/api/auth/*`.
   - Persist returned token and server URL in config.
   - `logout` clears token and calls server logout endpoint when possible.
@@ -80,6 +80,14 @@ Referenced but missing (noted once):
 - Validation run for this milestone:
   - `cd cli && GOCACHE=/tmp/go-cache GOMODCACHE=/tmp/go-mod go test ./...`
   - `cd cli && GOCACHE=/tmp/go-cache GOMODCACHE=/tmp/go-mod go build ./...`
+- Completed M2 auth/token lifecycle:
+  - Implemented `register`, `login`, and `logout` command handlers in `cli/internal/cmd/auth.go`.
+  - `register`/`login` call existing `/api/auth/*` endpoints, update runtime token, and persist updated config (`server_url`, `token`) to `~/.msgr/config`.
+  - `logout` attempts server-side logout when a local token exists, always clears local token, persists config, and prints a warning if remote logout fails.
+  - Added auth command tests in `cli/internal/cmd/auth_test.go` for register/login persistence and logout local-clear fallback behavior.
+- Additional validation run after M2:
+  - `cd cli && GOCACHE=/tmp/go-cache GOMODCACHE=/tmp/go-mod go test ./...`
+  - `cd cli && GOCACHE=/tmp/go-cache GOMODCACHE=/tmp/go-mod go build ./...`
 
 ## Key decisions
 - Keep implementation bounded to Phase 6 CLI deliverable and existing server/API/WS contracts.
@@ -87,9 +95,10 @@ Referenced but missing (noted once):
 - Persist read-session index mapping locally to satisfy index-based commands without introducing server changes.
 - Prefer deterministic, parseable CLI output where required by SPEC while keeping human-readable defaults for core commands.
 - Use a local Cobra-compatible shim (`replace github.com/spf13/cobra => ./third_party/cobra`) due offline dependency constraints in this environment.
+- For `logout`, prioritize local token invalidation durability: clear and persist local token even when remote `/api/auth/logout` returns an error.
 
 ## Remaining issues / open questions
-- M2+ command behavior is still stubbed and must be implemented sequentially.
+- M3+ command behavior is still stubbed and must be implemented sequentially.
 - Decide whether to keep the local Cobra shim or switch to upstream `github.com/spf13/cobra` when networked module fetch is available.
 
 ## Links to related documents

@@ -84,6 +84,7 @@ func runMain(ctx context.Context, repoRoot string, options MainOptions, stdout i
 	if err := ensurePlanParent(planPath); err != nil {
 		return result, err
 	}
+	skipSetup := shouldSkipSetupPhase(planPath)
 	sandbox := resolveSandbox(options.Sandbox, worktree.WorktreePath)
 	prSandbox := resolvePrSandbox(options.Sandbox, worktree.WorktreePath)
 	turnTimeout := time.Duration(options.TimeoutSeconds) * time.Second
@@ -159,63 +160,76 @@ func runMain(ctx context.Context, repoRoot string, options MainOptions, stdout i
 		}
 	}()
 
-	_, _ = fmt.Fprintf(stdout, "Phase 1/3: setup agent in %s\n", worktree.WorktreePath)
-	var setupSpan *ralphTelemetrySpan
-	if telemetry != nil {
-		telemetry.SetMetric("ralph_loop_active_phase", "setup")
-		telemetry.IncrementMetric("ralph_loop_setup_phase_total", 1)
-		telemetry.Log("info", "setup phase started", map[string]any{
-			"phase":         "setup",
-			"worktree_path": worktree.WorktreePath,
-		})
-		setupSpan = telemetry.StartSpan("ralph_loop.setup", map[string]any{
-			"phase":         "setup",
-			"worktree_path": worktree.WorktreePath,
-		})
-	}
-	setupClient, err = spawnCodexClient(logFile)
-	if err != nil {
-		endSpan(setupSpan, "error", err, map[string]any{"phase": "setup"})
-		return result, withLogTail(err, logFile)
-	}
-	setupClient.SetNotificationHandler(func(notification jsonRPCNotification) {
-		if event, ok := notificationToRalphEvent("setup", notification); ok {
-			emitEvent(stdout, event)
-			if telemetry != nil {
-				telemetry.Log("info", "setup agent message", map[string]any{
-					"phase":   "setup",
-					"message": event.Message,
-				})
-			}
+	if skipSetup {
+		skipMessage := fmt.Sprintf("Phase 1/3: reusing existing plan at %s; skipping setup agent.", planPath)
+		_, _ = fmt.Fprintln(stdout, skipMessage)
+		if telemetry != nil {
+			telemetry.SetMetric("ralph_loop_active_phase", "setup")
+			telemetry.Log("info", "setup phase skipped", map[string]any{
+				"phase":     "setup",
+				"plan_path": planPath,
+				"reason":    "existing_plan",
+			})
 		}
-	})
-	if err := setupClient.Initialize(ctx); err != nil {
-		endSpan(setupSpan, "error", err, map[string]any{"phase": "setup"})
-		return result, withLogTail(err, logFile)
+	} else {
+		_, _ = fmt.Fprintf(stdout, "Phase 1/3: setup agent in %s\n", worktree.WorktreePath)
+		var setupSpan *ralphTelemetrySpan
+		if telemetry != nil {
+			telemetry.SetMetric("ralph_loop_active_phase", "setup")
+			telemetry.IncrementMetric("ralph_loop_setup_phase_total", 1)
+			telemetry.Log("info", "setup phase started", map[string]any{
+				"phase":         "setup",
+				"worktree_path": worktree.WorktreePath,
+			})
+			setupSpan = telemetry.StartSpan("ralph_loop.setup", map[string]any{
+				"phase":         "setup",
+				"worktree_path": worktree.WorktreePath,
+			})
+		}
+		setupClient, err = spawnCodexClient(logFile)
+		if err != nil {
+			endSpan(setupSpan, "error", err, map[string]any{"phase": "setup"})
+			return result, withLogTail(err, logFile)
+		}
+		setupClient.SetNotificationHandler(func(notification jsonRPCNotification) {
+			if event, ok := notificationToRalphEvent("setup", notification); ok {
+				emitEvent(stdout, event)
+				if telemetry != nil {
+					telemetry.Log("info", "setup agent message", map[string]any{
+						"phase":   "setup",
+						"message": event.Message,
+					})
+				}
+			}
+		})
+		if err := setupClient.Initialize(ctx); err != nil {
+			endSpan(setupSpan, "error", err, map[string]any{"phase": "setup"})
+			return result, withLogTail(err, logFile)
+		}
+		if err := runSetupAgent(ctx, setupAgentOptions{
+			Client:         setupClient,
+			Model:          options.Model,
+			Cwd:            worktree.WorktreePath,
+			ApprovalPolicy: options.ApprovalPolicy,
+			Sandbox:        sandbox,
+			Timeout:        turnTimeout,
+			UserPrompt:     options.Prompt,
+			PlanPath:       planPath,
+			WorktreePath:   worktree.WorktreePath,
+			WorktreeID:     worktree.WorktreeID,
+			WorkBranch:     worktree.WorkBranch,
+			BaseBranch:     worktree.BaseBranch,
+		}); err != nil {
+			endSpan(setupSpan, "error", err, map[string]any{"phase": "setup"})
+			return result, withLogTail(err, logFile)
+		}
+		endSpan(setupSpan, "ok", nil, map[string]any{"phase": "setup"})
+		if telemetry != nil {
+			telemetry.Log("info", "setup phase completed", map[string]any{"phase": "setup"})
+		}
+		_ = setupClient.Close()
+		setupClient = nil
 	}
-	if err := runSetupAgent(ctx, setupAgentOptions{
-		Client:         setupClient,
-		Model:          options.Model,
-		Cwd:            worktree.WorktreePath,
-		ApprovalPolicy: options.ApprovalPolicy,
-		Sandbox:        sandbox,
-		Timeout:        turnTimeout,
-		UserPrompt:     options.Prompt,
-		PlanPath:       planPath,
-		WorktreePath:   worktree.WorktreePath,
-		WorktreeID:     worktree.WorktreeID,
-		WorkBranch:     worktree.WorkBranch,
-		BaseBranch:     worktree.BaseBranch,
-	}); err != nil {
-		endSpan(setupSpan, "error", err, map[string]any{"phase": "setup"})
-		return result, withLogTail(err, logFile)
-	}
-	endSpan(setupSpan, "ok", nil, map[string]any{"phase": "setup"})
-	if telemetry != nil {
-		telemetry.Log("info", "setup phase completed", map[string]any{"phase": "setup"})
-	}
-	_ = setupClient.Close()
-	setupClient = nil
 
 	_, _ = fmt.Fprintf(stdout, "Phase 2/3: coding loop on %s\n", worktree.WorkBranch)
 	var codingSpan *ralphTelemetrySpan
@@ -440,6 +454,14 @@ func runMain(ctx context.Context, repoRoot string, options MainOptions, stdout i
 	result.FinalStatus = "completed"
 	result.Completed = true
 	return result, nil
+}
+
+func shouldSkipSetupPhase(planPath string) bool {
+	info, err := os.Stat(planPath)
+	if err != nil {
+		return false
+	}
+	return !info.IsDir()
 }
 
 func ensurePlanParent(planPath string) error {

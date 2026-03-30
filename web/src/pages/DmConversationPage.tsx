@@ -14,9 +14,11 @@ import {
   type MessageDetails,
   type Reaction,
   type UserProfile,
+  parseMessageContent,
 } from '../api'
 import { apiClient } from '../api/runtime'
 import { useAuth } from '../auth'
+import { MessageJsonRender } from '../components/MessageJsonRender'
 import { useRealtime } from '../realtime'
 import {
   fallbackSender,
@@ -542,6 +544,7 @@ export function DmConversationPage() {
             {messagesAscending.length > 0 ? (
               <ol className={styles.timelineList}>
                 {messagesAscending.map((details: MessageDetails) => {
+                  const parsedContent = parseMessageContent(details.message)
                   const reactionGroups = groupReactionsByEmoji(messageReactions[details.message.id], user?.id)
                   return (
                     <li
@@ -578,8 +581,14 @@ export function DmConversationPage() {
                           <p className={`${styles.messageText} ${styles.messageTextDeleted}`}>삭제된 메시지입니다</p>
                         ) : null}
 
-                        {!details.message.deleted && details.message.content?.trim() ? (
-                          <p className={styles.messageText}>{details.message.content.trim()}</p>
+                        {!details.message.deleted &&
+                        parsedContent.kind === 'text' &&
+                        parsedContent.textContent?.trim() ? (
+                          <p className={styles.messageText}>{parsedContent.textContent.trim()}</p>
+                        ) : null}
+
+                        {!details.message.deleted && parsedContent.kind === 'json_render' ? (
+                          <MessageJsonRender spec={parsedContent.jsonRenderSpec} />
                         ) : null}
 
                         {!details.message.deleted &&

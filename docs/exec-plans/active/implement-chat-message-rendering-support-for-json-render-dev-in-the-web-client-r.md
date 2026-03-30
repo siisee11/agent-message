@@ -41,7 +41,7 @@ Referenced but missing (noted once):
 ## Milestones
 - [x] M1. Upgrade `web/` to React 19 and align related dependencies/tooling until build and typecheck are green (status: completed)
 - [x] M2. Introduce explicit message-kind protocol/types and parsing helpers for deterministic `text` vs `json_render` handling with backward-compatible text defaults (status: completed)
-- [ ] M3. Implement DM bubble render branching in `DmConversationPage.tsx` with deleted-message precedence, text bubble parity, and minimal read-only json-render registry rendering (status: not started)
+- [x] M3. Implement DM bubble render branching in `DmConversationPage.tsx` with deleted-message precedence, text bubble parity, and minimal read-only json-render registry rendering (status: completed)
 - [ ] M4. Update editability and preview behavior: disable edit affordances/flows for `json_render` messages, keep delete allowed, and add compact conversation preview fallback in `ChatShellPage.tsx` (status: not started)
 - [ ] M5. Add/update tests for message-kind parsing, render branch selection, preview fallback, and editability constraints; run web verification commands and fix regressions (status: not started)
 
@@ -82,6 +82,21 @@ Referenced but missing (noted once):
     - SSE parsing normalizes `message.new` and `message.edited` payloads
   - Preserved backward compatibility by defaulting missing/unknown kinds to `text`.
   - Verified build + typecheck pass with `cd web && npm run build`.
+- Completed M3 (DM render branching + minimal read-only json-render bubble support):
+  - Added json-render runtime dependencies in `web/package.json`:
+    - `@json-render/core`
+    - `@json-render/react`
+    - `zod` (required peer for json-render)
+  - Added read-only json-render message renderer:
+    - `web/src/components/MessageJsonRender.tsx`
+    - `web/src/components/MessageJsonRender.module.css`
+  - Implemented a small registry (`Stack`, `Text`, `Badge`) and fallback rendering for unknown/invalid specs, intentionally minimal for first-pass support.
+  - Updated `web/src/pages/DmConversationPage.tsx` to branch on parsed message protocol:
+    - `text` kind: render existing message text bubble behavior (`trim()` + same `<p className={styles.messageText}>`)
+    - `json_render` kind: render via `MessageJsonRender` inside the bubble
+    - deleted placeholder branch still precedes both and remains dominant
+  - Kept attachment rendering and reaction rendering branches unchanged.
+  - Verified build + typecheck pass with `cd web && npm run build`.
 
 ## Key decisions
 - Use an explicit message-kind protocol field for deterministic rendering; do not parse arbitrary text as JSON specs.
@@ -91,11 +106,12 @@ Referenced but missing (noted once):
 - Preserve existing attachment and reaction behavior without protocol drift.
 - For React 19 type compatibility, prefer inferred component return types over global `JSX.Element` annotations.
 - Normalize protocol from either `kind` or `message_kind` while keeping `text` as the fallback for absent or unexpected values.
+- Use `@json-render/react` `Renderer` with a minimal component registry and no action handlers for read-only json-render message rendering.
 
 ## Remaining issues / open questions
 - Confirm the compact preview label string for json-render messages (for example `[json-render]`) before final polish if product wording differs.
 - React 19 install emitted a transient peer-resolution warning from stale `18.x` metadata during dependency resolution, but final tree is resolved to React/ReactDOM 19.x and build is green.
-- Json-render payload shape remains intentionally unopinionated (`unknown`) until M3 defines the minimal read-only registry contract.
+- Json-render payload shape is still accepted as `unknown` at the API edge; runtime rendering currently expects flat json-render spec shape (`root` + `elements`) and falls back to a compact placeholder when invalid.
 
 ## Links to related documents
 - `AGENTS.md`

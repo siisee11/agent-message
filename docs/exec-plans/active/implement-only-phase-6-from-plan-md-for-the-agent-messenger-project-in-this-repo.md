@@ -58,7 +58,7 @@ Referenced but missing (noted once):
   - `delete <index>` resolves and soft-deletes message.
   - `react <index> <emoji>` and `unreact <index> <emoji>` resolve index and call reaction endpoints.
 
-- [ ] M6. Implement watch mode and Phase 6 validation/finalization (status: not started)
+- [x] M6. Implement watch mode and Phase 6 validation/finalization (status: completed)
   - `watch <username>` opens websocket with token and streams `message.new` for that DM to stdout.
   - Add/update CLI tests for config, index resolution, command behavior, and websocket event handling where practical.
   - Run relevant `go test` and `go build` checks for `cli/`, keep scope strictly Phase 6, and finalize with small logical milestone commits.
@@ -118,6 +118,15 @@ Referenced but missing (noted once):
 - Additional validation run after M5:
   - `cd cli && GOCACHE=/tmp/go-cache GOMODCACHE=/tmp/go-mod go test ./...`
   - `cd cli && GOCACHE=/tmp/go-cache GOMODCACHE=/tmp/go-mod go build ./...`
+- Completed M6 watch mode and final validation:
+  - Implemented `watch <username>` in `cli/internal/cmd/watch.go`.
+  - Added minimal in-repo websocket client (HTTP upgrade handshake + frame reader) compatible with existing server websocket contract, without introducing external dependencies.
+  - `watch` resolves/open DM by username, connects to `/ws?token=...`, filters incoming `message.new` events for the target conversation, and streams matching lines to stdout.
+  - Added watch tests in `cli/internal/cmd/watch_test.go` (event filtering, URL/token usage, auth guard).
+  - Removed final placeholder command file now that all Phase 6 commands are implemented.
+- Final validation run after M6:
+  - `cd cli && GOCACHE=/tmp/go-cache GOMODCACHE=/tmp/go-mod go test ./...`
+  - `cd cli && GOCACHE=/tmp/go-cache GOMODCACHE=/tmp/go-mod go build ./...`
 
 ## Key decisions
 - Keep implementation bounded to Phase 6 CLI deliverable and existing server/API/WS contracts.
@@ -129,10 +138,11 @@ Referenced but missing (noted once):
 - Keep conversation command output stable and simple (`<conversation_id> <username>`) to support scripting and easier manual inspection.
 - Preserve server message ordering (newest-first) in `read` output and index mapping so local index resolution remains deterministic with server pagination order.
 - Track a single explicit last-read conversation in config so index-only commands (`edit/delete/react/unreact`) resolve against the most recent `read` target.
+- Use an internal websocket client implementation for Phase 6 watch mode due restricted dependency/network environment while keeping protocol compatibility with the existing server contract.
 
 ## Remaining issues / open questions
-- M6 command behavior is still stubbed and must be implemented.
-- Decide whether to keep the local Cobra shim or switch to upstream `github.com/spf13/cobra` when networked module fetch is available.
+- Phase 6 CLI scope is fully implemented.
+- Optional follow-up outside Phase 6 scope: replace local Cobra shim with upstream `github.com/spf13/cobra` once dependency fetch is available.
 
 ## Links to related documents
 - `AGENTS.md`

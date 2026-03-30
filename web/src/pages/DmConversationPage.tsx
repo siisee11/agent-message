@@ -6,7 +6,7 @@ import {
   useQueryClient,
 } from '@tanstack/react-query'
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
-import { useParams } from 'react-router-dom'
+import { useNavigate, useParams } from 'react-router-dom'
 import {
   ApiError,
   type ConversationDetails,
@@ -124,6 +124,7 @@ function groupReactionsByEmoji(
 }
 
 export function DmConversationPage(): JSX.Element {
+  const navigate = useNavigate()
   const { conversationId } = useParams()
   const { user } = useAuth()
   const realtime = useRealtime()
@@ -492,6 +493,11 @@ export function DmConversationPage(): JSX.Element {
     <section className={styles.page}>
       <div className={styles.panel}>
         <header className={styles.header}>
+          <div className={styles.headerBar}>
+            <button className={styles.backButton} onClick={() => navigate('/')} type="button">
+              ← 대화 목록
+            </button>
+          </div>
           {conversationQuery.isLoading ? <h2 className={styles.title}>Loading conversation...</h2> : null}
           {conversationQuery.isError ? (
             <>
@@ -502,7 +508,13 @@ export function DmConversationPage(): JSX.Element {
           {conversationQuery.isSuccess && otherParticipant ? (
             <>
               <h2 className={styles.title}>@{otherParticipant.username}</h2>
-              <p className={styles.muted}>Conversation ID: {conversationId}</p>
+              <p className={styles.muted}>
+                {realtime.status === 'open'
+                  ? '실시간 연결됨'
+                  : realtime.status === 'connecting'
+                    ? '실시간 연결 중'
+                    : '실시간 연결 대기 중'}
+              </p>
             </>
           ) : null}
         </header>

@@ -1,10 +1,10 @@
 import { useMemo, useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { NavLink, Outlet, useNavigate } from 'react-router-dom'
+import { NavLink, useNavigate } from 'react-router-dom'
 import { ApiError, type ConversationSummary, type Message, type UserProfile } from '../api'
 import { apiClient } from '../api/runtime'
 import { useAuth } from '../auth'
-import { RealtimeProvider } from '../realtime'
+import { useRealtime } from '../realtime'
 import styles from './ChatShellPage.module.css'
 
 const MESSAGE_PREVIEW_EMPTY = '대화를 시작해 보세요'
@@ -88,6 +88,7 @@ export function ChatShellPage(): JSX.Element {
   const navigate = useNavigate()
   const queryClient = useQueryClient()
   const { user, logout } = useAuth()
+  const realtime = useRealtime()
 
   const [searchInput, setSearchInput] = useState('')
   const [startDmError, setStartDmError] = useState<string | null>(null)
@@ -182,13 +183,13 @@ export function ChatShellPage(): JSX.Element {
   const hasSearchInput = normalizedSearchInput.length > 0
 
   return (
-    <RealtimeProvider>
-      <div className={styles.shell}>
-        <aside className={styles.sidebar}>
-          <header className={styles.sidebarHeader}>
+    <main className={styles.page}>
+      <section className={styles.shell}>
+        <header className={styles.header}>
+          <div className={styles.headerTop}>
             <div>
+              <p className={styles.eyebrow}>Messages</p>
               <h1 className={styles.brand}>Agent Messenger</h1>
-              <p className={styles.currentUser}>{user ? `@${user.username}` : 'Unknown user'}</p>
             </div>
             <button
               className={styles.logoutButton}
@@ -198,76 +199,93 @@ export function ChatShellPage(): JSX.Element {
             >
               {logoutMutation.isPending ? 'Signing out...' : 'Logout'}
             </button>
-          </header>
+          </div>
+          <div className={styles.headerMeta}>
+            <p className={styles.currentUser}>{user ? `@${user.username}` : 'Unknown user'}</p>
+            <span className={styles.statusBadge}>
+              {realtime.status === 'open'
+                ? 'Live'
+                : realtime.status === 'connecting'
+                  ? 'Connecting'
+                  : 'Offline'}
+            </span>
+          </div>
+        </header>
 
-          <section className={styles.section}>
-            <h2 className={styles.sectionTitle}>Start new DM</h2>
-            <form className={styles.searchForm} onSubmit={handleStartDmSubmission}>
-              <input
-                aria-label="Search username"
-                className={styles.searchInput}
-                onChange={(event) => setSearchInput(event.target.value)}
-                placeholder="Search by username"
-                value={searchInput}
-              />
-              <button
-                className={styles.searchSubmit}
-                disabled={normalizedSearchInput.length === 0 || startConversationMutation.isPending}
-                type="submit"
-              >
-                {startConversationMutation.isPending ? 'Starting...' : 'Start'}
-              </button>
-            </form>
-            {startDmError ? <p className={styles.errorMessage}>{startDmError}</p> : null}
-            {hasSearchInput && userSearchQuery.isLoading ? <p className={styles.statusText}>Searching users...</p> : null}
-            {hasSearchInput && userSearchQuery.isError ? (
-              <p className={styles.errorMessage}>{resolveErrorMessage(userSearchQuery.error, '사용자를 찾을 수 없습니다.')}</p>
-            ) : null}
-            {hasSearchInput && userSearchQuery.isSuccess ? (
-              <ul className={styles.searchResults}>
-                {userSearchResults.map((candidate) => {
-                  const alreadyOpen = conversations.some((summary) => isConversationWithUser(summary, candidate.id))
-                  return (
-                    <li key={candidate.id}>
-                      <button
-                        className={styles.searchResultButton}
-                        onClick={() => handleStartDmWithCandidate(candidate.username)}
-                        type="button"
-                      >
-                        <span>@{candidate.username}</span>
-                        <span>{alreadyOpen ? 'Open DM' : 'New DM'}</span>
-                      </button>
-                    </li>
-                  )
-                })}
-                {userSearchResults.length === 0 ? <li className={styles.statusText}>No users found.</li> : null}
-              </ul>
-            ) : null}
-          </section>
+        <section className={styles.composerSection}>
+          <div className={styles.sectionHeading}>
+            <h2 className={styles.sectionTitle}>새 대화 시작</h2>
+            <p className={styles.sectionCopy}>사용자명을 입력하면 바로 DM을 열 수 있습니다.</p>
+          </div>
+          <form className={styles.searchForm} onSubmit={handleStartDmSubmission}>
+            <input
+              aria-label="Search username"
+              className={styles.searchInput}
+              onChange={(event) => setSearchInput(event.target.value)}
+              placeholder="@username"
+              value={searchInput}
+            />
+            <button
+              className={styles.searchSubmit}
+              disabled={normalizedSearchInput.length === 0 || startConversationMutation.isPending}
+              type="submit"
+            >
+              {startConversationMutation.isPending ? 'Opening...' : 'Open'}
+            </button>
+          </form>
+          {startDmError ? <p className={styles.errorMessage}>{startDmError}</p> : null}
+          {hasSearchInput && userSearchQuery.isLoading ? <p className={styles.statusText}>Searching users...</p> : null}
+          {hasSearchInput && userSearchQuery.isError ? (
+            <p className={styles.errorMessage}>{resolveErrorMessage(userSearchQuery.error, '사용자를 찾을 수 없습니다.')}</p>
+          ) : null}
+          {hasSearchInput && userSearchQuery.isSuccess ? (
+            <ul className={styles.searchResults}>
+              {userSearchResults.map((candidate) => {
+                const alreadyOpen = conversations.some((summary) => isConversationWithUser(summary, candidate.id))
+                return (
+                  <li key={candidate.id}>
+                    <button
+                      className={styles.searchResultButton}
+                      onClick={() => handleStartDmWithCandidate(candidate.username)}
+                      type="button"
+                    >
+                      <span className={styles.searchResultName}>@{candidate.username}</span>
+                      <span className={styles.searchResultAction}>{alreadyOpen ? 'Open chat' : 'New chat'}</span>
+                    </button>
+                  </li>
+                )
+              })}
+              {userSearchResults.length === 0 ? <li className={styles.statusText}>No users found.</li> : null}
+            </ul>
+          ) : null}
+        </section>
 
-          <section className={styles.section}>
-            <h2 className={styles.sectionTitle}>Conversations</h2>
-            {conversationsQuery.isLoading ? <p className={styles.statusText}>Loading conversations...</p> : null}
-            {conversationsQuery.isError ? (
-              <p className={styles.errorMessage}>
-                {resolveErrorMessage(conversationsQuery.error, '대화 목록을 불러오지 못했습니다.')}
-              </p>
-            ) : null}
-            {conversationsQuery.isSuccess && conversations.length === 0 ? (
-              <p className={styles.statusText}>No conversations yet. Start one above.</p>
-            ) : null}
-            {conversationsQuery.isSuccess && conversations.length > 0 ? (
-              <nav aria-label="Conversation list" className={styles.conversationList}>
-                {conversations.map(renderConversationItem)}
-              </nav>
-            ) : null}
-          </section>
-        </aside>
-
-        <main className={styles.mainPane}>
-          <Outlet />
-        </main>
-      </div>
-    </RealtimeProvider>
+        <section className={styles.listSection}>
+          <div className={styles.sectionHeading}>
+            <h2 className={styles.sectionTitle}>대화</h2>
+            <p className={styles.sectionCopy}>
+              {conversations.length > 0 ? `${conversations.length}개의 대화` : '아직 열린 대화가 없습니다.'}
+            </p>
+          </div>
+          {conversationsQuery.isLoading ? <p className={styles.statusText}>Loading conversations...</p> : null}
+          {conversationsQuery.isError ? (
+            <p className={styles.errorMessage}>
+              {resolveErrorMessage(conversationsQuery.error, '대화 목록을 불러오지 못했습니다.')}
+            </p>
+          ) : null}
+          {conversationsQuery.isSuccess && conversations.length === 0 ? (
+            <div className={styles.emptyState}>
+              <p className={styles.emptyTitle}>대화가 없습니다</p>
+              <p className={styles.emptyCopy}>위에서 사용자명을 검색해 첫 DM을 시작해 보세요.</p>
+            </div>
+          ) : null}
+          {conversationsQuery.isSuccess && conversations.length > 0 ? (
+            <nav aria-label="Conversation list" className={styles.conversationList}>
+              {conversations.map(renderConversationItem)}
+            </nav>
+          ) : null}
+        </section>
+      </section>
+    </main>
   )
 }

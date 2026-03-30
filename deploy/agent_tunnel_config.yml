@@ -1,0 +1,7 @@
+tunnel: 3c6d029a-af55-43d4-87fe-252eb76c404c
+credentials-file: /Users/dev/.cloudflared/3c6d029a-af55-43d4-87fe-252eb76c404c.json
+
+ingress:
+  - hostname: agent.namjaeyoun.com
+    service: http://127.0.0.1:8788
+  - service: http_status:404

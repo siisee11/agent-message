@@ -1,0 +1,89 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+RUNTIME_DIR="${HOME}/.agent-messenger"
+INCLUDE_TUNNEL=0
+
+for arg in "$@"; do
+  case "$arg" in
+    --with-tunnel|--all)
+      INCLUDE_TUNNEL=1
+      ;;
+    *)
+      echo "usage: ./dev-stop [--with-tunnel]" >&2
+      exit 1
+      ;;
+  esac
+done
+
+kill_from_pidfile() {
+  local pidfile="$1"
+  if [[ ! -f "$pidfile" ]]; then
+    return
+  fi
+
+  local pid
+  pid="$(tr -d '[:space:]' < "$pidfile")"
+  if [[ -z "$pid" ]]; then
+    rm -f "$pidfile"
+    return
+  fi
+
+  if kill -0 "$pid" 2>/dev/null; then
+    kill "$pid" 2>/dev/null || true
+    sleep 1
+    if kill -0 "$pid" 2>/dev/null; then
+      kill -9 "$pid" 2>/dev/null || true
+    fi
+  fi
+
+  rm -f "$pidfile"
+}
+
+kill_matching_processes() {
+  local pattern="$1"
+  local pids=()
+  local pid
+
+  while IFS= read -r pid; do
+    if [[ -n "$pid" ]]; then
+      pids+=("$pid")
+    fi
+  done < <(pgrep -f "$pattern" || true)
+
+  if [[ "${#pids[@]}" -eq 0 ]]; then
+    return
+  fi
+
+  kill "${pids[@]}" 2>/dev/null || true
+  sleep 1
+
+  pids=()
+  while IFS= read -r pid; do
+    if [[ -n "$pid" ]]; then
+      pids+=("$pid")
+    fi
+  done < <(pgrep -f "$pattern" || true)
+
+  if [[ "${#pids[@]}" -gt 0 ]]; then
+    kill -9 "${pids[@]}" 2>/dev/null || true
+  fi
+}
+
+kill_from_pidfile "${RUNTIME_DIR}/server.pid"
+kill_from_pidfile "${RUNTIME_DIR}/gateway.pid"
+
+kill_matching_processes "${RUNTIME_DIR}/bin/agent-messenger-server"
+kill_matching_processes "${ROOT_DIR}/deploy/agent_gateway.mjs"
+
+if [[ "$INCLUDE_TUNNEL" -eq 1 ]]; then
+  kill_from_pidfile "${RUNTIME_DIR}/named-tunnel.pid"
+  kill_matching_processes "cloudflared tunnel --config ${ROOT_DIR}/deploy/agent_tunnel_config.yml run agent-namjaeyoun-com"
+fi
+
+if [[ "$INCLUDE_TUNNEL" -eq 1 ]]; then
+  echo "Stopped local server, gateway, and named tunnel."
+else
+  echo "Stopped local server and gateway."
+fi

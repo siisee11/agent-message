@@ -1,46 +1,83 @@
-.shell {
+.page {
   min-height: 100vh;
-  display: grid;
-  grid-template-columns: minmax(290px, 340px) 1fr;
-  background: linear-gradient(180deg, #edf4ff 0%, #e6efff 100%);
+  padding: 0;
+  background:
+    radial-gradient(circle at top, #f5f9ff 0%, #ebf2ff 34%, #e3edff 100%);
   color: #10213f;
 }
 
-.sidebar {
-  display: flex;
-  flex-direction: column;
-  gap: 1rem;
-  padding: 1rem;
-  border-right: 1px solid #d5e1fb;
-  background: #f8fbff;
-  overflow-y: auto;
+.shell {
+  width: 100%;
+  min-height: 100vh;
+  padding: 0;
+  display: grid;
+  gap: 0.9rem;
 }
 
-.sidebarHeader {
+.header {
+  padding: 1rem;
+  border-radius: 0 0 22px 22px;
+  background: linear-gradient(180deg, #1f4fbf 0%, #2e67dc 100%);
+  color: #ffffff;
+  box-shadow: 0 18px 34px -24px rgba(19, 43, 96, 0.6);
+}
+
+.headerTop {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   justify-content: space-between;
-  gap: 1rem;
+  gap: 0.8rem;
+}
+
+.eyebrow {
+  margin: 0 0 0.28rem;
+  font-size: 0.74rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  opacity: 0.78;
 }
 
 .brand {
   margin: 0;
-  font-size: 1.1rem;
+  font-size: 1.4rem;
+  line-height: 1.1;
+}
+
+.headerMeta {
+  margin-top: 0.75rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
 }
 
 .currentUser {
-  margin: 0.2rem 0 0;
-  font-size: 0.85rem;
-  color: #3a4e75;
+  margin: 0;
+  font-size: 0.92rem;
+  color: rgba(255, 255, 255, 0.88);
+}
+
+.statusBadge {
+  display: inline-flex;
+  align-items: center;
+  min-height: 30px;
+  padding: 0.22rem 0.65rem;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.14);
+  color: #ffffff;
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
 }
 
 .logoutButton {
-  border: 1px solid #b9c9ef;
-  border-radius: 8px;
-  background: #ffffff;
-  color: #1e3970;
-  padding: 0.42rem 0.72rem;
-  font-size: 0.84rem;
+  border: 1px solid rgba(255, 255, 255, 0.32);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.14);
+  color: #ffffff;
+  padding: 0.46rem 0.8rem;
+  font-size: 0.82rem;
+  font-weight: 600;
   cursor: pointer;
 }
 
@@ -49,46 +86,61 @@
   cursor: not-allowed;
 }
 
-.section {
-  background: #ffffff;
-  border: 1px solid #d6e3fc;
-  border-radius: 12px;
-  padding: 0.8rem;
-  box-shadow: 0 10px 24px -20px #14326f;
+.composerSection,
+.listSection {
+  background: rgba(255, 255, 255, 0.86);
+  border: 1px solid rgba(195, 211, 244, 0.9);
+  border-radius: 22px;
+  padding: 0.95rem;
+  box-shadow: 0 14px 30px -26px rgba(16, 33, 63, 0.45);
+  backdrop-filter: blur(10px);
+}
+
+.sectionHeading {
+  margin-bottom: 0.7rem;
 }
 
 .sectionTitle {
-  margin: 0 0 0.65rem;
-  font-size: 0.9rem;
-  color: #2b4270;
+  margin: 0;
+  font-size: 0.96rem;
+  color: #1b3464;
+}
+
+.sectionCopy {
+  margin: 0.28rem 0 0;
+  font-size: 0.82rem;
+  color: #4a6291;
 }
 
 .searchForm {
   display: grid;
   grid-template-columns: 1fr auto;
-  gap: 0.5rem;
+  gap: 0.55rem;
 }
 
 .searchInput {
-  border: 1px solid #c2d2f4;
-  border-radius: 8px;
-  padding: 0.5rem 0.65rem;
+  min-width: 0;
+  border: 1px solid #c6d6f7;
+  border-radius: 14px;
+  padding: 0.8rem 0.9rem;
   background: #ffffff;
-  color: #122447;
+  color: #10213f;
+  font-size: 0.95rem;
 }
 
 .searchInput:focus {
-  outline: 2px solid #9ab3ef;
-  border-color: #5d80db;
+  outline: 2px solid #91aff3;
+  border-color: #5b82de;
 }
 
 .searchSubmit {
   border: 0;
-  border-radius: 8px;
-  background: #2454d6;
+  border-radius: 14px;
+  background: linear-gradient(180deg, #2454d6 0%, #163b9e 100%);
   color: #ffffff;
-  padding: 0.45rem 0.7rem;
-  font-weight: 600;
+  padding: 0.78rem 0.95rem;
+  font-size: 0.9rem;
+  font-weight: 700;
   cursor: pointer;
 }
 
@@ -98,55 +150,65 @@
 }
 
 .searchResults {
-  margin: 0.6rem 0 0;
+  margin: 0.7rem 0 0;
   padding: 0;
   list-style: none;
   display: grid;
-  gap: 0.4rem;
+  gap: 0.5rem;
 }
 
 .searchResultButton {
   width: 100%;
-  border: 1px solid #d2def8;
-  border-radius: 8px;
+  border: 1px solid #d5e2fb;
+  border-radius: 16px;
   background: #f7faff;
   color: #18305c;
   display: flex;
   justify-content: space-between;
   align-items: center;
   gap: 0.8rem;
-  padding: 0.45rem 0.55rem;
+  padding: 0.76rem 0.84rem;
   cursor: pointer;
-  font-size: 0.84rem;
+  font-size: 0.88rem;
 }
 
 .searchResultButton:hover {
   background: #eef4ff;
 }
 
+.searchResultName {
+  font-weight: 700;
+}
+
+.searchResultAction {
+  color: #4c6595;
+  font-size: 0.8rem;
+}
+
 .conversationList {
   display: grid;
-  gap: 0.45rem;
+  gap: 0.55rem;
 }
 
 .conversationItem {
   display: grid;
-  gap: 0.28rem;
-  padding: 0.6rem 0.65rem;
-  border-radius: 10px;
-  border: 1px solid #d5e2fb;
-  background: #f8fbff;
+  gap: 0.34rem;
+  padding: 0.88rem 0.9rem;
+  border-radius: 18px;
+  border: 1px solid #d9e4fb;
+  background: linear-gradient(180deg, #ffffff 0%, #f6f9ff 100%);
   text-decoration: none;
   color: inherit;
+  box-shadow: 0 10px 24px -24px rgba(16, 33, 63, 0.5);
 }
 
 .conversationItem:hover {
-  background: #f0f6ff;
+  background: linear-gradient(180deg, #ffffff 0%, #eef4ff 100%);
 }
 
 .conversationItemActive {
   border-color: #557fdd;
-  background: #eaf2ff;
+  background: linear-gradient(180deg, #eff5ff 0%, #e8f1ff 100%);
   box-shadow: inset 0 0 0 1px #557fdd;
 }
 
@@ -158,18 +220,18 @@
 }
 
 .conversationName {
-  font-size: 0.92rem;
-  font-weight: 600;
+  font-size: 0.96rem;
+  font-weight: 700;
 }
 
 .conversationTime {
-  font-size: 0.74rem;
+  font-size: 0.75rem;
   color: #4a5f8c;
 }
 
 .conversationPreview {
   margin: 0;
-  font-size: 0.82rem;
+  font-size: 0.85rem;
   color: #314a79;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -181,35 +243,46 @@
 }
 
 .statusText {
-  margin: 0.6rem 0 0;
+  margin: 0.7rem 0 0;
   font-size: 0.82rem;
   color: #445e91;
 }
 
 .errorMessage {
-  margin: 0.6rem 0 0;
+  margin: 0.7rem 0 0;
   font-size: 0.82rem;
   color: #9b2035;
 }
 
-.mainPane {
-  padding: 1.2rem;
-  overflow: auto;
+.emptyState {
+  padding: 1.1rem 0.4rem 0.5rem;
+  text-align: center;
 }
 
-@media (max-width: 960px) {
+.emptyTitle {
+  margin: 0;
+  color: #1b3464;
+  font-weight: 700;
+}
+
+.emptyCopy {
+  margin: 0.42rem 0 0;
+  color: #5a709d;
+  font-size: 0.84rem;
+}
+
+@media (min-width: 768px) {
+  .page {
+    padding: 1rem;
+  }
+
   .shell {
-    grid-template-columns: 1fr;
-    grid-template-rows: auto 1fr;
+    max-width: 560px;
+    margin: 0 auto;
+    padding: 0;
   }
 
-  .sidebar {
-    border-right: 0;
-    border-bottom: 1px solid #d5e1fb;
-    max-height: 46vh;
-  }
-
-  .mainPane {
-    min-height: 54vh;
+  .header {
+    border-radius: 24px;
   }
 }

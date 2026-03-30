@@ -85,6 +85,39 @@ cd web
 npm run build
 ```
 
+## Local Bundle Commands
+
+From the project root, you can start the SQLite-backed API server and the production-like local web gateway together:
+
+```bash
+./dev-up
+```
+
+This will:
+- build `web/dist`
+- build the Go server binary into `~/.agent-messenger/bin`
+- start the API on `127.0.0.1:18080`
+- start the local web gateway on `127.0.0.1:8788`
+
+To stop both processes:
+
+```bash
+./dev-stop
+```
+
+If you also want to start or stop the named tunnel that serves `https://agent.namjaeyoun.com`, use:
+
+```bash
+./dev-up --with-tunnel
+./dev-stop --with-tunnel
+```
+
+PWA install:
+
+- Open the deployed web app in Safari on iPhone.
+- Use `Share -> Add to Home Screen`.
+- The app now ships with a web app manifest, service worker, and Apple touch icon so it can be installed like a standalone app.
+
 ## CLI Quickstart
 
 Run from `cli/` with optional `--server-url` override.

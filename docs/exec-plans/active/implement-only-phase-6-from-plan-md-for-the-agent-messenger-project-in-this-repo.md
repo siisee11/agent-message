@@ -1,0 +1,96 @@
+# Execution Plan: Implement Only Phase 6 from PLAN.md for Agent Messenger
+
+## Goal / scope
+Implement only Phase 6 from `PLAN.md`: build the full `msgr` CLI client in Go under `cli/` against the existing server REST/WebSocket contract.
+
+In scope:
+- Go CLI module and command wiring
+- Config management at `~/.msgr/config` (`server_url`, `token`, plus local read-session index state required by `edit/delete/react/unreact`)
+- Auth commands: `register`, `login`, `logout`
+- Conversation commands: `ls`, `open`
+- Message commands: `send`, `read`, `edit`, `delete` with index resolution from last `read`
+- Reaction commands: `react`, `unreact`
+- Watch mode: `watch <username>` streaming `message.new` websocket events to stdout
+
+Out of scope: Phase 7+ items except narrowly required plumbing to make the Phase 6 deliverable functional.
+
+## Background
+`PLAN.md` Phase 6 and `SPEC.md` CLI sections define the required `msgr` command surface and output behaviors. Server-side auth, conversations, messages, reactions, and websocket events were implemented in prior phases, so Phase 6 should consume existing APIs/contracts without changing them.
+
+Docs reviewed for this planning step:
+- `AGENTS.md`
+- `PLAN.md`
+- `SPEC.md`
+- `docs/exec-plans/active/implement-only-phase-1-from-plan-md-for-the-agent-messenger-project-in-this-repo.md`
+- `docs/exec-plans/active/implement-only-phase-2-from-plan-md-for-the-agent-messenger-project-in-this-repo.md`
+- `docs/exec-plans/active/implement-only-phase-3-from-plan-md-for-the-agent-messenger-project-in-this-repo.md`
+- `docs/exec-plans/active/continue-only-the-remaining-phase-3-milestones-from-the-current-branch-state-for.md`
+- `docs/exec-plans/active/implement-only-phase-4-from-plan-md-for-the-agent-messenger-project-in-this-repo.md`
+- `docs/exec-plans/active/implement-only-phase-5-from-plan-md-for-the-agent-messenger-project-in-this-repo.md`
+
+Referenced but missing (noted once):
+- `ARCHITECTURE.md`
+- `docs/PLANS.md`
+
+## Milestones
+- [ ] M1. Scaffold `cli/` module, root command tree, HTTP client layer, and config store primitives (status: not started)
+  - Initialize `cli/go.mod` and command entrypoint.
+  - Add shared REST client wrappers for existing server endpoints used by Phase 6.
+  - Implement config load/save for `~/.msgr/config` and safe defaults.
+
+- [ ] M2. Implement auth commands and token lifecycle (status: not started)
+  - `register <username> <pin>` and `login <username> <pin>` against `/api/auth/*`.
+  - Persist returned token and server URL in config.
+  - `logout` clears token and calls server logout endpoint when possible.
+
+- [ ] M3. Implement conversation commands and username-to-conversation resolution (status: not started)
+  - `ls` lists user conversations.
+  - `open <username>` get-or-create DM via conversations API.
+  - Add shared helper used by `send/read/watch` to resolve DM conversation by username.
+
+- [ ] M4. Implement `send` and `read`, including read-session index map persistence (status: not started)
+  - `send <username> <text>` posts message to resolved conversation.
+  - `read <username> [--n N]` fetches recent messages and prints indexed output.
+  - Persist per-conversation read-session mapping from display index to message UUID.
+
+- [ ] M5. Implement index-based mutations and reactions (status: not started)
+  - `edit <index> <text>` resolves index from last read session and patches message.
+  - `delete <index>` resolves and soft-deletes message.
+  - `react <index> <emoji>` and `unreact <index> <emoji>` resolve index and call reaction endpoints.
+
+- [ ] M6. Implement watch mode and Phase 6 validation/finalization (status: not started)
+  - `watch <username>` opens websocket with token and streams `message.new` for that DM to stdout.
+  - Add/update CLI tests for config, index resolution, command behavior, and websocket event handling where practical.
+  - Run relevant `go test` and `go build` checks for `cli/`, keep scope strictly Phase 6, and finalize with small logical milestone commits.
+
+## Current progress
+- Verified prepared environment using:
+  - `./ralph-loop init --base-branch main --work-branch ralph-phase-6-cli-client`
+- Confirmed returned JSON matches:
+  - `worktree_path=/Users/dev/git/agent-messenger/.worktrees/phase-6-cli-client`
+  - `work_branch=ralph-phase-6-cli-client`
+  - `base_branch=main`
+  - `worktree_id=phase-6-cli-client-121b0b8b`
+- Reviewed available planning/spec docs listed above.
+- Phase 6 implementation work has not started yet; all milestones are currently not started.
+
+## Key decisions
+- Keep implementation bounded to Phase 6 CLI deliverable and existing server/API/WS contracts.
+- Use milestone-sized commits (one or a few tightly related changes per milestone) to preserve clean history and rollback safety.
+- Persist read-session index mapping locally to satisfy index-based commands without introducing server changes.
+- Prefer deterministic, parseable CLI output where required by SPEC while keeping human-readable defaults for core commands.
+
+## Remaining issues / open questions
+- Confirm exact shape of message payloads/events used by server endpoints during implementation to ensure strict contract compatibility.
+- Confirm whether existing repository has CLI scaffolding/tests to extend vs. creating new `cli/` tree from scratch.
+
+## Links to related documents
+- `AGENTS.md`
+- `PLAN.md`
+- `SPEC.md`
+- `docs/exec-plans/active/implement-only-phase-1-from-plan-md-for-the-agent-messenger-project-in-this-repo.md`
+- `docs/exec-plans/active/implement-only-phase-2-from-plan-md-for-the-agent-messenger-project-in-this-repo.md`
+- `docs/exec-plans/active/implement-only-phase-3-from-plan-md-for-the-agent-messenger-project-in-this-repo.md`
+- `docs/exec-plans/active/continue-only-the-remaining-phase-3-milestones-from-the-current-branch-state-for.md`
+- `docs/exec-plans/active/implement-only-phase-4-from-plan-md-for-the-agent-messenger-project-in-this-repo.md`
+- `docs/exec-plans/active/implement-only-phase-5-from-plan-md-for-the-agent-messenger-project-in-this-repo.md`

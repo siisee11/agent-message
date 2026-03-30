@@ -16,9 +16,32 @@ func TestRegisterRequestValidate(t *testing.T) {
 			},
 		},
 		{
+			name: "valid username with symbols",
+			req: RegisterRequest{
+				Username: "alice.smith-1",
+				PIN:      "123456",
+			},
+		},
+		{
 			name: "empty username",
 			req: RegisterRequest{
 				Username: "   ",
+				PIN:      "1234",
+			},
+			wantErr: true,
+		},
+		{
+			name: "username too short",
+			req: RegisterRequest{
+				Username: "ab",
+				PIN:      "1234",
+			},
+			wantErr: true,
+		},
+		{
+			name: "username has spaces",
+			req: RegisterRequest{
+				Username: "alice smith",
 				PIN:      "1234",
 			},
 			wantErr: true,
@@ -36,6 +59,14 @@ func TestRegisterRequestValidate(t *testing.T) {
 			req: RegisterRequest{
 				Username: "alice",
 				PIN:      "12a4",
+			},
+			wantErr: true,
+		},
+		{
+			name: "pin too long",
+			req: RegisterRequest{
+				Username: "alice",
+				PIN:      "1234567",
 			},
 			wantErr: true,
 		},

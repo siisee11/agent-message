@@ -111,4 +111,30 @@ func TestUploadEndpointAndStaticServing(t *testing.T) {
 			t.Fatalf("unexpected static file body %q", body)
 		}
 	})
+
+	t.Run("rejects unsupported file type", func(t *testing.T) {
+		var body bytes.Buffer
+		writer := multipart.NewWriter(&body)
+		part, err := writer.CreateFormFile("file", "script.sh")
+		if err != nil {
+			t.Fatalf("create file form part: %v", err)
+		}
+		if _, err := part.Write([]byte("echo hello")); err != nil {
+			t.Fatalf("write upload payload: %v", err)
+		}
+		if err := writer.Close(); err != nil {
+			t.Fatalf("close multipart writer: %v", err)
+		}
+
+		req := httptest.NewRequest(http.MethodPost, "/api/upload", &body)
+		req.Header.Set("Authorization", "Bearer "+alice.Token)
+		req.Header.Set("Content-Type", writer.FormDataContentType())
+		resp := httptest.NewRecorder()
+		router.ServeHTTP(resp, req)
+
+		if resp.Code != http.StatusBadRequest {
+			t.Fatalf("expected %d, got %d", http.StatusBadRequest, resp.Code)
+		}
+		assertErrorBody(t, resp.Body, "unsupported file type")
+	})
 }

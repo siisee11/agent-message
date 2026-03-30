@@ -132,6 +132,22 @@ func TestAuthRegisterValidation(t *testing.T) {
 	if resp.Code != http.StatusBadRequest {
 		t.Fatalf("expected status %d, got %d", http.StatusBadRequest, resp.Code)
 	}
+
+	req = httptest.NewRequest(http.MethodPost, "/api/auth/register", bytes.NewBufferString(`{"username":"ab","pin":"1234"}`))
+	req.Header.Set("Content-Type", "application/json")
+	resp = httptest.NewRecorder()
+	router.ServeHTTP(resp, req)
+	if resp.Code != http.StatusBadRequest {
+		t.Fatalf("expected status %d, got %d", http.StatusBadRequest, resp.Code)
+	}
+
+	req = httptest.NewRequest(http.MethodPost, "/api/auth/register", bytes.NewBufferString(`{"username":"alice smith","pin":"1234"}`))
+	req.Header.Set("Content-Type", "application/json")
+	resp = httptest.NewRecorder()
+	router.ServeHTTP(resp, req)
+	if resp.Code != http.StatusBadRequest {
+		t.Fatalf("expected status %d, got %d", http.StatusBadRequest, resp.Code)
+	}
 }
 
 func newTestRouter(t *testing.T) (http.Handler, *store.SQLiteStore) {

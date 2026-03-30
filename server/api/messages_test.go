@@ -116,6 +116,32 @@ func TestMessagesEndpoints(t *testing.T) {
 		}
 	})
 
+	t.Run("reject multipart with unsupported attachment type", func(t *testing.T) {
+		var body bytes.Buffer
+		writer := multipart.NewWriter(&body)
+		part, err := writer.CreateFormFile("attachment", "script.sh")
+		if err != nil {
+			t.Fatalf("create multipart file part: %v", err)
+		}
+		if _, err := part.Write([]byte("echo hello")); err != nil {
+			t.Fatalf("write multipart attachment: %v", err)
+		}
+		if err := writer.Close(); err != nil {
+			t.Fatalf("close multipart writer: %v", err)
+		}
+
+		req := httptest.NewRequest(http.MethodPost, "/api/conversations/"+conversationID+"/messages", &body)
+		req.Header.Set("Authorization", "Bearer "+alice.Token)
+		req.Header.Set("Content-Type", writer.FormDataContentType())
+		resp := httptest.NewRecorder()
+		router.ServeHTTP(resp, req)
+
+		if resp.Code != http.StatusBadRequest {
+			t.Fatalf("expected %d, got %d", http.StatusBadRequest, resp.Code)
+		}
+		assertErrorBody(t, resp.Body, "unsupported file type")
+	})
+
 	t.Run("toggle reaction add then remove", func(t *testing.T) {
 		req := httptest.NewRequest(http.MethodPost, "/api/messages/"+msg1.ID+"/reactions", bytes.NewBufferString(`{"emoji":"👍"}`))
 		req.Header.Set("Authorization", "Bearer "+alice.Token)

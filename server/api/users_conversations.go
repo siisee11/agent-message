@@ -43,6 +43,10 @@ func (h *usersHandler) handleUsers(w http.ResponseWriter, r *http.Request) {
 		writeJSON(w, http.StatusOK, make([]models.UserProfile, 0))
 		return
 	}
+	if err := models.ValidateUsernameQuery(query); err != nil {
+		writeError(w, http.StatusBadRequest, err.Error())
+		return
+	}
 
 	limit, err := parsePositiveIntQuery(r, "limit")
 	if err != nil {

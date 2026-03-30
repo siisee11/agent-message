@@ -65,6 +65,10 @@ func (h *uploadHandler) handleUpload(w http.ResponseWriter, r *http.Request) {
 			writeError(w, http.StatusRequestEntityTooLarge, "file exceeds 20 MB")
 			return
 		}
+		if errors.Is(err, errUnsupportedUploadType) {
+			writeError(w, http.StatusBadRequest, err.Error())
+			return
+		}
 		writeError(w, http.StatusInternalServerError, "failed to upload file")
 		return
 	}

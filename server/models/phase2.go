@@ -24,10 +24,7 @@ type StartConversationRequest struct {
 }
 
 func (r StartConversationRequest) Validate() error {
-	if strings.TrimSpace(r.Username) == "" {
-		return ErrUsernameRequired
-	}
-	return nil
+	return ValidateUsername(r.Username)
 }
 
 // SendMessageRequest is the JSON body for POST /api/conversations/:id/messages text sends.

@@ -15,6 +15,13 @@ func TestStartConversationRequestValidate(t *testing.T) {
 			},
 		},
 		{
+			name: "invalid username format",
+			req: StartConversationRequest{
+				Username: "alice smith",
+			},
+			wantErr: true,
+		},
+		{
 			name: "empty username",
 			req: StartConversationRequest{
 				Username: "   ",

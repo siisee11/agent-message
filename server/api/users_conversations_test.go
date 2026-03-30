@@ -76,6 +76,17 @@ func TestUsersEndpoints(t *testing.T) {
 		}
 	})
 
+	t.Run("search users validates username query", func(t *testing.T) {
+		req := httptest.NewRequest(http.MethodGet, "/api/users?username=bo%20x", nil)
+		req.Header.Set("Authorization", "Bearer "+alice.Token)
+		resp := httptest.NewRecorder()
+		router.ServeHTTP(resp, req)
+
+		if resp.Code != http.StatusBadRequest {
+			t.Fatalf("expected %d, got %d", http.StatusBadRequest, resp.Code)
+		}
+	})
+
 	t.Run("search users excludes self", func(t *testing.T) {
 		req := httptest.NewRequest(http.MethodGet, "/api/users?username=ali", nil)
 		req.Header.Set("Authorization", "Bearer "+alice.Token)

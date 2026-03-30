@@ -48,7 +48,7 @@ Referenced but missing (noted once):
   - Audit shared HTTP helpers and all handlers to ensure uniform JSON error envelope and status mapping.
   - Remove remaining inconsistent bodies (plain text/non-standard payloads) while preserving status semantics.
 
-- [ ] M3. Tighten validation for auth/user inputs and uploads (status: not started)
+- [x] M3. Tighten validation for auth/user inputs and uploads (status: completed)
   - Enforce username validation rules consistently at API boundary.
   - Enforce PIN 4-6 numeric-digit validation consistently.
   - Tighten upload validation for size/type/field handling per Phase 7 constraints.
@@ -91,6 +91,24 @@ Referenced but missing (noted once):
   - Added targeted API tests asserting JSON error envelope + `application/json` content type for unknown and invalid API paths:
     - `server/api/error_responses_test.go`
   - Validation run: `cd server && go test ./api ./...` (pass).
+- Completed M3 (tightened username/PIN/upload validation):
+  - Added shared username validation rules in models:
+    - Length constrained to `3-32` chars.
+    - Allowed characters constrained to letters, numbers, `.`, `_`, `-`.
+    - Added `ValidateUsername` for credential/start-conversation usernames and `ValidateUsernameQuery` for `/api/users` lookup query.
+    - Files: `server/models/auth.go`, `server/models/phase2.go`.
+  - Kept PIN validation strictly `4-6` numeric digits and reused the same credential validator path.
+  - Enforced username-query validation at API boundary for `/api/users`:
+    - File: `server/api/users_conversations.go`.
+  - Tightened upload validation in shared upload handling:
+    - Reject unsupported file extensions/types.
+    - Validate multipart file metadata/content-type shape for uploads.
+    - Preserve existing max-size enforcement (`20 MB`).
+    - Files: `server/api/upload_common.go`, `server/api/upload.go`.
+  - Added/updated tests for validation coverage:
+    - Model validation tests: `server/models/auth_test.go`, `server/models/phase2_test.go`.
+    - API validation tests: `server/api/auth_test.go`, `server/api/users_conversations_test.go`, `server/api/upload_test.go`, `server/api/messages_test.go`.
+  - Validation run: `cd server && go test ./...` (pass).
 
 ## Key decisions
 - Keep scope strictly bounded to Phase 7 tasks from `PLAN.md`.
@@ -103,9 +121,13 @@ Referenced but missing (noted once):
   - `POSTGRES_DSN` with fallback to `DATABASE_URL` for PostgreSQL.
 - Keep model timestamp storage format unchanged (`RFC3339Nano` text) across both backends to preserve existing parsing/ordering behavior and avoid contract drift in this milestone.
 - For M2 consistency, API path parsing failures and unknown `/api/*` routes should return JSON error envelopes instead of default `http.NotFound` plain-text responses.
+- For M3 validation:
+  - Username identity fields (`register`, `login`, `start conversation`) use strict username validation (`3-32`, allowed charset).
+  - Username prefix search query uses a relaxed variant (no minimum length, same charset, same maximum length).
+  - Upload file type enforcement is centralized in `saveUploadedFile`, so `/api/upload` and multipart message attachment flows stay aligned.
 
 ## Remaining issues / open questions
-- Remaining Phase 7 milestones pending: M3-M6.
+- Remaining Phase 7 milestones pending: M4-M6.
 - Confirm exact repository location/creation path for the top-level `README.md` quickstart update if a root `README.md` is absent in current tree state.
 
 ## Links to related documents

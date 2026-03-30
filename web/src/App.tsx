@@ -2,6 +2,7 @@ import { Link, Route, Routes } from 'react-router-dom'
 import { FoundationPage } from './pages/FoundationPage'
 import { LoginPage } from './pages/LoginPage'
 import { NotFoundPage } from './pages/NotFoundPage'
+import { ProtectedRoute } from './routes'
 import styles from './App.module.css'
 
 export function App() {
@@ -23,7 +24,9 @@ export function App() {
       <main className={styles.main}>
         <Routes>
           <Route element={<LoginPage />} path="/login" />
-          <Route element={<FoundationPage />} path="/" />
+          <Route element={<ProtectedRoute />}>
+            <Route element={<FoundationPage />} path="/" />
+          </Route>
           <Route element={<NotFoundPage />} path="*" />
         </Routes>
       </main>

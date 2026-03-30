@@ -1,2 +1,4 @@
 .worktree/
 .worktrees/
+server/*.sqlite
+server/*.sqlite-*

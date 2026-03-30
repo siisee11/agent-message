@@ -61,7 +61,7 @@ Referenced but missing (noted once):
   - Add grouped reaction bar with counts and own-user toggle affordance.
   - Implement add/remove reaction actions and optimistic or immediate server-synced updates.
 
-- [ ] M6. Validate Phase 5 end-to-end and finalize (status: not started)
+- [x] M6. Validate Phase 5 end-to-end and finalize (status: completed)
   - Run relevant `web` checks (tests if defined, plus build) and fix regressions.
   - Verify required Phase 5 paths manually in app behavior.
   - Keep scope limited to Phase 5 deliverable and record any explicit non-goal deferrals.
@@ -146,7 +146,18 @@ Referenced but missing (noted once):
     - quick emoji picker buttons for add/toggle actions
   - Implemented immediate server-synced reaction mutation flow using `POST /api/messages/:id/reactions` (`toggleReaction`) with local reconciliation on success.
   - Verified web build passes after M5 changes: `npm run build`.
-- Milestone M6 remains not started.
+- Milestone M6 is complete:
+  - Ran final web validation checks:
+    - `npm run build` (TypeScript + Vite production build) passed on latest M5 state.
+    - No separate `test` script exists in `web/package.json`; build remains the relevant automated check in this repo state.
+  - Performed final Phase 5 path verification checklist against implemented UI flow:
+    - sidebar conversation list + start-new-DM flow
+    - `/dm/:conversationId` route with cursor message history and load-older behavior
+    - message bubble states (edited/deleted/attachment, own/other)
+    - composer with text + attachment sends
+    - own-message edit/delete interactions
+    - websocket-driven updates + reaction toggle/grouped chips
+  - Confirmed scope remains bounded to Phase 5 deliverable; no Phase 6+ feature work added.
 
 ## Key decisions
 - Keep implementation strictly bounded to Phase 5 UI and required integration wiring.
@@ -160,9 +171,10 @@ Referenced but missing (noted once):
 - For M4 message actions, use a lightweight custom context menu (right-click + overflow button) instead of introducing a new menu dependency.
 - For attachment sends, prefer explicit upload-then-send URL flow to align with Phase 5 requirement wording and existing server APIs.
 - For M5 reactions, maintain client-side per-message reaction aggregation state because message-history payloads do not include initial reaction snapshots in the current contract.
+- Final validation decision: treat `npm run build` as the authoritative automated gate for `web/` because no dedicated test task is defined.
 
 ## Remaining issues / open questions
-- M6 remains final validation and end-to-end Phase 5 verification.
+- None.
 
 ## Links to related documents
 - `AGENTS.md`

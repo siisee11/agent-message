@@ -39,7 +39,7 @@ Referenced but missing (noted once):
 - `docs/PLANS.md`
 
 ## Milestones
-- [ ] M1. Add PostgreSQL store implementation and `DB_DRIVER` backend switching in server bootstrap (status: not started)
+- [x] M1. Add PostgreSQL store implementation and `DB_DRIVER` backend switching in server bootstrap (status: completed)
   - Implement Postgres-backed store with parity for existing store interface methods used by API/WebSocket flows.
   - Add config/bootstrap selection for SQLite vs PostgreSQL via `DB_DRIVER` and supporting DSN envs.
   - Preserve existing behavior/contracts for handlers and store callers.
@@ -75,17 +75,28 @@ Referenced but missing (noted once):
     - `base_branch=main`
     - `worktree_id=phase-7-integration-polish-8ab3ca8c`
 - Reviewed the relevant existing repository docs listed above.
-- No implementation milestones have started yet.
+- Completed M1 (PostgreSQL store + DB driver switching):
+  - Added `server/store/postgres.go` implementing the full `store.Store` interface with PostgreSQL (`pgx` stdlib) and SQL placeholder rebinding for parity with existing query contracts.
+  - Added `server/store/postgres_migrations.go` with PostgreSQL schema migration support equivalent to current SQLite tables/indexes.
+  - Updated `server/main.go` config/bootstrap to select store backend via `DB_DRIVER` (`sqlite` default, `postgres` supported), with `POSTGRES_DSN` and `DATABASE_URL` fallback handling.
+  - Added bootstrap tests in `server/main_test.go` for driver normalization, SQLite opening path, unknown driver rejection, and required Postgres DSN behavior.
+  - Added PostgreSQL driver dependency in `server/go.mod`/`server/go.sum` (`github.com/jackc/pgx/v5/stdlib`).
+  - Validation run: `cd server && go test ./...` (pass).
 
 ## Key decisions
 - Keep scope strictly bounded to Phase 7 tasks from `PLAN.md`.
 - Preserve existing API/store contracts unless a Phase 7 requirement explicitly forces a change.
 - Keep milestones small enough for one coding-loop iteration and commit after each logical milestone.
 - Validate each milestone with targeted tests/build checks before moving forward.
+- For M1 backend config, use:
+  - `DB_DRIVER=sqlite|postgres` (default `sqlite`).
+  - `SQLITE_DSN` for SQLite.
+  - `POSTGRES_DSN` with fallback to `DATABASE_URL` for PostgreSQL.
+- Keep model timestamp storage format unchanged (`RFC3339Nano` text) across both backends to preserve existing parsing/ordering behavior and avoid contract drift in this milestone.
 
 ## Remaining issues / open questions
+- Remaining Phase 7 milestones pending: M2-M6.
 - Confirm exact repository location/creation path for the top-level `README.md` quickstart update if a root `README.md` is absent in current tree state.
-- Confirm preferred PostgreSQL DSN/env naming conventions in existing server config before implementing `DB_DRIVER` switch wiring.
 
 ## Links to related documents
 - `AGENTS.md`

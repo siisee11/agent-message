@@ -16,6 +16,17 @@ const queryClient = new QueryClient({
   },
 })
 
+let reloadedForServiceWorker = false
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.addEventListener('controllerchange', () => {
+    if (reloadedForServiceWorker) {
+      return
+    }
+    reloadedForServiceWorker = true
+    window.location.reload()
+  })
+}
+
 registerSW({
   immediate: true,
 })

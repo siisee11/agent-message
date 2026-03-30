@@ -297,6 +297,12 @@ func TestSQLiteStorePhase2CoreOperations(t *testing.T) {
 	if conversations[0].LastMessage == nil || conversations[0].LastMessage.ID != msg4.ID {
 		t.Fatalf("expected last message msg4 in AB summary, got %+v", conversations[0].LastMessage)
 	}
+	if conversations[0].LastMessage.Kind != models.MessageKindJSONRender {
+		t.Fatalf("expected json_render kind in AB summary, got %+v", conversations[0].LastMessage)
+	}
+	if string(conversations[0].LastMessage.JSONRenderSpec) != string(jsonRenderSpec) {
+		t.Fatalf("expected json_render spec in AB summary, got %+v", conversations[0].LastMessage)
+	}
 	if conversations[1].Conversation.ID != conversationAC.ID {
 		t.Fatalf("expected AC second, got %q", conversations[1].Conversation.ID)
 	}

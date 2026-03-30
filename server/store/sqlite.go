@@ -199,7 +199,7 @@ func (s *SQLiteStore) ListConversationsByUser(ctx context.Context, params models
 		SELECT
 			c.id, c.participant_a, c.participant_b, c.created_at,
 			ou.id, ou.username, ou.created_at,
-			m.id, m.conversation_id, m.sender_id, m.content, m.attachment_url, m.attachment_type, m.edited, m.deleted, m.created_at, m.updated_at
+			m.id, m.conversation_id, m.sender_id, m.content, m.kind, m.json_render_spec, m.attachment_url, m.attachment_type, m.edited, m.deleted, m.created_at, m.updated_at
 		FROM conversations c
 		INNER JOIN users ou ON ou.id = CASE WHEN c.participant_a = ? THEN c.participant_b ELSE c.participant_a END
 		LEFT JOIN messages m ON m.id = (
@@ -229,6 +229,8 @@ func (s *SQLiteStore) ListConversationsByUser(ctx context.Context, params models
 			messageConversationID     sql.NullString
 			messageSenderID           sql.NullString
 			messageContent            sql.NullString
+			messageKind               sql.NullString
+			messageJSONRenderSpec     sql.NullString
 			messageAttachmentURL      sql.NullString
 			messageAttachmentType     sql.NullString
 			messageEdited             sql.NullInt64
@@ -250,6 +252,8 @@ func (s *SQLiteStore) ListConversationsByUser(ctx context.Context, params models
 			&messageConversationID,
 			&messageSenderID,
 			&messageContent,
+			&messageKind,
+			&messageJSONRenderSpec,
 			&messageAttachmentURL,
 			&messageAttachmentType,
 			&messageEdited,
@@ -278,6 +282,8 @@ func (s *SQLiteStore) ListConversationsByUser(ctx context.Context, params models
 				messageConversationID,
 				messageSenderID,
 				messageContent,
+				messageKind,
+				messageJSONRenderSpec,
 				messageAttachmentURL,
 				messageAttachmentType,
 				messageEdited,
@@ -1016,6 +1022,8 @@ func nullableMessageToModel(
 	messageConversationID sql.NullString,
 	messageSenderID sql.NullString,
 	messageContent sql.NullString,
+	messageKind sql.NullString,
+	messageJSONRenderSpec sql.NullString,
 	messageAttachmentURL sql.NullString,
 	messageAttachmentType sql.NullString,
 	messageEdited sql.NullInt64,
@@ -1031,6 +1039,12 @@ func nullableMessageToModel(
 		AttachmentURL:  nullStringPointer(messageAttachmentURL),
 		Edited:         messageEdited.Int64 != 0,
 		Deleted:        messageDeleted.Int64 != 0,
+	}
+	if messageKind.Valid {
+		message.Kind = models.MessageKind(messageKind.String)
+	}
+	if messageJSONRenderSpec.Valid {
+		message.JSONRenderSpec = json.RawMessage(messageJSONRenderSpec.String)
 	}
 	if messageAttachmentType.Valid {
 		typed := models.AttachmentType(messageAttachmentType.String)

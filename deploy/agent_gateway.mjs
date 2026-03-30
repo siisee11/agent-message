@@ -1,7 +1,7 @@
 import { createReadStream } from 'node:fs'
 import { access, readFile, stat } from 'node:fs/promises'
 import http from 'node:http'
-import { extname, join, normalize, resolve } from 'node:path'
+import { basename, extname, join, normalize, resolve } from 'node:path'
 
 const host = process.env.AGENT_GATEWAY_HOST ?? '127.0.0.1'
 const port = Number(process.env.AGENT_GATEWAY_PORT ?? '8788')
@@ -96,8 +96,10 @@ async function serveFile(res, path) {
   }
 
   const type = contentTypes.get(extname(path)) ?? 'application/octet-stream'
+  const isServiceWorkerScript = basename(path) === 'sw.js'
   res.writeHead(200, {
-    'cache-control': path === indexPath ? 'no-cache' : 'public, max-age=31536000, immutable',
+    'cache-control':
+      path === indexPath || isServiceWorkerScript ? 'no-cache' : 'public, max-age=31536000, immutable',
     'content-length': String(fileStats.size),
     'content-type': type,
   })

@@ -28,10 +28,31 @@ function toSpec(value: JsonRenderSpec | null): Spec | null {
     return null
   }
 
+  const normalizedElements: Spec['elements'] = {}
+  for (const [key, rawElement] of Object.entries(elements)) {
+    if (!isObject(rawElement) || typeof rawElement.type !== 'string' || rawElement.type.trim() === '') {
+      return null
+    }
+
+    const normalizedElement: Spec['elements'][string] = {
+      ...rawElement,
+      type: rawElement.type,
+      props: isObject(rawElement.props) ? rawElement.props : {},
+    }
+
+    if (Array.isArray(rawElement.children)) {
+      normalizedElement.children = rawElement.children.filter(
+        (child): child is string => typeof child === 'string' && child.trim() !== '',
+      )
+    }
+
+    normalizedElements[key] = normalizedElement
+  }
+
   return {
     ...value,
     root,
-    elements: elements as Spec['elements'],
+    elements: normalizedElements,
     state: isObject(value.state) ? value.state : undefined,
   } as Spec
 }

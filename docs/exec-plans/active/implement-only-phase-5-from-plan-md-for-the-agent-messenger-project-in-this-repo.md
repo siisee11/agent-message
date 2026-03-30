@@ -56,7 +56,7 @@ Referenced but missing (noted once):
   - Implement own-message edit mode (prefill, submit patch, cancel).
   - Implement own-message delete action with UI interaction (context menu/right-click equivalent on web).
 
-- [ ] M5. Implement real-time synchronization and reaction toggle UX (status: not started)
+- [x] M5. Implement real-time synchronization and reaction toggle UX (status: completed)
   - Connect websocket event stream into conversation/message cache reconciliation.
   - Add grouped reaction bar with counts and own-user toggle affordance.
   - Implement add/remove reaction actions and optimistic or immediate server-synced updates.
@@ -133,7 +133,20 @@ Referenced but missing (noted once):
     - action menu “Delete” performs `DELETE /api/messages/:id`
   - Added local message-cache updates for send/edit/delete and conversation-list invalidation for preview freshness.
   - Verified web build passes after M4 changes: `npm run build`.
-- Milestones M5-M6 remain not started.
+- Milestone M5 is complete:
+  - Integrated the existing websocket hook into `/dm/:conversationId` runtime:
+    - `message.new`: prepend into relevant cached message timeline(s) when present and invalidate conversation summaries
+    - `message.edited`: patch cached message payload and invalidate conversation summaries
+    - `message.deleted`: mark matching cached message as soft-deleted across message query caches and invalidate conversation summaries
+    - `reaction.added` / `reaction.removed`: reconcile in-memory per-message reaction state
+    - send websocket `read` event when socket is open for the active conversation
+  - Implemented reaction toggle UX on message bubbles:
+    - grouped reaction chips (emoji + count)
+    - own-user affordance styling for chips user has reacted with
+    - quick emoji picker buttons for add/toggle actions
+  - Implemented immediate server-synced reaction mutation flow using `POST /api/messages/:id/reactions` (`toggleReaction`) with local reconciliation on success.
+  - Verified web build passes after M5 changes: `npm run build`.
+- Milestone M6 remains not started.
 
 ## Key decisions
 - Keep implementation strictly bounded to Phase 5 UI and required integration wiring.
@@ -146,9 +159,9 @@ Referenced but missing (noted once):
 - For M3 rendering precedence, treat `deleted` as dominant over `edited` and attachment/content display to match soft-delete UX expectations.
 - For M4 message actions, use a lightweight custom context menu (right-click + overflow button) instead of introducing a new menu dependency.
 - For attachment sends, prefer explicit upload-then-send URL flow to align with Phase 5 requirement wording and existing server APIs.
+- For M5 reactions, maintain client-side per-message reaction aggregation state because message-history payloads do not include initial reaction snapshots in the current contract.
 
 ## Remaining issues / open questions
-- M5 must integrate websocket-driven live cache reconciliation and reaction toggle UX on top of current paginated/composer behavior.
 - M6 remains final validation and end-to-end Phase 5 verification.
 
 ## Links to related documents

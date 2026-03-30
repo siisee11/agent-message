@@ -5,14 +5,23 @@ import {
   useQuery,
   useQueryClient,
 } from '@tanstack/react-query'
-import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import { useParams } from 'react-router-dom'
-import { ApiError, type ConversationDetails, type Message, type MessageDetails, type UserProfile } from '../api'
+import {
+  ApiError,
+  type ConversationDetails,
+  type Message,
+  type MessageDetails,
+  type Reaction,
+  type UserProfile,
+} from '../api'
 import { apiClient } from '../api/runtime'
 import { useAuth } from '../auth'
+import { useWebSocket } from '../hooks'
 import styles from './DmConversationPage.module.css'
 
 const MESSAGE_PAGE_SIZE = 20
+const REACTION_EMOJI_OPTIONS = ['👍', '❤️', '😂', '🔥', '🎉']
 const TIMESTAMP_FORMATTER = new Intl.DateTimeFormat(undefined, {
   month: 'short',
   day: 'numeric',
@@ -34,6 +43,14 @@ interface ActionMenuState {
   messageId: string
   x: number
   y: number
+}
+
+type MessageReactionsState = Record<string, Reaction[]>
+
+interface ReactionGroup {
+  emoji: string
+  count: number
+  reactedByMe: boolean
 }
 
 function resolveErrorMessage(error: unknown, fallback: string): string {
@@ -106,6 +123,45 @@ function prependMessageToPages(
   }
 }
 
+function markMessageDeletedInPages(
+  current: InfiniteData<MessageDetails[]> | undefined,
+  messageId: string,
+): InfiniteData<MessageDetails[]> | undefined {
+  if (!current) {
+    return current
+  }
+
+  let replaced = false
+  const nextPages = current.pages.map((page) =>
+    page.map((details) => {
+      if (details.message.id !== messageId) {
+        return details
+      }
+
+      replaced = true
+      return {
+        ...details,
+        message: {
+          ...details.message,
+          deleted: true,
+          content: undefined,
+          attachment_url: undefined,
+          attachment_type: undefined,
+        },
+      }
+    }),
+  )
+
+  if (!replaced) {
+    return current
+  }
+
+  return {
+    ...current,
+    pages: nextPages,
+  }
+}
+
 function replaceMessageInPages(
   current: InfiniteData<MessageDetails[]> | undefined,
   updatedMessage: Message,
@@ -138,9 +194,94 @@ function replaceMessageInPages(
   }
 }
 
+function resolveRealtimeSender(
+  message: Message,
+  currentUser: UserProfile | null,
+  otherParticipant: UserProfile | null,
+): UserProfile {
+  if (currentUser && message.sender_id === currentUser.id) {
+    return currentUser
+  }
+  if (otherParticipant && message.sender_id === otherParticipant.id) {
+    return otherParticipant
+  }
+  return fallbackSender(message)
+}
+
+function addReactionToState(
+  state: MessageReactionsState,
+  reaction: Reaction,
+): MessageReactionsState {
+  const current = state[reaction.message_id] ?? []
+  const alreadyExists = current.some(
+    (existing) => existing.emoji === reaction.emoji && existing.user_id === reaction.user_id,
+  )
+  if (alreadyExists) {
+    return state
+  }
+  return {
+    ...state,
+    [reaction.message_id]: [...current, reaction],
+  }
+}
+
+function removeReactionFromState(
+  state: MessageReactionsState,
+  removal: { message_id: string; emoji: string; user_id: string },
+): MessageReactionsState {
+  const current = state[removal.message_id] ?? []
+  const next = current.filter(
+    (reaction) =>
+      !(reaction.emoji === removal.emoji && reaction.user_id === removal.user_id),
+  )
+
+  if (next.length === current.length) {
+    return state
+  }
+
+  if (next.length === 0) {
+    const { [removal.message_id]: _removed, ...rest } = state
+    return rest
+  }
+
+  return {
+    ...state,
+    [removal.message_id]: next,
+  }
+}
+
+function groupReactionsByEmoji(
+  reactions: Reaction[] | undefined,
+  currentUserId: string | undefined,
+): ReactionGroup[] {
+  if (!reactions || reactions.length === 0) {
+    return []
+  }
+
+  const grouped = new Map<string, ReactionGroup>()
+  for (const reaction of reactions) {
+    const existing = grouped.get(reaction.emoji)
+    if (!existing) {
+      grouped.set(reaction.emoji, {
+        emoji: reaction.emoji,
+        count: 1,
+        reactedByMe: currentUserId === reaction.user_id,
+      })
+      continue
+    }
+
+    existing.count += 1
+    if (currentUserId === reaction.user_id) {
+      existing.reactedByMe = true
+    }
+  }
+
+  return Array.from(grouped.values())
+}
+
 export function DmConversationPage(): JSX.Element {
   const { conversationId } = useParams()
-  const { user } = useAuth()
+  const { token, user } = useAuth()
   const queryClient = useQueryClient()
 
   const timelineRef = useRef<HTMLDivElement | null>(null)
@@ -154,6 +295,7 @@ export function DmConversationPage(): JSX.Element {
   const [composerError, setComposerError] = useState<string | null>(null)
   const [editingTarget, setEditingTarget] = useState<EditTarget | null>(null)
   const [actionMenu, setActionMenu] = useState<ActionMenuState | null>(null)
+  const [messageReactions, setMessageReactions] = useState<MessageReactionsState>({})
 
   const conversationQuery = useQuery({
     queryKey: ['conversation', conversationId],
@@ -298,6 +440,70 @@ export function DmConversationPage(): JSX.Element {
     return messagesAscending.find((details) => details.message.id === actionMenu.messageId) ?? null
   }, [actionMenu, messagesAscending])
 
+  const handleMessageNew = useCallback(
+    (incomingMessage: Message) => {
+      const key = ['messages', incomingMessage.conversation_id] as const
+      const existingCache = queryClient.getQueryData<InfiniteData<MessageDetails[]>>(key)
+      const shouldUpdate = incomingMessage.conversation_id === conversationId || existingCache !== undefined
+      if (!shouldUpdate) {
+        void queryClient.invalidateQueries({ queryKey: ['conversations'] })
+        return
+      }
+
+      const sender = resolveRealtimeSender(incomingMessage, user, otherParticipant)
+      queryClient.setQueryData<InfiniteData<MessageDetails[]>>(key, (current) =>
+        prependMessageToPages(current, {
+          message: incomingMessage,
+          sender,
+        }),
+      )
+      void queryClient.invalidateQueries({ queryKey: ['conversations'] })
+    },
+    [conversationId, otherParticipant, queryClient, user],
+  )
+
+  const handleMessageEdited = useCallback(
+    (updatedMessage: Message) => {
+      const key = ['messages', updatedMessage.conversation_id] as const
+      const existingCache = queryClient.getQueryData<InfiniteData<MessageDetails[]>>(key)
+      const shouldUpdate = updatedMessage.conversation_id === conversationId || existingCache !== undefined
+      if (!shouldUpdate) {
+        void queryClient.invalidateQueries({ queryKey: ['conversations'] })
+        return
+      }
+
+      queryClient.setQueryData<InfiniteData<MessageDetails[]>>(key, (current) =>
+        replaceMessageInPages(current, updatedMessage),
+      )
+      void queryClient.invalidateQueries({ queryKey: ['conversations'] })
+    },
+    [conversationId, queryClient],
+  )
+
+  const handleMessageDeleted = useCallback(
+    (messageID: string) => {
+      queryClient.setQueriesData<InfiniteData<MessageDetails[]>>({ queryKey: ['messages'] }, (current) =>
+        markMessageDeletedInPages(current, messageID),
+      )
+      void queryClient.invalidateQueries({ queryKey: ['conversations'] })
+    },
+    [queryClient],
+  )
+
+  const ws = useWebSocket({
+    token,
+    enabled: Boolean(token),
+    onMessageNew: ({ data }) => handleMessageNew(data),
+    onMessageEdited: ({ data }) => handleMessageEdited(data),
+    onMessageDeleted: ({ data }) => handleMessageDeleted(data.id),
+    onReactionAdded: ({ data }) => {
+      setMessageReactions((state) => addReactionToState(state, data))
+    },
+    onReactionRemoved: ({ data }) => {
+      setMessageReactions((state) => removeReactionFromState(state, data))
+    },
+  })
+
   useLayoutEffect(() => {
     const timeline = timelineRef.current
     if (!timeline || !conversationId) {
@@ -321,6 +527,12 @@ export function DmConversationPage(): JSX.Element {
       initialScrollConversationRef.current = conversationId
     }
   }, [conversationId, messagePagesQuery.isFetchingNextPage, messagesAscending.length])
+
+  useEffect(() => {
+    if (ws.status === 'open' && conversationId) {
+      ws.sendReadEvent(conversationId)
+    }
+  }, [conversationId, ws.sendReadEvent, ws.status])
 
   useEffect(() => {
     if (!actionMenu) {
@@ -463,6 +675,27 @@ export function DmConversationPage(): JSX.Element {
     })
   }
 
+  const toggleReactionMutation = useMutation({
+    mutationFn: async (input: { messageId: string; emoji: string }) =>
+      apiClient.toggleReaction(input.messageId, { emoji: input.emoji }),
+    onSuccess: ({ action, reaction }) => {
+      setComposerError(null)
+      setMessageReactions((state) => {
+        if (action === 'added') {
+          return addReactionToState(state, reaction)
+        }
+        return removeReactionFromState(state, {
+          message_id: reaction.message_id,
+          emoji: reaction.emoji,
+          user_id: reaction.user_id,
+        })
+      })
+    },
+    onError: (error: unknown) => {
+      setComposerError(resolveErrorMessage(error, '리액션을 업데이트하지 못했습니다.'))
+    },
+  })
+
   if (!conversationId) {
     return (
       <section className={styles.page}>
@@ -522,79 +755,129 @@ export function DmConversationPage(): JSX.Element {
             ) : null}
             {messagesAscending.length > 0 ? (
               <ol className={styles.timelineList}>
-                {messagesAscending.map((details: MessageDetails) => (
-                  <li
-                    className={`${styles.timelineItem} ${
-                      details.message.sender_id === user?.id ? styles.timelineItemOwn : styles.timelineItemOther
-                    }`}
-                    key={details.message.id}
-                    onContextMenu={(event) => handleOpenContextMenu(event, details)}
-                  >
-                    <div className={styles.messageBubble}>
-                      <div className={styles.timelineMeta}>
-                        <span className={styles.sender}>{details.sender.username}</span>
-                        <span className={styles.timelineMetaRight}>
-                          <span className={styles.timestamp}>{formatMessageTimestamp(details.message)}</span>
-                          {!details.message.deleted && details.message.edited ? (
-                            <span className={styles.editedBadge}>[수정됨]</span>
-                          ) : null}
-                          {details.message.sender_id === user?.id && !details.message.deleted ? (
-                            <button
-                              aria-label="Message actions"
-                              className={styles.messageActionsTrigger}
-                              onClick={(event) => {
-                                handleToggleActionMenu(event.currentTarget, details)
-                              }}
-                              type="button"
-                            >
-                              ⋯
-                            </button>
-                          ) : null}
-                        </span>
+                {messagesAscending.map((details: MessageDetails) => {
+                  const reactionGroups = groupReactionsByEmoji(messageReactions[details.message.id], user?.id)
+                  return (
+                    <li
+                      className={`${styles.timelineItem} ${
+                        details.message.sender_id === user?.id ? styles.timelineItemOwn : styles.timelineItemOther
+                      }`}
+                      key={details.message.id}
+                      onContextMenu={(event) => handleOpenContextMenu(event, details)}
+                    >
+                      <div className={styles.messageBubble}>
+                        <div className={styles.timelineMeta}>
+                          <span className={styles.sender}>{details.sender.username}</span>
+                          <span className={styles.timelineMetaRight}>
+                            <span className={styles.timestamp}>{formatMessageTimestamp(details.message)}</span>
+                            {!details.message.deleted && details.message.edited ? (
+                              <span className={styles.editedBadge}>[수정됨]</span>
+                            ) : null}
+                            {details.message.sender_id === user?.id && !details.message.deleted ? (
+                              <button
+                                aria-label="Message actions"
+                                className={styles.messageActionsTrigger}
+                                onClick={(event) => {
+                                  handleToggleActionMenu(event.currentTarget, details)
+                                }}
+                                type="button"
+                              >
+                                ⋯
+                              </button>
+                            ) : null}
+                          </span>
+                        </div>
+
+                        {details.message.deleted ? (
+                          <p className={`${styles.messageText} ${styles.messageTextDeleted}`}>삭제된 메시지입니다</p>
+                        ) : null}
+
+                        {!details.message.deleted && details.message.content?.trim() ? (
+                          <p className={styles.messageText}>{details.message.content.trim()}</p>
+                        ) : null}
+
+                        {!details.message.deleted &&
+                        details.message.attachment_type === 'image' &&
+                        details.message.attachment_url ? (
+                          <a
+                            className={styles.imageAttachmentLink}
+                            href={details.message.attachment_url}
+                            rel="noreferrer"
+                            target="_blank"
+                          >
+                            <img
+                              alt="Message attachment"
+                              className={styles.imageAttachment}
+                              loading="lazy"
+                              src={details.message.attachment_url}
+                            />
+                          </a>
+                        ) : null}
+
+                        {!details.message.deleted &&
+                        details.message.attachment_type === 'file' &&
+                        details.message.attachment_url ? (
+                          <a
+                            className={styles.fileAttachmentLink}
+                            download
+                            href={details.message.attachment_url}
+                            rel="noreferrer"
+                            target="_blank"
+                          >
+                            첨부 파일 다운로드
+                          </a>
+                        ) : null}
+
+                        {!details.message.deleted ? (
+                          <div className={styles.reactionSection}>
+                            {reactionGroups.length > 0 ? (
+                              <div className={styles.reactionGroups}>
+                                {reactionGroups.map((group) => (
+                                  <button
+                                    className={`${styles.reactionChip}${
+                                      group.reactedByMe ? ` ${styles.reactionChipOwn}` : ''
+                                    }`}
+                                    disabled={toggleReactionMutation.isPending}
+                                    key={group.emoji}
+                                    onClick={() =>
+                                      toggleReactionMutation.mutate({
+                                        messageId: details.message.id,
+                                        emoji: group.emoji,
+                                      })
+                                    }
+                                    type="button"
+                                  >
+                                    <span>{group.emoji}</span>
+                                    <span>{group.count}</span>
+                                  </button>
+                                ))}
+                              </div>
+                            ) : null}
+
+                            <div className={styles.reactionPicker}>
+                              {REACTION_EMOJI_OPTIONS.map((emoji) => (
+                                <button
+                                  className={styles.reactionPickerButton}
+                                  disabled={toggleReactionMutation.isPending}
+                                  key={emoji}
+                                  onClick={() =>
+                                    toggleReactionMutation.mutate({
+                                      messageId: details.message.id,
+                                      emoji,
+                                    })
+                                  }
+                                  type="button"
+                                >
+                                  {emoji}
+                                </button>
+                              ))}
+                            </div>
+                          </div>
+                        ) : null}
                       </div>
-
-                      {details.message.deleted ? (
-                        <p className={`${styles.messageText} ${styles.messageTextDeleted}`}>삭제된 메시지입니다</p>
-                      ) : null}
-
-                      {!details.message.deleted && details.message.content?.trim() ? (
-                        <p className={styles.messageText}>{details.message.content.trim()}</p>
-                      ) : null}
-
-                      {!details.message.deleted &&
-                      details.message.attachment_type === 'image' &&
-                      details.message.attachment_url ? (
-                        <a
-                          className={styles.imageAttachmentLink}
-                          href={details.message.attachment_url}
-                          rel="noreferrer"
-                          target="_blank"
-                        >
-                          <img
-                            alt="Message attachment"
-                            className={styles.imageAttachment}
-                            loading="lazy"
-                            src={details.message.attachment_url}
-                          />
-                        </a>
-                      ) : null}
-
-                      {!details.message.deleted &&
-                      details.message.attachment_type === 'file' &&
-                      details.message.attachment_url ? (
-                        <a
-                          className={styles.fileAttachmentLink}
-                          download
-                          href={details.message.attachment_url}
-                          rel="noreferrer"
-                          target="_blank"
-                        >
-                          첨부 파일 다운로드
-                        </a>
-                      ) : null}
-                    </div>
-                  </li>
-                ))}
+                    </li>
+                  )
+                })}
               </ol>
             ) : null}
           </div>

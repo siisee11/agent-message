@@ -201,6 +201,60 @@
   background: #eef4ff;
 }
 
+.reactionSection {
+  margin-top: 0.5rem;
+  display: grid;
+  gap: 0.38rem;
+}
+
+.reactionGroups {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  flex-wrap: wrap;
+}
+
+.reactionChip {
+  border: 1px solid #bfd0f2;
+  border-radius: 999px;
+  background: #f5f9ff;
+  color: #1e3b6d;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.24rem;
+  font-size: 0.8rem;
+  padding: 0.18rem 0.46rem;
+  cursor: pointer;
+}
+
+.reactionChipOwn {
+  border-color: #5a80d8;
+  background: #e5efff;
+  color: #1b3f7c;
+}
+
+.reactionPicker {
+  display: flex;
+  align-items: center;
+  gap: 0.3rem;
+  flex-wrap: wrap;
+}
+
+.reactionPickerButton {
+  border: 1px solid #c8d8f9;
+  border-radius: 8px;
+  background: #ffffff;
+  color: #2a4679;
+  font-size: 0.88rem;
+  line-height: 1;
+  padding: 0.2rem 0.38rem;
+  cursor: pointer;
+}
+
+.reactionPickerButton:hover {
+  background: #edf4ff;
+}
+
 .composerForm {
   border: 1px solid #dce6fb;
   border-radius: 10px;

@@ -30,10 +30,11 @@ func TestSaveLoadRoundTripNormalizesServerURL(t *testing.T) {
 
 	store := NewStore(filepath.Join(t.TempDir(), "config"))
 	input := Config{
-		ServerURL: " https://example.com/api/ ",
-		Token:     "  abc123  ",
+		ServerURL:              " https://example.com/api/ ",
+		Token:                  "  abc123  ",
+		LastReadConversationID: " conv-1 ",
 		ReadSessions: map[string]ReadSession{
-			"conv-1": {
+			" conv-1 ": {
 				ConversationID: "conv-1",
 				Username:       "alice",
 				IndexToMessage: map[int]string{1: "msg-1"},
@@ -58,5 +59,8 @@ func TestSaveLoadRoundTripNormalizesServerURL(t *testing.T) {
 	}
 	if got, ok := cfg.ReadSessions["conv-1"]; !ok || got.IndexToMessage[1] != "msg-1" {
 		t.Fatalf("expected read session mapping to survive round trip")
+	}
+	if got, want := cfg.LastReadConversationID, "conv-1"; got != want {
+		t.Fatalf("last read conversation mismatch: got %q want %q", got, want)
 	}
 }

@@ -119,6 +119,7 @@ func persistReadSession(rt *Runtime, conversationID string, username string, mes
 	}
 
 	rt.Config.ReadSessions[session.ConversationID] = session
+	rt.Config.LastReadConversationID = session.ConversationID
 	if err := rt.ConfigStore.Save(rt.Config); err != nil {
 		return fmt.Errorf("save config: %w", err)
 	}

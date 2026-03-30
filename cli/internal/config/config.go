@@ -26,9 +26,10 @@ type ReadSession struct {
 
 // Config is persisted at ~/.msgr/config.
 type Config struct {
-	ServerURL    string                 `json:"server_url"`
-	Token        string                 `json:"token,omitempty"`
-	ReadSessions map[string]ReadSession `json:"read_sessions,omitempty"`
+	ServerURL              string                 `json:"server_url"`
+	Token                  string                 `json:"token,omitempty"`
+	LastReadConversationID string                 `json:"last_read_conversation_id,omitempty"`
+	ReadSessions           map[string]ReadSession `json:"read_sessions,omitempty"`
 }
 
 // Store provides disk persistence for Config.
@@ -116,6 +117,7 @@ func (s *Store) Save(cfg Config) error {
 func (c *Config) normalize() error {
 	trimmedToken := strings.TrimSpace(c.Token)
 	c.Token = trimmedToken
+	c.LastReadConversationID = strings.TrimSpace(c.LastReadConversationID)
 
 	rawURL := strings.TrimSpace(c.ServerURL)
 	if rawURL == "" {
@@ -138,6 +140,7 @@ func (c *Config) normalize() error {
 	if c.ReadSessions == nil {
 		c.ReadSessions = make(map[string]ReadSession)
 	}
+	normalizedSessions := make(map[string]ReadSession, len(c.ReadSessions))
 	for key, session := range c.ReadSessions {
 		session.ConversationID = strings.TrimSpace(session.ConversationID)
 		session.Username = strings.TrimSpace(session.Username)
@@ -145,7 +148,19 @@ func (c *Config) normalize() error {
 		if session.IndexToMessage == nil {
 			session.IndexToMessage = make(map[int]string)
 		}
-		c.ReadSessions[strings.TrimSpace(key)] = session
+
+		normalizedKey := strings.TrimSpace(key)
+		if session.ConversationID == "" {
+			session.ConversationID = normalizedKey
+		}
+		normalizedSessions[normalizedKey] = session
+	}
+	c.ReadSessions = normalizedSessions
+
+	if c.LastReadConversationID != "" {
+		if _, ok := c.ReadSessions[c.LastReadConversationID]; !ok {
+			c.LastReadConversationID = ""
+		}
 	}
 
 	return nil

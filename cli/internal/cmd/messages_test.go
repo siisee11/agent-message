@@ -156,6 +156,9 @@ func TestRunReadMessagesPrintsAndPersistsIndexMapping(t *testing.T) {
 	if got, want := session.IndexToMessage[2], "m1"; got != want {
 		t.Fatalf("index 2 mismatch: got %q want %q", got, want)
 	}
+	if got, want := persisted.LastReadConversationID, "c-read"; got != want {
+		t.Fatalf("last read conversation mismatch: got %q want %q", got, want)
+	}
 }
 
 func TestRunReadMessagesRejectsInvalidLimit(t *testing.T) {

@@ -53,7 +53,7 @@ Referenced but missing (noted once):
   - `read <username> [--n N]` fetches recent messages and prints indexed output.
   - Persist per-conversation read-session mapping from display index to message UUID.
 
-- [ ] M5. Implement index-based mutations and reactions (status: not started)
+- [x] M5. Implement index-based mutations and reactions (status: completed)
   - `edit <index> <text>` resolves index from last read session and patches message.
   - `delete <index>` resolves and soft-deletes message.
   - `react <index> <emoji>` and `unreact <index> <emoji>` resolve index and call reaction endpoints.
@@ -108,6 +108,16 @@ Referenced but missing (noted once):
 - Additional validation run after M4:
   - `cd cli && GOCACHE=/tmp/go-cache GOMODCACHE=/tmp/go-mod go test ./...`
   - `cd cli && GOCACHE=/tmp/go-cache GOMODCACHE=/tmp/go-mod go build ./...`
+- Completed M5 index-based mutations and reactions:
+  - Implemented `edit`, `delete`, `react`, and `unreact` command handlers in `cli/internal/cmd/mutations.go`.
+  - Added index-resolution helpers to map `<index>` from last `read` session to message ID.
+  - Added deterministic “last read session” pointer by extending config with `last_read_conversation_id`.
+  - Updated read-session persistence to set `last_read_conversation_id` on every successful `read`.
+  - Added mutation tests in `cli/internal/cmd/mutations_test.go` covering edit/delete/react/unreact happy paths and index/session error cases.
+  - Updated config tests and read tests to cover `last_read_conversation_id` behavior.
+- Additional validation run after M5:
+  - `cd cli && GOCACHE=/tmp/go-cache GOMODCACHE=/tmp/go-mod go test ./...`
+  - `cd cli && GOCACHE=/tmp/go-cache GOMODCACHE=/tmp/go-mod go build ./...`
 
 ## Key decisions
 - Keep implementation bounded to Phase 6 CLI deliverable and existing server/API/WS contracts.
@@ -118,9 +128,10 @@ Referenced but missing (noted once):
 - For `logout`, prioritize local token invalidation durability: clear and persist local token even when remote `/api/auth/logout` returns an error.
 - Keep conversation command output stable and simple (`<conversation_id> <username>`) to support scripting and easier manual inspection.
 - Preserve server message ordering (newest-first) in `read` output and index mapping so local index resolution remains deterministic with server pagination order.
+- Track a single explicit last-read conversation in config so index-only commands (`edit/delete/react/unreact`) resolve against the most recent `read` target.
 
 ## Remaining issues / open questions
-- M5+ command behavior is still stubbed and must be implemented sequentially.
+- M6 command behavior is still stubbed and must be implemented.
 - Decide whether to keep the local Cobra shim or switch to upstream `github.com/spf13/cobra` when networked module fetch is available.
 
 ## Links to related documents

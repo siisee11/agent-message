@@ -118,6 +118,14 @@ PWA install:
 - Use `Share -> Add to Home Screen`.
 - The app now ships with a web app manifest, service worker, and Apple touch icon so it can be installed like a standalone app.
 
+## Claude Code Skill
+
+Install the agent-messenger CLI skill to give Claude Code full knowledge of this project's CLI commands, flags, and json_render component catalog:
+
+```bash
+npx skills add https://github.com/siisee11/agent-messenger --skill agent-messenger-cli
+```
+
 ## CLI Quickstart
 
 Run from `cli/` with optional `--server-url` override.

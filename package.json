@@ -1,0 +1,33 @@
+{
+  "name": "agent-messenger",
+  "version": "0.1.0",
+  "description": "Agent Messenger CLI and local stack launcher for macOS",
+  "type": "module",
+  "bin": {
+    "agent-messenger": "./npm/bin/agent-messenger.mjs"
+  },
+  "files": [
+    "README.md",
+    "npm/bin",
+    "npm/runtime"
+  ],
+  "scripts": {
+    "prepare:npm-bundle": "node ./scripts/prepare-npm-bundle.mjs",
+    "prepack": "node ./scripts/prepare-npm-bundle.mjs",
+    "pack:dry-run": "npm pack --dry-run"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "os": [
+    "darwin"
+  ],
+  "cpu": [
+    "arm64",
+    "x64"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/siisee11/agent-messenger.git"
+  }
+}

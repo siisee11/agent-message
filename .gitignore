@@ -3,3 +3,5 @@
 server/*.sqlite
 server/*.sqlite-*
 agent-messenger
+npm/runtime/
+*.tgz

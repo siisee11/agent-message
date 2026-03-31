@@ -112,6 +112,39 @@ If you also want to start or stop the named tunnel that serves `https://agent.na
 ./dev-stop --with-tunnel
 ```
 
+## npm Distribution (macOS)
+
+The repo now includes a publishable npm package surface for macOS (`arm64` and `x64`). The npm command keeps the existing CLI behavior and also adds local stack lifecycle commands:
+
+```bash
+agent-messenger start
+agent-messenger status
+agent-messenger stop
+```
+
+Default npm launcher ports:
+- API: `127.0.0.1:8080`
+- Web: `127.0.0.1:8788`
+
+You can override runtime location and ports when needed:
+
+```bash
+agent-messenger start --runtime-dir /tmp/agent-messenger --api-port 28080 --web-port 28788
+agent-messenger status --runtime-dir /tmp/agent-messenger --api-port 28080 --web-port 28788
+agent-messenger stop --runtime-dir /tmp/agent-messenger
+```
+
+When publishing, `npm pack` / `npm publish` will run the package `prepack` hook, which:
+- builds `web/dist`
+- bundles `deploy/agent_gateway.mjs`
+- cross-compiles macOS `arm64` and `x64` binaries for the Go CLI and API server into `npm/runtime/`
+
+You can run the same packaging step manually from the repo root:
+
+```bash
+npm run prepare:npm-bundle
+```
+
 PWA install:
 
 - Open the deployed web app in Safari on iPhone.

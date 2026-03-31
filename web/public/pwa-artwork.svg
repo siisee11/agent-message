@@ -1,26 +1,9 @@
-<svg width="1024" height="1024" viewBox="0 0 1024 1024" fill="none" xmlns="http://www.w3.org/2000/svg">
-  <rect width="1024" height="1024" rx="240" fill="url(#bg)"/>
-  <circle cx="512" cy="512" r="330" fill="url(#ring)" opacity="0.16"/>
-  <rect x="248" y="222" width="528" height="580" rx="156" fill="#ffffff"/>
-  <rect x="318" y="320" width="388" height="286" rx="118" fill="url(#bubble)"/>
-  <path d="M390 578L414 494H522L390 578Z" fill="url(#bubble)"/>
-  <circle cx="430" cy="462" r="28" fill="#ffffff"/>
-  <circle cx="512" cy="462" r="28" fill="#ffffff"/>
-  <circle cx="594" cy="462" r="28" fill="#ffffff"/>
-  <rect x="366" y="654" width="292" height="44" rx="22" fill="#DCE7FF"/>
-  <rect x="366" y="718" width="184" height="32" rx="16" fill="#E9F0FF"/>
-  <defs>
-    <linearGradient id="bg" x1="140" y1="90" x2="896" y2="944" gradientUnits="userSpaceOnUse">
-      <stop stop-color="#2E67DC"/>
-      <stop offset="1" stop-color="#163B9E"/>
-    </linearGradient>
-    <linearGradient id="ring" x1="248" y1="222" x2="776" y2="802" gradientUnits="userSpaceOnUse">
-      <stop stop-color="#FFFFFF"/>
-      <stop offset="1" stop-color="#D8E5FF"/>
-    </linearGradient>
-    <linearGradient id="bubble" x1="318" y1="320" x2="706" y2="606" gradientUnits="userSpaceOnUse">
-      <stop stop-color="#5E8EFF"/>
-      <stop offset="1" stop-color="#2858D9"/>
-    </linearGradient>
-  </defs>
+<svg width="64" height="64" viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <rect width="64" height="64" rx="16" fill="#2454D6"/>
+  <rect x="13" y="12" width="38" height="42" rx="12" fill="#ffffff"/>
+  <rect x="18" y="19" width="28" height="20" rx="8" fill="#5E8EFF"/>
+  <path d="M23 37L25.5 31H32L23 37Z" fill="#5E8EFF"/>
+  <circle cx="25" cy="29" r="2.4" fill="#ffffff"/>
+  <circle cx="32" cy="29" r="2.4" fill="#ffffff"/>
+  <circle cx="39" cy="29" r="2.4" fill="#ffffff"/>
 </svg>

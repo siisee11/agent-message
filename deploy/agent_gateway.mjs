@@ -23,6 +23,32 @@ const contentTypes = new Map([
   ['.woff2', 'font/woff2'],
 ])
 
+function resolveCacheHeaders(path) {
+  const fileName = basename(path)
+
+  if (fileName === 'sw.js') {
+    return {
+      'cache-control': 'no-cache',
+      'cdn-cache-control': 'no-store',
+      'cloudflare-cdn-cache-control': 'no-store',
+    }
+  }
+
+  if (path === indexPath || fileName === 'manifest.webmanifest') {
+    return {
+      'cache-control': 'no-cache',
+      'cdn-cache-control': 'no-cache',
+      'cloudflare-cdn-cache-control': 'no-cache',
+    }
+  }
+
+  return {
+    'cache-control': 'public, max-age=31536000, immutable',
+    'cdn-cache-control': 'public, max-age=31536000, immutable',
+    'cloudflare-cdn-cache-control': 'public, max-age=31536000, immutable',
+  }
+}
+
 function setForwardHeaders(headers, req) {
   headers.set('x-forwarded-for', req.socket.remoteAddress ?? '')
   headers.set('x-forwarded-host', req.headers.host ?? '')
@@ -96,10 +122,8 @@ async function serveFile(res, path) {
   }
 
   const type = contentTypes.get(extname(path)) ?? 'application/octet-stream'
-  const isServiceWorkerScript = basename(path) === 'sw.js'
   res.writeHead(200, {
-    'cache-control':
-      path === indexPath || isServiceWorkerScript ? 'no-cache' : 'public, max-age=31536000, immutable',
+    ...resolveCacheHeaders(path),
     'content-length': String(fileStats.size),
     'content-type': type,
   })
@@ -120,7 +144,7 @@ async function serveApp(req, res) {
 
   candidatePath = indexPath
   res.writeHead(200, {
-    'cache-control': 'no-cache',
+    ...resolveCacheHeaders(candidatePath),
     'content-type': 'text/html; charset=utf-8',
   })
   res.end(await readFile(candidatePath))

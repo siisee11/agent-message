@@ -5,7 +5,53 @@ Agent Message is a direct-message stack with three clients:
 - Web app (`web/`)
 - CLI (`cli/`)
 
-This README covers a Phase 7 quickstart for local development and local production-like testing.
+## Install With npm (macOS)
+
+Install the packaged app from npm on macOS (`arm64` and `x64`):
+
+```bash
+npm install -g agent-message
+```
+
+The installed `agent-message` command keeps the existing CLI behavior and also adds local stack lifecycle commands:
+
+```bash
+agent-message start
+agent-message status
+agent-message stop
+```
+
+Default ports:
+- API: `127.0.0.1:8080`
+- Web: `127.0.0.1:8788`
+
+After `agent-message start`, open `http://127.0.0.1:8788` in your browser.
+The bundled CLI continues to work from the same command:
+
+```bash
+agent-message register alice 1234
+agent-message login alice 1234
+agent-message ls
+agent-message open bob
+agent-message send bob "hello"
+```
+
+You can override the runtime location and ports when needed:
+
+```bash
+agent-message start --runtime-dir /tmp/agent-message --api-port 28080 --web-port 28788
+agent-message status --runtime-dir /tmp/agent-message --api-port 28080 --web-port 28788
+agent-message stop --runtime-dir /tmp/agent-message
+```
+
+PWA install:
+- Open the deployed web app in Safari on iPhone.
+- Use `Share -> Add to Home Screen`.
+- The app now ships with a web app manifest, service worker, and Apple touch icon so it can be installed like a standalone app.
+
+## Run From Source
+
+This section covers local development and local production-like testing from a checked-out repository.
 
 ## Prerequisites
 
@@ -112,29 +158,7 @@ If you also want to start or stop the named tunnel that serves `https://agent.na
 ./dev-stop --with-tunnel
 ```
 
-## npm Distribution (macOS)
-
-The repo now includes a publishable npm package surface for macOS (`arm64` and `x64`). The npm command keeps the existing CLI behavior and also adds local stack lifecycle commands:
-
-```bash
-agent-message start
-agent-message status
-agent-message stop
-```
-
-Default npm launcher ports:
-- API: `127.0.0.1:8080`
-- Web: `127.0.0.1:8788`
-
-You can override runtime location and ports when needed:
-
-```bash
-agent-message start --runtime-dir /tmp/agent-message --api-port 28080 --web-port 28788
-agent-message status --runtime-dir /tmp/agent-message --api-port 28080 --web-port 28788
-agent-message stop --runtime-dir /tmp/agent-message
-```
-
-When publishing, `npm pack` / `npm publish` will run the package `prepack` hook, which:
+When publishing from the repo, `npm pack` / `npm publish` will run the package `prepack` hook, which:
 - builds `web/dist`
 - bundles `deploy/agent_gateway.mjs`
 - cross-compiles macOS `arm64` and `x64` binaries for the Go CLI and API server into `npm/runtime/`
@@ -144,12 +168,6 @@ You can run the same packaging step manually from the repo root:
 ```bash
 npm run prepare:npm-bundle
 ```
-
-PWA install:
-
-- Open the deployed web app in Safari on iPhone.
-- Use `Share -> Add to Home Screen`.
-- The app now ships with a web app manifest, service worker, and Apple touch icon so it can be installed like a standalone app.
 
 ## Claude Code Skill
 

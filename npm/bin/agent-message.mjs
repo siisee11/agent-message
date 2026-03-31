@@ -22,6 +22,12 @@ const bundleRoot = resolve(packageRoot, 'npm', 'runtime')
 const bundleBinDir = join(bundleRoot, 'bin')
 const bundleGatewayPath = join(bundleRoot, 'agent_gateway.mjs')
 const bundleWebDistDir = join(bundleRoot, 'web-dist')
+const sourceServerDir = resolve(packageRoot, 'server')
+const sourceWebDir = resolve(packageRoot, 'web')
+const sourceGatewayPath = resolve(packageRoot, 'deploy', 'agent_gateway.mjs')
+const sourceWebDistDir = resolve(sourceWebDir, 'dist')
+const tunnelConfigPath = resolve(packageRoot, 'deploy', 'agent_tunnel_config.yml')
+const tunnelName = 'agent-namjaeyoun-com'
 
 const lifecycleCommands = new Set(['start', 'stop', 'status'])
 
@@ -39,7 +45,9 @@ async function main() {
 
   if (lifecycleCommands.has(command)) {
     const options = parseLifecycleOptions(rest)
-    await ensureBundleReady()
+    if (!options.dev) {
+      await ensureBundleReady()
+    }
 
     if (command === 'start') {
       await startStack(options)
@@ -59,14 +67,16 @@ async function main() {
 
 function printRootUsage() {
   console.error(`Usage:
-  agent-message start [--runtime-dir <dir>] [--api-host <host>] [--api-port <port>] [--web-host <host>] [--web-port <port>]
-  agent-message stop [--runtime-dir <dir>]
-  agent-message status [--runtime-dir <dir>] [--api-host <host>] [--api-port <port>] [--web-host <host>] [--web-port <port>]
+  agent-message start [--dev] [--with-tunnel] [--runtime-dir <dir>] [--api-host <host>] [--api-port <port>] [--web-host <host>] [--web-port <port>]
+  agent-message stop [--dev] [--with-tunnel] [--runtime-dir <dir>]
+  agent-message status [--dev] [--runtime-dir <dir>] [--api-host <host>] [--api-port <port>] [--web-host <host>] [--web-port <port>]
   agent-message <existing-cli-command> [...args]`)
 }
 
 function parseLifecycleOptions(args) {
   const options = {
+    dev: false,
+    withTunnel: false,
     runtimeDir: join(os.homedir(), '.agent-message'),
     apiHost: DEFAULT_API_HOST,
     apiPort: DEFAULT_API_PORT,
@@ -81,6 +91,14 @@ function parseLifecycleOptions(args) {
       process.exit(0)
     }
 
+    if (arg === '--dev') {
+      options.dev = true
+      continue
+    }
+    if (arg === '--with-tunnel' || arg === '--all') {
+      options.withTunnel = true
+      continue
+    }
     if (arg === '--runtime-dir') {
       options.runtimeDir = requireOptionValue(args, ++index, arg)
       continue
@@ -164,12 +182,15 @@ function resolveBinaryPath(baseName) {
 function runtimePaths(runtimeDir) {
   return {
     runtimeDir,
+    binDir: join(runtimeDir, 'bin'),
     logDir: join(runtimeDir, 'logs'),
     uploadDir: join(runtimeDir, 'uploads'),
     serverLog: join(runtimeDir, 'logs', 'server.log'),
     gatewayLog: join(runtimeDir, 'logs', 'gateway.log'),
+    tunnelLog: join(runtimeDir, 'logs', 'named-tunnel.log'),
     serverPidfile: join(runtimeDir, 'server.pid'),
     gatewayPidfile: join(runtimeDir, 'gateway.pid'),
+    tunnelPidfile: join(runtimeDir, 'named-tunnel.pid'),
     stackMetadataPath: join(runtimeDir, 'stack.json'),
     sqlitePath: join(runtimeDir, 'agent_message.sqlite'),
   }
@@ -178,6 +199,7 @@ function runtimePaths(runtimeDir) {
 async function startStack(options) {
   const paths = runtimePaths(options.runtimeDir)
   mkdirSync(paths.runtimeDir, { recursive: true })
+  mkdirSync(paths.binDir, { recursive: true })
   mkdirSync(paths.logDir, { recursive: true })
   mkdirSync(paths.uploadDir, { recursive: true })
 
@@ -185,12 +207,15 @@ async function startStack(options) {
 
   writeFileSync(paths.serverLog, '')
   writeFileSync(paths.gatewayLog, '')
+  if (options.withTunnel) {
+    ensureTunnelTargetMatchesDefaults(options)
+    writeFileSync(paths.tunnelLog, '')
+  }
 
-  const serverBinary = resolveBinaryPath('agent-message-server')
-  const gatewayChild = { pid: null }
+  const launchSpec = options.dev ? buildDevLaunchSpec(paths) : buildBundledLaunchSpec()
 
   try {
-    const serverChild = spawnDetached(serverBinary, [], {
+    const serverChild = spawnDetached(launchSpec.serverCommand, launchSpec.serverArgs, {
       ...process.env,
       SERVER_ADDR: `${options.apiHost}:${options.apiPort}`,
       DB_DRIVER: 'sqlite',
@@ -202,21 +227,31 @@ async function startStack(options) {
 
     await waitForHttp(`http://${options.apiHost}:${options.apiPort}/healthz`, 'API server')
 
-    gatewayChild.pid = spawnDetached(
-      process.execPath,
-      [bundleGatewayPath],
+    const gatewayChild = spawnDetached(
+      launchSpec.gatewayCommand,
+      launchSpec.gatewayArgs,
       {
         ...process.env,
         AGENT_GATEWAY_HOST: options.webHost,
         AGENT_GATEWAY_PORT: String(options.webPort),
         AGENT_API_ORIGIN: `http://${options.apiHost}:${options.apiPort}`,
-        AGENT_WEB_DIST: bundleWebDistDir,
+        AGENT_WEB_DIST: launchSpec.webDistDir,
       },
       paths.gatewayLog,
-    ).pid
+    )
     writeFileSync(paths.gatewayPidfile, `${gatewayChild.pid}\n`)
 
     await waitForHttp(`http://${options.webHost}:${options.webPort}`, 'web gateway')
+    if (options.withTunnel) {
+      const tunnelChild = spawnDetached(
+        'cloudflared',
+        ['tunnel', '--config', tunnelConfigPath, 'run', tunnelName],
+        process.env,
+        paths.tunnelLog,
+      )
+      writeFileSync(paths.tunnelPidfile, `${tunnelChild.pid}\n`)
+      await waitForLogMessage(paths.tunnelLog, 'Registered tunnel connection', 'named tunnel')
+    }
     writeStackMetadata(paths.stackMetadataPath, options)
   } catch (error) {
     await stopStack(options, { quiet: true })
@@ -227,16 +262,21 @@ async function startStack(options) {
   console.log(`API:  http://${options.apiHost}:${options.apiPort}`)
   console.log(`Web:  http://${options.webHost}:${options.webPort}`)
   console.log(`Logs: ${paths.serverLog} ${paths.gatewayLog}`)
+  if (options.withTunnel) {
+    console.log(`Tunnel: https://agent.namjaeyoun.com`)
+    console.log(`Tunnel log: ${paths.tunnelLog}`)
+  }
 }
 
 async function stopStack(options, { quiet }) {
   const paths = runtimePaths(options.runtimeDir)
   const stoppedServer = await killFromPidfile(paths.serverPidfile)
   const stoppedGateway = await killFromPidfile(paths.gatewayPidfile)
+  const stoppedTunnel = await killFromPidfile(paths.tunnelPidfile)
   rmSync(paths.stackMetadataPath, { force: true })
 
   if (!quiet) {
-    if (stoppedServer || stoppedGateway) {
+    if (stoppedServer || stoppedGateway || stoppedTunnel) {
       console.log('Agent Message is stopped.')
     } else {
       console.log('Agent Message is not running.')
@@ -250,14 +290,66 @@ async function printStatus(options) {
   const gatewayPid = readPidfile(paths.gatewayPidfile)
   const serverRunning = serverPid !== null && isPidAlive(serverPid)
   const gatewayRunning = gatewayPid !== null && isPidAlive(gatewayPid)
+  const tunnelPid = readPidfile(paths.tunnelPidfile)
+  const tunnelRunning = tunnelPid !== null && isPidAlive(tunnelPid)
   const apiHealthy = serverRunning ? await isHttpReady(`http://${options.apiHost}:${options.apiPort}/healthz`) : false
   const webHealthy = gatewayRunning ? await isHttpReady(`http://${options.webHost}:${options.webPort}`) : false
 
   console.log(`API server: ${serverRunning ? 'running' : 'stopped'}${apiHealthy ? ' (healthy)' : ''}`)
   console.log(`Web gateway: ${gatewayRunning ? 'running' : 'stopped'}${webHealthy ? ' (healthy)' : ''}`)
+  if (tunnelPid !== null) {
+    console.log(`Named tunnel: ${tunnelRunning ? 'running' : 'stopped'}`)
+  }
   console.log(`Runtime dir: ${paths.runtimeDir}`)
   console.log(`API URL: http://${options.apiHost}:${options.apiPort}`)
   console.log(`Web URL: http://${options.webHost}:${options.webPort}`)
+}
+
+function buildBundledLaunchSpec() {
+  return {
+    serverCommand: resolveBinaryPath('agent-message-server'),
+    serverArgs: [],
+    gatewayCommand: process.execPath,
+    gatewayArgs: [bundleGatewayPath],
+    webDistDir: bundleWebDistDir,
+  }
+}
+
+function buildDevLaunchSpec(paths) {
+  ensureDevSourcesReady()
+
+  if (!existsSync(join(sourceWebDir, 'node_modules'))) {
+    runForeground('npm', ['ci'], { cwd: sourceWebDir })
+  }
+  runForeground('npm', ['run', 'build'], { cwd: sourceWebDir })
+
+  const serverBinaryPath = join(paths.binDir, 'agent-message-server')
+  runForeground('go', ['build', '-o', serverBinaryPath, '.'], { cwd: sourceServerDir })
+
+  return {
+    serverCommand: serverBinaryPath,
+    serverArgs: [],
+    gatewayCommand: process.execPath,
+    gatewayArgs: [sourceGatewayPath],
+    webDistDir: sourceWebDistDir,
+  }
+}
+
+function ensureDevSourcesReady() {
+  const requiredPaths = [sourceServerDir, sourceWebDir, sourceGatewayPath]
+  for (const target of requiredPaths) {
+    if (!existsSync(target)) {
+      throw new Error(`development mode requires a local checkout with ${target}`)
+    }
+  }
+}
+
+function ensureTunnelTargetMatchesDefaults(options) {
+  if (options.webHost !== DEFAULT_WEB_HOST || options.webPort !== DEFAULT_WEB_PORT) {
+    throw new Error(
+      `--with-tunnel requires the default web listener ${DEFAULT_WEB_HOST}:${DEFAULT_WEB_PORT} to match ${tunnelConfigPath}.`,
+    )
+  }
 }
 
 function delegateToBundledCli(args) {
@@ -355,6 +447,27 @@ function spawnDetached(command, args, env, logFile) {
   }
 }
 
+function runForeground(command, args, { cwd }) {
+  const result = spawnSync(command, args, {
+    cwd,
+    env: process.env,
+    stdio: 'inherit',
+  })
+
+  if (result.error) {
+    throw result.error
+  }
+
+  if (result.signal) {
+    process.kill(process.pid, result.signal)
+    return
+  }
+
+  if ((result.status ?? 1) !== 0) {
+    throw new Error(`${command} ${args.join(' ')} failed with exit code ${result.status ?? 1}`)
+  }
+}
+
 function readPidfile(pidfile) {
   if (!existsSync(pidfile)) {
     return null
@@ -407,6 +520,16 @@ async function waitForHttp(url, label) {
     await sleep(STARTUP_DELAY_MS)
   }
   throw new Error(`${label} did not become ready: ${url}`)
+}
+
+async function waitForLogMessage(logFile, message, label) {
+  for (let attempt = 0; attempt < STARTUP_ATTEMPTS; attempt += 1) {
+    if (existsSync(logFile) && readFileSync(logFile, 'utf8').includes(message)) {
+      return
+    }
+    await sleep(STARTUP_DELAY_MS)
+  }
+  throw new Error(`${label} did not become ready: ${message}`)
 }
 
 async function isHttpReady(url) {

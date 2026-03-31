@@ -12,4 +12,4 @@ description: Work safely on the Vite React frontend by tracing routes, auth, rea
 4. Keep data fetching aligned with the existing React Query patterns. Reuse the current query keys such as `['conversations']`, `['conversation', conversationId]`, and `['messages', conversationId]` instead of inventing parallel cache shapes.
 5. Prefer page-local CSS modules for screen styling and use `web/src/styles/global.css` only for app-wide tokens and document-level defaults.
 6. Preserve the existing phone-first messaging UX. Check mobile layout, loading states, empty states, optimistic-feeling interactions, and realtime updates when changing message or conversation flows.
-7. Validate frontend changes with `cd web && npm run build`. If the change depends on the integrated stack, use `./dev-up` from the repo root for a production-like local run.
+7. Validate frontend changes with `cd web && npm run build`. If the change depends on the integrated stack, use `agent-message start --dev` from the repo root for a production-like local run.

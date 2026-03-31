@@ -59,6 +59,14 @@ PWA install:
 
 This section covers local development and local production-like testing from a checked-out repository.
 
+To expose the checked-out repository on your `PATH` as `agent-message`, run:
+
+```bash
+npm link
+```
+
+That symlinks this checkout's `npm/bin/agent-message.mjs`, so `agent-message ...` uses your local source tree.
+
 ## Prerequisites
 
 - Go `1.26+`
@@ -137,32 +145,34 @@ cd web
 npm run build
 ```
 
-## Local Bundle Commands
+## Local Lifecycle Commands
 
-From the project root, you can start the SQLite-backed API server and the production-like local web gateway together:
+From a checked-out repo, use the same lifecycle command as the packaged app, but add `--dev` to build from the local source tree before launch:
 
 ```bash
-./dev-up
+agent-message start --dev
 ```
 
 This will:
 - build `web/dist`
 - build the Go server binary into `~/.agent-message/bin`
-- start the API on `127.0.0.1:18080`
-- start the local web gateway on `127.0.0.1:8788`
+- start the API on `127.0.0.1:45180`
+- start the local web gateway on `127.0.0.1:45788`
 
 To stop both processes:
 
 ```bash
-./dev-stop
+agent-message stop --dev
 ```
 
 If you also want to start or stop the named tunnel that serves `https://agent.namjaeyoun.com`, use:
 
 ```bash
-./dev-up --with-tunnel
-./dev-stop --with-tunnel
+agent-message start --dev --with-tunnel
+agent-message stop --dev
 ```
+
+`--with-tunnel` assumes the default web listener `127.0.0.1:45788`, because the checked-in Cloudflare config points there.
 
 When publishing from the repo, `npm pack` / `npm publish` will run the package `prepack` hook, which:
 - builds `web/dist`

@@ -1,5 +1,9 @@
 # Agent Message
 
+```bash
+npm install -g agent-message
+```
+
 Agent Message is a direct-message stack with three clients:
 - HTTP/SSE server (`server/`)
 - Web app (`web/`)
@@ -7,11 +11,7 @@ Agent Message is a direct-message stack with three clients:
 
 ## Install With npm (macOS)
 
-Install the packaged app from npm on macOS (`arm64` and `x64`):
-
-```bash
-npm install -g agent-message
-```
+Install the packaged app from npm on macOS (`arm64` and `x64`).
 
 The installed `agent-message` command keeps the existing CLI behavior and also adds local stack lifecycle commands:
 

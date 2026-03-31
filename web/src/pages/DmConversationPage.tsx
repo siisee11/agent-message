@@ -34,7 +34,6 @@ import styles from './DmConversationPage.module.css'
 
 const MESSAGE_PAGE_SIZE = 20
 const TIMELINE_PULL_TRIGGER_PX = 32
-const REACTION_EMOJI_OPTIONS = ['👍', '❤️', '😂', '🔥', '🎉']
 const TIMESTAMP_FORMATTER = new Intl.DateTimeFormat('en-US', {
   month: 'short',
   day: 'numeric',
@@ -575,26 +574,6 @@ export function DmConversationPage() {
     })
   }
 
-  const toggleReactionMutation = useMutation({
-    mutationFn: async (input: { messageId: string; emoji: string }) =>
-      apiClient.toggleReaction(input.messageId, { emoji: input.emoji }),
-    onSuccess: ({ action, reaction }) => {
-      setComposerError(null)
-      if (action === 'added') {
-        realtime.applyReactionAdded(reaction)
-        return
-      }
-      realtime.applyReactionRemoved({
-        message_id: reaction.message_id,
-        emoji: reaction.emoji,
-        user_id: reaction.user_id,
-      })
-    },
-    onError: (error: unknown) => {
-      setComposerError(resolveErrorMessage(error, 'Failed to update the reaction.'))
-    },
-  })
-
   if (!conversationId) {
     return (
       <section className={styles.page}>
@@ -735,48 +714,19 @@ export function DmConversationPage() {
                             </a>
                           ) : null}
 
-                          {!details.message.deleted ? (
+                          {!details.message.deleted && reactionGroups.length > 0 ? (
                             <div className={styles.reactionSection}>
-                              {reactionGroups.length > 0 ? (
-                                <div className={styles.reactionGroups}>
-                                  {reactionGroups.map((group) => (
-                                    <button
-                                      className={`${styles.reactionChip}${
-                                        group.reactedByMe ? ` ${styles.reactionChipOwn}` : ''
-                                      }`}
-                                      disabled={toggleReactionMutation.isPending}
-                                      key={group.emoji}
-                                      onClick={() =>
-                                        toggleReactionMutation.mutate({
-                                          messageId: details.message.id,
-                                          emoji: group.emoji,
-                                        })
-                                      }
-                                      type="button"
-                                    >
-                                      <span>{group.emoji}</span>
-                                      <span>{group.count}</span>
-                                    </button>
-                                  ))}
-                                </div>
-                              ) : null}
-
-                              <div className={styles.reactionPicker}>
-                                {REACTION_EMOJI_OPTIONS.map((emoji) => (
-                                  <button
-                                    className={styles.reactionPickerButton}
-                                    disabled={toggleReactionMutation.isPending}
-                                    key={emoji}
-                                    onClick={() =>
-                                      toggleReactionMutation.mutate({
-                                        messageId: details.message.id,
-                                        emoji,
-                                      })
-                                    }
-                                    type="button"
+                              <div className={styles.reactionGroups}>
+                                {reactionGroups.map((group) => (
+                                  <span
+                                    className={`${styles.reactionChip}${
+                                      group.reactedByMe ? ` ${styles.reactionChipOwn}` : ''
+                                    }`}
+                                    key={group.emoji}
                                   >
-                                    {emoji}
-                                  </button>
+                                    <span>{group.emoji}</span>
+                                    <span>{group.count}</span>
+                                  </span>
                                 ))}
                               </div>
                             </div>

@@ -101,6 +101,16 @@ function inferAttachmentType(file: File): 'image' | 'file' {
   return file.type.startsWith('image/') ? 'image' : 'file'
 }
 
+function resolveRealtimeStatusLabel(status: string): string {
+  if (status === 'open') {
+    return '연결됨'
+  }
+  if (status === 'connecting') {
+    return '연결 중'
+  }
+  return '대기 중'
+}
+
 function scrollTimelineToBottom(timeline: HTMLDivElement | null): void {
   if (!timeline) {
     return
@@ -565,6 +575,16 @@ export function DmConversationPage() {
   const hasComposerContent = composerText.trim() !== '' || Boolean(selectedFile)
   const disableComposerActions =
     sendMessageMutation.isPending || editMessageMutation.isPending || deleteMessageMutation.isPending || isSubmitting
+  const headerTitle = conversationQuery.isLoading
+    ? 'Loading conversation...'
+    : conversationQuery.isError
+      ? 'Conversation unavailable'
+      : otherParticipant
+        ? `@${otherParticipant.username}`
+        : 'Conversation'
+  const headerStatus = conversationQuery.isError
+    ? resolveErrorMessage(conversationQuery.error, 'Failed to load conversation.')
+    : resolveRealtimeStatusLabel(realtime.status)
 
   return (
     <section className={styles.page}>
@@ -574,26 +594,15 @@ export function DmConversationPage() {
             <button className={styles.backButton} onClick={() => navigate('/')} type="button">
               ← 대화 목록
             </button>
+            <h2 className={styles.title}>{headerTitle}</h2>
+            <span
+              className={`${styles.headerStatusBadge}${
+                conversationQuery.isError ? ` ${styles.headerStatusBadgeError}` : ''
+              }`}
+            >
+              {headerStatus}
+            </span>
           </div>
-          {conversationQuery.isLoading ? <h2 className={styles.title}>Loading conversation...</h2> : null}
-          {conversationQuery.isError ? (
-            <>
-              <h2 className={styles.title}>Conversation unavailable</h2>
-              <p className={styles.error}>{resolveErrorMessage(conversationQuery.error, 'Failed to load conversation.')}</p>
-            </>
-          ) : null}
-          {conversationQuery.isSuccess && otherParticipant ? (
-            <>
-              <h2 className={styles.title}>@{otherParticipant.username}</h2>
-              <p className={styles.muted}>
-                {realtime.status === 'open'
-                  ? '실시간 연결됨'
-                  : realtime.status === 'connecting'
-                    ? '실시간 연결 중'
-                    : '실시간 연결 대기 중'}
-              </p>
-            </>
-          ) : null}
         </header>
 
         <section className={styles.timelineSection}>

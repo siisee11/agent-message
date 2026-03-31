@@ -1,21 +1,28 @@
 .page {
-  min-height: 100vh;
+  position: fixed;
+  inset: 0;
+  width: 100%;
+  min-height: 0;
   background:
     radial-gradient(circle at top, #f5f9ff 0%, #edf3ff 28%, #e4edff 100%);
   padding: 0;
+  overflow: hidden;
+  overscroll-behavior: none;
 }
 
 .panel {
-  min-height: 100vh;
+  height: 100%;
+  min-height: 0;
   display: grid;
   grid-template-rows: auto 1fr;
+  overflow: hidden;
 }
 
 .header {
   position: sticky;
   top: 0;
   z-index: 5;
-  padding: 0.95rem 1rem 1rem;
+  padding: calc(0.75rem + env(safe-area-inset-top)) 1rem 0.75rem;
   border-bottom: 1px solid rgba(207, 219, 245, 0.9);
   background: rgba(255, 255, 255, 0.88);
   backdrop-filter: blur(14px);
@@ -24,8 +31,8 @@
 .headerBar {
   display: flex;
   align-items: center;
-  justify-content: flex-start;
-  margin-bottom: 0.72rem;
+  gap: 0.6rem;
+  min-width: 0;
 }
 
 .backButton {
@@ -33,16 +40,40 @@
   border-radius: 999px;
   background: #f7faff;
   color: #20406f;
-  font-size: 0.82rem;
+  font-size: 0.78rem;
   font-weight: 700;
-  padding: 0.46rem 0.78rem;
+  padding: 0.38rem 0.68rem;
   cursor: pointer;
+  flex-shrink: 0;
 }
 
 .title {
   margin: 0;
-  font-size: 1.08rem;
+  min-width: 0;
+  flex: 1;
+  font-size: 1rem;
   color: #152b53;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.headerStatusBadge {
+  flex-shrink: 0;
+  border: 1px solid #c7d9fb;
+  border-radius: 999px;
+  background: #eef4ff;
+  color: #2b4f8a;
+  font-size: 0.75rem;
+  font-weight: 700;
+  line-height: 1;
+  padding: 0.34rem 0.52rem;
+}
+
+.headerStatusBadgeError {
+  border-color: #f1c4cc;
+  background: #fff4f6;
+  color: #8c1d33;
 }
 
 .muted {
@@ -58,10 +89,12 @@
 }
 
 .timelineSection {
-  padding: 0.8rem;
+  min-height: 0;
+  padding: 0.8rem 0.8rem max(0.1rem, calc(env(safe-area-inset-bottom) - 0.9rem));
   display: grid;
   grid-template-rows: auto auto 1fr auto;
   gap: 0.6rem;
+  overflow: hidden;
 }
 
 .timelineToolbar {
@@ -90,6 +123,8 @@
 .timelineViewport {
   min-height: 0;
   overflow: auto;
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
   border: 1px solid #dde6fb;
   border-radius: 20px;
   background: rgba(255, 255, 255, 0.74);
@@ -280,7 +315,7 @@
   border: 1px solid #dce6fb;
   border-radius: 22px;
   background: rgba(255, 255, 255, 0.9);
-  padding: 0.8rem;
+  padding: 0.8rem 0.8rem 0.45rem;
   display: grid;
   gap: 0.55rem;
   backdrop-filter: blur(12px);

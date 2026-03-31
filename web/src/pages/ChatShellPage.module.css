@@ -1,21 +1,26 @@
 .page {
-  min-height: 100vh;
+  height: 100%;
+  min-height: 0;
   padding: 0;
   background:
     radial-gradient(circle at top, #f5f9ff 0%, #ebf2ff 34%, #e3edff 100%);
   color: #10213f;
+  overflow: hidden;
 }
 
 .shell {
   width: 100%;
-  min-height: 100vh;
+  height: 100%;
+  min-height: 0;
   padding: 0;
   display: grid;
+  grid-template-rows: auto auto 1fr;
   gap: 0.9rem;
+  overflow: hidden;
 }
 
 .header {
-  padding: 1rem;
+  padding: calc(1rem + env(safe-area-inset-top)) 1rem 1rem;
   border-radius: 0 0 22px 22px;
   background: linear-gradient(180deg, #1f4fbf 0%, #2e67dc 100%);
   color: #ffffff;
@@ -94,6 +99,17 @@
   padding: 0.95rem;
   box-shadow: 0 14px 30px -26px rgba(16, 33, 63, 0.45);
   backdrop-filter: blur(10px);
+}
+
+.composerSection {
+  flex-shrink: 0;
+}
+
+.listSection {
+  min-height: 0;
+  display: grid;
+  grid-template-rows: auto 1fr;
+  overflow: hidden;
 }
 
 .sectionHeading {
@@ -186,8 +202,14 @@
 }
 
 .conversationList {
+  min-height: 0;
   display: grid;
+  align-content: start;
+  grid-auto-rows: max-content;
   gap: 0.55rem;
+  overflow: auto;
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
 }
 
 .conversationItem {
@@ -273,11 +295,13 @@
 
 @media (min-width: 768px) {
   .page {
+    height: 100%;
     padding: 1rem;
   }
 
   .shell {
     max-width: 560px;
+    height: 100%;
     margin: 0 auto;
     padding: 0;
   }

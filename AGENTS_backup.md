@@ -15,7 +15,7 @@ Always use `--kind json_render` to send a structured message. Structure the mess
 ### Template
 
 ```bash
-./agent-messenger send jay '{
+agent-messege send jay '{
   "root": "card",
   "elements": {
     "card": { "type": "Card", "props": { "title": "<task summary>" }, "children": ["stack"] },
@@ -36,7 +36,7 @@ Badge variant mapping:
 After fixing a bug in `server/handler.go`:
 
 ```bash
-./agent-messenger send jay '{
+agent-messege send jay '{
   "root": "card",
   "elements": {
     "card": { "type": "Card", "props": { "title": "Bug fix: nil pointer in handler" }, "children": ["stack"] },
@@ -62,13 +62,13 @@ Before sending a message, ensure you are logged in. If login fails (account does
 
 ```bash
 # 1. Try to login
-./agent-messenger login <project>-<agent> 1111
+agent-messege login <project>-<agent> 1111
 
 # 2. If login fails (user not found), register first
-./agent-messenger register <project>-<agent> 1111
+agent-messege register <project>-<agent> 1111
 
 # 3. Then send the message
-./agent-messenger send jay '...' --kind json_render
+agent-messege send jay '...' --kind json_render
 ```
 
 - If the server is not running, start it with `agent-message start`.

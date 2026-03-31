@@ -299,9 +299,44 @@
   background: #edf4ff;
 }
 
+.unreadBanner {
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%);
+  bottom: calc(100% + 0.5rem);
+  z-index: 8;
+  border: 1px solid #c5d6f7;
+  border-radius: 999px;
+  background: #ffffff;
+  color: #1e355f;
+  font-size: 0.82rem;
+  font-weight: 700;
+  padding: 0.44rem 0.9rem;
+  cursor: pointer;
+  box-shadow: 0 6px 18px -6px rgba(16, 33, 63, 0.35);
+  white-space: nowrap;
+  animation: unreadSlideUp 0.2s ease-out;
+}
+
+.unreadBanner:hover {
+  background: #eef4ff;
+}
+
+@keyframes unreadSlideUp {
+  from {
+    opacity: 0;
+    transform: translateX(-50%) translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0);
+  }
+}
+
 .composerForm {
   position: relative;
   bottom: auto;
+  z-index: 0;
   border-top: 1px solid #dce6fb;
   border-right: 0;
   border-bottom: 0;

@@ -175,6 +175,8 @@ export function DmConversationPage() {
   const [composerError, setComposerError] = useState<string | null>(null)
   const [editingTarget, setEditingTarget] = useState<EditTarget | null>(null)
   const [actionMenu, setActionMenu] = useState<ActionMenuState | null>(null)
+  const [unreadCount, setUnreadCount] = useState(0)
+  const prevMessageCountRef = useRef(0)
 
   const conversationQuery = useQuery({
     queryKey: ['conversation', conversationId],
@@ -363,7 +365,18 @@ export function DmConversationPage() {
   useEffect(() => {
     shouldStickToBottomRef.current = true
     loadOlderAnchorRef.current = null
+    setUnreadCount(0)
+    prevMessageCountRef.current = 0
   }, [conversationId])
+
+  useEffect(() => {
+    const prevCount = prevMessageCountRef.current
+    const currentCount = messagesAscending.length
+    if (prevCount > 0 && currentCount > prevCount && !shouldStickToBottomRef.current) {
+      setUnreadCount((prev) => prev + (currentCount - prevCount))
+    }
+    prevMessageCountRef.current = currentCount
+  }, [messagesAscending.length])
 
   useEffect(() => {
     const timeline = timelineRef.current
@@ -374,6 +387,9 @@ export function DmConversationPage() {
     const handleScroll = () => {
       const isNearBottom = isTimelineNearBottom(timeline)
       shouldStickToBottomRef.current = isNearBottom
+      if (isNearBottom) {
+        setUnreadCount(0)
+      }
       if (timeline.scrollTop <= TIMELINE_PULL_TRIGGER_PX) {
         loadOlderMessages()
       }
@@ -447,6 +463,12 @@ export function DmConversationPage() {
       setActionMenu(null)
     }
   }, [actionMenuMessage])
+
+  function handleScrollToBottom(): void {
+    shouldStickToBottomRef.current = true
+    setUnreadCount(0)
+    scrollTimelineToBottom(timelineRef.current)
+  }
 
   function openActionMenu(messageId: string, x: number, y: number): void {
     const padding = 8
@@ -769,6 +791,11 @@ export function DmConversationPage() {
           </div>
 
           <form className={styles.composerForm} onSubmit={handleComposerSubmit}>
+            {unreadCount > 0 ? (
+              <button className={styles.unreadBanner} onClick={handleScrollToBottom} type="button">
+                {unreadCount === 1 ? '1 unread message' : `${unreadCount} unread messages`}
+              </button>
+            ) : null}
             {editingTarget ? (
               <div className={styles.editingBanner}>
                 <span>Editing message</span>

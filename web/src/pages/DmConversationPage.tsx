@@ -5,7 +5,7 @@ import {
   useQuery,
   useQueryClient,
 } from '@tanstack/react-query'
-import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import {
   ApiError,
@@ -33,6 +33,7 @@ import {
 import styles from './DmConversationPage.module.css'
 
 const MESSAGE_PAGE_SIZE = 20
+const TIMELINE_PULL_TRIGGER_PX = 32
 const REACTION_EMOJI_OPTIONS = ['👍', '❤️', '😂', '🔥', '🎉']
 const TIMESTAMP_FORMATTER = new Intl.DateTimeFormat('en-US', {
   month: 'short',
@@ -316,6 +317,24 @@ export function DmConversationPage() {
     return messagesAscending.find((details) => details.message.id === actionMenu.messageId) ?? null
   }, [actionMenu, messagesAscending])
 
+  const loadOlderMessages = useCallback((): void => {
+    if (!conversationId || !hasOlderMessages || messagePagesQuery.isFetchingNextPage) {
+      return
+    }
+
+    const timeline = timelineRef.current
+    if (timeline) {
+      loadOlderAnchorRef.current = {
+        conversationId,
+        scrollHeight: timeline.scrollHeight,
+        scrollTop: timeline.scrollTop,
+      }
+    }
+
+    shouldStickToBottomRef.current = false
+    void messagePagesQuery.fetchNextPage()
+  }, [conversationId, hasOlderMessages, messagePagesQuery])
+
   useLayoutEffect(() => {
     const timeline = timelineRef.current
     if (!timeline || !conversationId) {
@@ -353,7 +372,11 @@ export function DmConversationPage() {
     }
 
     const handleScroll = () => {
-      shouldStickToBottomRef.current = isTimelineNearBottom(timeline)
+      const isNearBottom = isTimelineNearBottom(timeline)
+      shouldStickToBottomRef.current = isNearBottom
+      if (timeline.scrollTop <= TIMELINE_PULL_TRIGGER_PX) {
+        loadOlderMessages()
+      }
     }
 
     handleScroll()
@@ -361,7 +384,17 @@ export function DmConversationPage() {
     return () => {
       timeline.removeEventListener('scroll', handleScroll)
     }
-  }, [conversationId])
+  }, [conversationId, loadOlderMessages])
+
+  useEffect(() => {
+    const timeline = timelineRef.current
+    if (!timeline) {
+      return
+    }
+    if (timeline.scrollHeight <= timeline.clientHeight + TIMELINE_PULL_TRIGGER_PX) {
+      loadOlderMessages()
+    }
+  }, [conversationId, loadOlderMessages, messagesAscending.length])
 
   useEffect(() => {
     const timeline = timelineRef.current
@@ -414,24 +447,6 @@ export function DmConversationPage() {
       setActionMenu(null)
     }
   }, [actionMenuMessage])
-
-  function handleLoadOlder(): void {
-    if (!conversationId || !hasOlderMessages || messagePagesQuery.isFetchingNextPage) {
-      return
-    }
-
-    const timeline = timelineRef.current
-    if (timeline) {
-      loadOlderAnchorRef.current = {
-        conversationId,
-        scrollHeight: timeline.scrollHeight,
-        scrollTop: timeline.scrollTop,
-      }
-    }
-
-    shouldStickToBottomRef.current = false
-    void messagePagesQuery.fetchNextPage()
-  }
 
   function openActionMenu(messageId: string, x: number, y: number): void {
     const padding = 8
@@ -606,22 +621,12 @@ export function DmConversationPage() {
         </header>
 
         <section className={styles.timelineSection}>
-          <div className={styles.timelineToolbar}>
-            <button
-              className={styles.loadOlderButton}
-              disabled={!hasOlderMessages || messagePagesQuery.isFetchingNextPage || messagePagesQuery.isLoading}
-              onClick={handleLoadOlder}
-              type="button"
-            >
-              {messagePagesQuery.isFetchingNextPage ? 'Loading older...' : 'Load older'}
-            </button>
-            <span className={styles.muted}>{messagesAscending.length} loaded</span>
-          </div>
-
-          {timelineError ? <p className={styles.error}>{timelineError}</p> : null}
-
           <div className={styles.timelineViewport} ref={timelineRef}>
             <div className={styles.timelineContent} ref={timelineContentRef}>
+              {messagePagesQuery.isFetchingNextPage ? (
+                <p className={styles.timelinePullStatus}>Loading older messages...</p>
+              ) : null}
+              {timelineError ? <p className={styles.error}>{timelineError}</p> : null}
               {messagePagesQuery.isLoading ? <p className={styles.muted}>Loading messages...</p> : null}
               {messagePagesQuery.isSuccess && messagesAscending.length === 0 ? (
                 <p className={styles.muted}>No messages yet in this conversation.</p>

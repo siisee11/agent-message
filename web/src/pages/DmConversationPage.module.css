@@ -92,37 +92,14 @@
   min-height: 0;
   padding: 0;
   display: grid;
-  grid-template-rows: auto auto 1fr auto;
+  grid-template-rows: minmax(0, 1fr) auto;
   gap: 0;
   overflow: hidden;
 }
 
-.timelineToolbar {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 0.75rem;
-  padding: 0.8rem 1rem 0.55rem;
-}
-
-.loadOlderButton {
-  border: 1px solid #beceee;
-  border-radius: 999px;
-  background: #f6f9ff;
-  color: #1f3f78;
-  font-size: 0.82rem;
-  font-weight: 700;
-  padding: 0.42rem 0.68rem;
-  cursor: pointer;
-}
-
-.loadOlderButton:disabled {
-  opacity: 0.62;
-  cursor: not-allowed;
-}
-
 .timelineViewport {
   min-height: 0;
+  position: relative;
   overflow: auto;
   overscroll-behavior: contain;
   -webkit-overflow-scrolling: touch;
@@ -135,7 +112,14 @@
 
 .timelineContent {
   min-height: 100%;
-  padding: 0 1rem 1rem;
+  padding: 0.8rem 1rem 1rem;
+}
+
+.timelinePullStatus {
+  margin: 0 0 0.7rem;
+  color: #486293;
+  font-size: 0.78rem;
+  text-align: center;
 }
 
 .timelineList {

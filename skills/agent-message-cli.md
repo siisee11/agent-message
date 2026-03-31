@@ -10,11 +10,11 @@ The agent-message CLI is a Go-based command-line client for the agent-message me
 
 ## Quick Reference
 
-**Binary**: `./agent-message` (built from `cli/` with `go build -o agent-message .`)
+**Install**: `npm install -g agent-message`
 **Config file**: `~/.agent-message/config` (JSON)
-**Default server**: `http://localhost:8080`
+**Default server**: `http://localhost:45180` (API), `http://localhost:45788` (Web)
 
-Assume the binary is already built. Use `./agent-message <command>` in all examples. If the binary isn't found, build it once with `cd cli && go build -o agent-message .`.
+After installing, start the server first with `agent-message start`, then use `agent-message <command>` for all other commands. The npm wrapper automatically detects the running local server URL, so no manual `--server-url` configuration is needed.
 
 ## Global Flags
 
@@ -29,7 +29,7 @@ Assume the binary is already built. Use `./agent-message <command>` in all examp
 
 ### Register a new account
 ```bash
-./agent-message register <username> <pin>
+agent-message register <username> <pin>
 # username: 3-32 chars, [A-Za-z0-9._-]
 # pin: 4-6 numeric digits
 # Output: registered <username>
@@ -38,35 +38,35 @@ Assume the binary is already built. Use `./agent-message <command>` in all examp
 
 ### Login
 ```bash
-./agent-message login <username> <pin>
+agent-message login <username> <pin>
 # Output: logged in as <username>
 # Side effect: saves/updates a local profile for this username and makes it active
 ```
 
 ### Logout
 ```bash
-./agent-message logout
+agent-message logout
 # Output: logged out
 # Clears the active profile token locally; attempts remote logout (warns if server unreachable)
 ```
 
 ### Check current user
 ```bash
-./agent-message whoami
+agent-message whoami
 # Output: <username>
 ```
 
 ### List and switch saved profiles
 ```bash
-./agent-message profile list
+agent-message profile list
 # Output (one per line):
 # * alice
 #   bob logged_out
 
-./agent-message profile current
+agent-message profile current
 # Output: <active-profile-name>
 
-./agent-message profile switch <username>
+agent-message profile switch <username>
 # Output: switched to <username>
 ```
 
@@ -76,14 +76,14 @@ Assume the binary is already built. Use `./agent-message <command>` in all examp
 
 ### List all conversations
 ```bash
-./agent-message ls
+agent-message ls
 # Output (one per line):
 # <conversation-id> <other-user-username>
 ```
 
 ### Open (or create) a conversation
 ```bash
-./agent-message open <username>
+agent-message open <username>
 # Output: <conversation-id> <username>
 # Creates the conversation if it doesn't exist yet
 ```
@@ -94,7 +94,7 @@ Assume the binary is already built. Use `./agent-message <command>` in all examp
 
 ### Send a message
 ```bash
-./agent-message send <username> "<text>"
+agent-message send <username> "<text>"
 # Output: sent <message-id>
 ```
 
@@ -102,7 +102,7 @@ Assume the binary is already built. Use `./agent-message <command>` in all examp
 Use `--kind json_render` to send a structured rich message rendered by the web client using shadcn components.
 
 ```bash
-./agent-message send <username> '<json-spec>' --kind json_render
+agent-message send <username> '<json-spec>' --kind json_render
 ```
 
 The JSON spec follows this schema:
@@ -121,7 +121,7 @@ The JSON spec follows this schema:
 
 **Example — badge + text in a stack:**
 ```bash
-./agent-message send alice '{
+agent-message send alice '{
   "root": "stack-1",
   "elements": {
     "stack-1": { "type": "Stack", "children": ["badge-1", "text-1"] },
@@ -171,13 +171,13 @@ The web client renders the spec visually; the CLI shows `[json-render]` as a pla
 
 ### Read messages
 ```bash
-./agent-message read <username>
+agent-message read <username>
 # Output (one per line):
 # [1] <message-id> <sender>: <text>
 # [2] <message-id> <sender>: <text>
 # ...
 
-./agent-message read <username> --n 50   # fetch last 50 messages (default: 20)
+agent-message read <username> --n 50   # fetch last 50 messages (default: 20)
 ```
 
 **Important:** The `read` command stores a local index (1, 2, 3…) that `edit`, `delete`, `react`, and `unreact` reference. Always run `read` before using those commands in a session.
@@ -188,7 +188,7 @@ Special message display:
 
 ### Watch for real-time messages
 ```bash
-./agent-message watch <username>
+agent-message watch <username>
 # Streams new messages as they arrive (SSE)
 # Blocks until Ctrl-C
 # Output per message: <message-id> <sender-id>: <text>
@@ -202,27 +202,27 @@ All mutation commands use the **1-based index** from the most recent `read` outp
 
 ### Edit a message
 ```bash
-./agent-message edit <index> "<new text>"
+agent-message edit <index> "<new text>"
 # Output: edited <message-id>
 ```
 
 ### Delete a message
 ```bash
-./agent-message delete <index>
+agent-message delete <index>
 # Output: deleted <message-id>
 # Soft-deletes: message shows as "deleted message" to others
 ```
 
 ### Add a reaction
 ```bash
-./agent-message react <index> 👍
+agent-message react <index> 👍
 # Output: reaction added <message-id> 👍
 # Running again with the same emoji toggles it off
 ```
 
 ### Remove a reaction
 ```bash
-./agent-message unreact <index> 👍
+agent-message unreact <index> 👍
 # Output: reaction removed <message-id> 👍
 ```
 
@@ -232,20 +232,20 @@ All mutation commands use the **1-based index** from the most recent `read` outp
 
 ### Show config file path
 ```bash
-./agent-message config path
+agent-message config path
 # Output: /Users/you/.agent-message/config
 ```
 
 ### Read config
 ```bash
-./agent-message config get              # full config as JSON
-./agent-message config get server_url   # single key value
+agent-message config get              # full config as JSON
+agent-message config get server_url   # single key value
 ```
 
 ### Write config
 ```bash
-./agent-message config set server_url https://api.example.com
-./agent-message config unset server_url   # reset to default (http://localhost:8080)
+agent-message config set server_url https://api.example.com
+agent-message config unset server_url   # reset to default (http://localhost:45180)
 ```
 
 **Supported keys:** `server_url`
@@ -256,7 +256,7 @@ All mutation commands use the **1-based index** from the most recent `read` outp
 
 ```json
 {
-  "server_url": "http://localhost:8080",
+  "server_url": "http://localhost:45180",
   "token": "<session-token>",
   "last_read_conversation_id": "<uuid>",
   "read_sessions": {
@@ -277,43 +277,43 @@ All mutation commands use the **1-based index** from the most recent `read` outp
 ### First-time setup
 ```bash
 # Configure server (if not localhost:8080)
-./agent-message config set server_url http://my-server:8080
+agent-message config set server_url http://my-server:8080
 
 # Register
-./agent-message register myusername 1234
+agent-message register myusername 1234
 
 # Or login if already registered
-./agent-message login myusername 1234
+agent-message login myusername 1234
 ```
 
 ### Send and receive messages
 ```bash
 # Start a conversation and send a message
-./agent-message open alice
-./agent-message send alice "hey!"
+agent-message open alice
+agent-message send alice "hey!"
 
 # Read the conversation
-./agent-message read alice
+agent-message read alice
 
 # Reply
-./agent-message send alice "how are you?"
+agent-message send alice "how are you?"
 ```
 
 ### Edit or react to a message
 ```bash
 # Read to establish the index
-./agent-message read alice
+agent-message read alice
 
 # Edit message at index 2
-./agent-message edit 2 "corrected text"
+agent-message edit 2 "corrected text"
 
 # React to message at index 1
-./agent-message react 1 ❤️
+agent-message react 1 ❤️
 ```
 
 ### Monitor incoming messages
 ```bash
-./agent-message watch alice
+agent-message watch alice
 ```
 
 ---

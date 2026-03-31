@@ -132,6 +132,7 @@
 
 .timelineItem {
   display: flex;
+  min-width: 0;
 }
 
 .timelineItemOwn {
@@ -144,6 +145,7 @@
 
 .messageBubble {
   width: min(100%, 31rem);
+  min-width: 0;
   border: 1px solid #d9e4fb;
   border-radius: 18px;
   background: #ffffff;

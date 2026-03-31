@@ -2,6 +2,24 @@
   margin-top: 0.42rem;
   width: 100%;
   max-width: 100%;
+  min-width: 0;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+}
+
+.root :global([data-slot='card']),
+.root :global([data-slot='card-header']),
+.root :global([data-slot='card-content']) {
+  min-width: 0;
+  max-width: 100%;
+}
+
+.root :global([data-slot='card-title']),
+.root :global([data-slot='card-description']),
+.root :global(p),
+.root :global(code) {
+  overflow-wrap: anywhere;
+  word-break: break-word;
 }
 
 .fallback {

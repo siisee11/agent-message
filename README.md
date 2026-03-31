@@ -1,6 +1,12 @@
 # Agent Message
 
 ```bash
+npx skills add https://github.com/siisee11/agent-message --skill agent-message-cli
+```
+
+Install the skill above, then ask your coding agent (e.g. Claude Code) to "set up agent-message" — it will handle installation and configuration for you.
+
+```bash
 npm install -g agent-message
 ```
 

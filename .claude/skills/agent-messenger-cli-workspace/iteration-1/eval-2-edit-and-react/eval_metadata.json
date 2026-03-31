@@ -1,0 +1,23 @@
+{
+  "eval_id": 2,
+  "eval_name": "edit-and-react",
+  "prompt": "I just ran `read alice` and got a list of messages. Message at index 3 has a typo. How do I fix it, and how do I also add a thumbs-up reaction to message at index 1?",
+  "assertions": [
+    {
+      "text": "Includes edit command with index 3",
+      "check": "response contains 'edit 3'"
+    },
+    {
+      "text": "Includes react command with index 1 and thumbs-up emoji",
+      "check": "response contains 'react 1' and (👍 or thumbs)"
+    },
+    {
+      "text": "Correctly explains that read was already done (does not require re-running read)",
+      "check": "response does not wrongly require running read again before edit/react"
+    },
+    {
+      "text": "Provides correct go run . invocation style",
+      "check": "response mentions 'go run .' or equivalent"
+    }
+  ]
+}

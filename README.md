@@ -149,7 +149,7 @@ go run . --server-url http://localhost:8080 unreact 1 👍
 go run . --server-url http://localhost:8080 watch bob
 ```
 
-CLI config is stored at `~/.msgr/config` by default.
+CLI config is stored at `~/.agent-messenger/config` by default.
 
 ## Validation and Constraints (Phase 7)
 

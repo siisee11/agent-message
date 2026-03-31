@@ -187,10 +187,10 @@ created_at timestamp
 ## CLI Client Features
 
 ```
-Usage: msgr <command> [flags]
+Usage: agent-messenger <command> [flags]
 
 Auth:
-  login <username> <pin>    Log in (stores token in ~/.msgr/config)
+  login <username> <pin>    Log in (stores token in ~/.agent-messenger/config)
   register <username> <pin> Register new account
   logout                    Clear stored token
 
@@ -217,7 +217,7 @@ Watch mode:
   watch <username>          Stream incoming messages in real-time (SSE)
 ```
 
-Config is stored at `~/.msgr/config` (JSON with server URL and session token).
+Config is stored at `~/.agent-messenger/config` (JSON with server URL and session token).
 
 ---
 

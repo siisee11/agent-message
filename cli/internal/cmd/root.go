@@ -35,7 +35,7 @@ func NewRootCommand() *cobra.Command {
 	var serverURLOverride string
 
 	cmd := &cobra.Command{
-		Use:   "msgr",
+		Use:   "agent-messenger",
 		Short: "CLI client for Agent Messenger",
 		PersistentPreRunE: func(command *cobra.Command, _ []string) error {
 			store := config.NewStore(configPath)
@@ -64,6 +64,7 @@ func NewRootCommand() *cobra.Command {
 	cmd.PersistentFlags().StringVar(&serverURLOverride, "server-url", "", "Override server URL for this command")
 
 	cmd.AddCommand(
+		newConfigCommand(rt),
 		newRegisterCommand(rt),
 		newLoginCommand(rt),
 		newLogoutCommand(rt),

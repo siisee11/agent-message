@@ -11,7 +11,7 @@ import (
 )
 
 const (
-	defaultDirName   = ".msgr"
+	defaultDirName   = ".agent-messenger"
 	defaultFileName  = "config"
 	defaultServerURL = "http://localhost:8080"
 )
@@ -24,7 +24,7 @@ type ReadSession struct {
 	LastReadMessage string         `json:"last_read_message,omitempty"`
 }
 
-// Config is persisted at ~/.msgr/config.
+// Config is persisted at ~/.agent-messenger/config.
 type Config struct {
 	ServerURL              string                 `json:"server_url"`
 	Token                  string                 `json:"token,omitempty"`

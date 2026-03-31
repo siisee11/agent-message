@@ -1,0 +1,23 @@
+{
+  "eval_id": 3,
+  "eval_name": "config-server-url",
+  "prompt": "I'm trying to connect my agent-messenger CLI to a remote server at https://messaging.example.com instead of localhost. How do I permanently save that, and how do I verify it's set correctly?",
+  "assertions": [
+    {
+      "text": "Includes 'config set server_url' with the correct URL",
+      "check": "response contains 'config set server_url https://messaging.example.com'"
+    },
+    {
+      "text": "Includes a verification command (config get or config get server_url)",
+      "check": "response contains 'config get'"
+    },
+    {
+      "text": "Uses correct key name 'server_url' (not 'server-url' or 'serverUrl')",
+      "check": "response uses 'server_url' as the key"
+    },
+    {
+      "text": "Explains that the setting is persistent (saved to config file)",
+      "check": "response mentions persistence or config file"
+    }
+  ]
+}

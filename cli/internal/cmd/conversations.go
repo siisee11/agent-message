@@ -104,7 +104,7 @@ func ensureLoggedIn(rt *Runtime) error {
 	if strings.TrimSpace(rt.Config.Token) != "" {
 		return nil
 	}
-	return errors.New("not logged in; run `msgr login <username> <pin>`")
+	return errors.New("not logged in; run `agent-messenger login <username> <pin>`")
 }
 
 func resolveOtherUsername(details api.ConversationDetails, requestedUsername string) string {

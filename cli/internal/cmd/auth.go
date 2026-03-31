@@ -6,6 +6,8 @@ import (
 	"fmt"
 	"strings"
 
+	"agent-messenger/cli/internal/config"
+
 	"github.com/spf13/cobra"
 )
 
@@ -30,12 +32,8 @@ func runRegister(rt *Runtime, username, pin string) error {
 		return err
 	}
 
-	rt.Config.Token = strings.TrimSpace(resp.Token)
-	rt.Config.ServerURL = rt.Client.ServerURL()
-	rt.Client.SetToken(rt.Config.Token)
-
-	if err := rt.ConfigStore.Save(rt.Config); err != nil {
-		return fmt.Errorf("save config: %w", err)
+	if err := activateAuthenticatedProfile(rt, resp.User.Username, rt.Client.ServerURL(), resp.Token); err != nil {
+		return err
 	}
 
 	_, _ = fmt.Fprintf(rt.Stdout, "registered %s\n", resp.User.Username)
@@ -63,12 +61,8 @@ func runLogin(rt *Runtime, username, pin string) error {
 		return err
 	}
 
-	rt.Config.Token = strings.TrimSpace(resp.Token)
-	rt.Config.ServerURL = rt.Client.ServerURL()
-	rt.Client.SetToken(rt.Config.Token)
-
-	if err := rt.ConfigStore.Save(rt.Config); err != nil {
-		return fmt.Errorf("save config: %w", err)
+	if err := activateAuthenticatedProfile(rt, resp.User.Username, rt.Client.ServerURL(), resp.Token); err != nil {
+		return err
 	}
 
 	_, _ = fmt.Fprintf(rt.Stdout, "logged in as %s\n", resp.User.Username)
@@ -124,11 +118,13 @@ func runLogout(rt *Runtime) error {
 		remoteErr = rt.Client.Logout(context.Background())
 	}
 
-	rt.Config.Token = ""
-	rt.Client.SetToken("")
-	rt.Config.ServerURL = rt.Client.ServerURL()
-	if err := rt.ConfigStore.Save(rt.Config); err != nil {
-		return fmt.Errorf("save config: %w", err)
+	cfg := rt.Config
+	cfg.Token = ""
+	cfg.ServerURL = rt.Client.ServerURL()
+	cfg.ReadSessions = make(map[string]config.ReadSession)
+	cfg.LastReadConversationID = ""
+	if err := saveRuntimeConfig(rt, cfg); err != nil {
+		return err
 	}
 
 	if remoteErr != nil {
@@ -153,4 +149,25 @@ func ensureRuntime(rt *Runtime) error {
 	default:
 		return nil
 	}
+}
+
+func activateAuthenticatedProfile(rt *Runtime, username, serverURL, token string) error {
+	profileName := strings.TrimSpace(username)
+	if profileName == "" {
+		return errors.New("username is required")
+	}
+
+	cfg := rt.Config
+	existingProfile := cfg.Profiles[profileName]
+	cfg.ActiveProfile = profileName
+	cfg.ServerURL = serverURL
+	cfg.Token = strings.TrimSpace(token)
+	cfg.ReadSessions = cloneReadSessionsMap(existingProfile.ReadSessions)
+	cfg.LastReadConversationID = existingProfile.LastReadConversationID
+
+	if err := saveRuntimeConfig(rt, cfg); err != nil {
+		return err
+	}
+	rt.Client.SetToken(rt.Config.Token)
+	return nil
 }

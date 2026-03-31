@@ -65,6 +65,7 @@ func NewRootCommand() *cobra.Command {
 
 	cmd.AddCommand(
 		newConfigCommand(rt),
+		newProfileCommand(rt),
 		newRegisterCommand(rt),
 		newLoginCommand(rt),
 		newLogoutCommand(rt),

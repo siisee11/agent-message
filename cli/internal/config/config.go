@@ -16,6 +16,15 @@ const (
 	defaultServerURL = "http://localhost:8080"
 )
 
+// Profile stores auth and read-session state for a saved account.
+type Profile struct {
+	Username               string                 `json:"username"`
+	ServerURL              string                 `json:"server_url"`
+	Token                  string                 `json:"token,omitempty"`
+	LastReadConversationID string                 `json:"last_read_conversation_id,omitempty"`
+	ReadSessions           map[string]ReadSession `json:"read_sessions,omitempty"`
+}
+
 // ReadSession stores index -> message ID data from the latest `read` per conversation.
 type ReadSession struct {
 	ConversationID  string         `json:"conversation_id"`
@@ -28,6 +37,8 @@ type ReadSession struct {
 type Config struct {
 	ServerURL              string                 `json:"server_url"`
 	Token                  string                 `json:"token,omitempty"`
+	ActiveProfile          string                 `json:"active_profile,omitempty"`
+	Profiles               map[string]Profile     `json:"profiles,omitempty"`
 	LastReadConversationID string                 `json:"last_read_conversation_id,omitempty"`
 	ReadSessions           map[string]ReadSession `json:"read_sessions,omitempty"`
 }
@@ -62,10 +73,7 @@ func (s *Store) Path() string {
 }
 
 func (s *Store) Load() (Config, error) {
-	cfg := Config{
-		ServerURL:    defaultServerURL,
-		ReadSessions: make(map[string]ReadSession),
-	}
+	cfg := defaultConfig()
 
 	data, err := os.ReadFile(s.path)
 	if err != nil {
@@ -82,14 +90,14 @@ func (s *Store) Load() (Config, error) {
 		return Config{}, fmt.Errorf("decode config %q: %w", s.path, err)
 	}
 
-	if err := cfg.normalize(); err != nil {
+	if err := cfg.normalizeLoaded(); err != nil {
 		return Config{}, err
 	}
 	return cfg, nil
 }
 
 func (s *Store) Save(cfg Config) error {
-	if err := cfg.normalize(); err != nil {
+	if err := cfg.prepareForSave(); err != nil {
 		return err
 	}
 
@@ -114,54 +122,175 @@ func (s *Store) Save(cfg Config) error {
 	return nil
 }
 
-func (c *Config) normalize() error {
-	trimmedToken := strings.TrimSpace(c.Token)
-	c.Token = trimmedToken
-	c.LastReadConversationID = strings.TrimSpace(c.LastReadConversationID)
-
-	rawURL := strings.TrimSpace(c.ServerURL)
-	if rawURL == "" {
-		rawURL = defaultServerURL
+func defaultConfig() Config {
+	return Config{
+		ServerURL:    defaultServerURL,
+		Profiles:     make(map[string]Profile),
+		ReadSessions: make(map[string]ReadSession),
 	}
-	parsed, err := url.Parse(rawURL)
+}
+
+func (c *Config) prepareForSave() error {
+	if c == nil {
+		return errors.New("config is required")
+	}
+
+	c.ActiveProfile = strings.TrimSpace(c.ActiveProfile)
+	if c.Profiles == nil {
+		c.Profiles = make(map[string]Profile)
+	}
+	if c.ActiveProfile != "" {
+		c.Profiles[c.ActiveProfile] = Profile{
+			Username:               c.ActiveProfile,
+			ServerURL:              c.ServerURL,
+			Token:                  c.Token,
+			LastReadConversationID: c.LastReadConversationID,
+			ReadSessions:           cloneReadSessions(c.ReadSessions),
+		}
+	}
+
+	return c.normalizeLoaded()
+}
+
+func (c *Config) normalizeLoaded() error {
+	if c == nil {
+		return errors.New("config is required")
+	}
+
+	normalizedServerURL, err := normalizeServerURL(c.ServerURL)
 	if err != nil {
-		return fmt.Errorf("invalid server_url: %w", err)
+		return err
+	}
+	c.ServerURL = normalizedServerURL
+	c.Token = strings.TrimSpace(c.Token)
+	c.ActiveProfile = strings.TrimSpace(c.ActiveProfile)
+	c.LastReadConversationID = strings.TrimSpace(c.LastReadConversationID)
+	c.ReadSessions = normalizeReadSessions(c.ReadSessions)
+	c.LastReadConversationID = normalizeLastReadConversationID(c.LastReadConversationID, c.ReadSessions)
+
+	if c.Profiles == nil {
+		c.Profiles = make(map[string]Profile)
+	}
+	normalizedProfiles := make(map[string]Profile, len(c.Profiles))
+	for key, profile := range c.Profiles {
+		normalizedKey := strings.TrimSpace(key)
+		if normalizedKey == "" {
+			continue
+		}
+
+		normalizedProfile, err := normalizeProfile(normalizedKey, profile)
+		if err != nil {
+			return err
+		}
+		normalizedProfiles[normalizedKey] = normalizedProfile
+	}
+	c.Profiles = normalizedProfiles
+
+	if c.ActiveProfile == "" {
+		return nil
+	}
+
+	profile, ok := c.Profiles[c.ActiveProfile]
+	if !ok {
+		c.ActiveProfile = ""
+		return nil
+	}
+
+	c.ServerURL = profile.ServerURL
+	c.Token = profile.Token
+	c.ReadSessions = cloneReadSessions(profile.ReadSessions)
+	c.LastReadConversationID = normalizeLastReadConversationID(profile.LastReadConversationID, c.ReadSessions)
+	return nil
+}
+
+func normalizeProfile(name string, profile Profile) (Profile, error) {
+	serverURL, err := normalizeServerURL(profile.ServerURL)
+	if err != nil {
+		return Profile{}, fmt.Errorf("invalid profile %q: %w", name, err)
+	}
+
+	profile.Username = strings.TrimSpace(profile.Username)
+	if profile.Username == "" {
+		profile.Username = name
+	}
+	profile.ServerURL = serverURL
+	profile.Token = strings.TrimSpace(profile.Token)
+	profile.ReadSessions = normalizeReadSessions(profile.ReadSessions)
+	profile.LastReadConversationID = normalizeLastReadConversationID(profile.LastReadConversationID, profile.ReadSessions)
+	return profile, nil
+}
+
+func normalizeServerURL(raw string) (string, error) {
+	trimmed := strings.TrimSpace(raw)
+	if trimmed == "" {
+		trimmed = defaultServerURL
+	}
+
+	parsed, err := url.Parse(trimmed)
+	if err != nil {
+		return "", fmt.Errorf("invalid server_url: %w", err)
 	}
 	if parsed.Scheme != "http" && parsed.Scheme != "https" {
-		return errors.New("server_url must start with http:// or https://")
+		return "", errors.New("server_url must start with http:// or https://")
 	}
 	if strings.TrimSpace(parsed.Host) == "" {
-		return errors.New("server_url host is required")
+		return "", errors.New("server_url host is required")
 	}
 	parsed.Path = strings.TrimSuffix(parsed.Path, "/")
 	parsed.RawPath = strings.TrimSuffix(parsed.RawPath, "/")
-	c.ServerURL = parsed.String()
+	return parsed.String(), nil
+}
 
-	if c.ReadSessions == nil {
-		c.ReadSessions = make(map[string]ReadSession)
+func normalizeReadSessions(readSessions map[string]ReadSession) map[string]ReadSession {
+	if readSessions == nil {
+		return make(map[string]ReadSession)
 	}
-	normalizedSessions := make(map[string]ReadSession, len(c.ReadSessions))
-	for key, session := range c.ReadSessions {
+
+	normalizedSessions := make(map[string]ReadSession, len(readSessions))
+	for key, session := range readSessions {
+		normalizedKey := strings.TrimSpace(key)
+		if normalizedKey == "" {
+			continue
+		}
+
 		session.ConversationID = strings.TrimSpace(session.ConversationID)
 		session.Username = strings.TrimSpace(session.Username)
 		session.LastReadMessage = strings.TrimSpace(session.LastReadMessage)
 		if session.IndexToMessage == nil {
 			session.IndexToMessage = make(map[int]string)
 		}
-
-		normalizedKey := strings.TrimSpace(key)
 		if session.ConversationID == "" {
 			session.ConversationID = normalizedKey
 		}
 		normalizedSessions[normalizedKey] = session
 	}
-	c.ReadSessions = normalizedSessions
+	return normalizedSessions
+}
 
-	if c.LastReadConversationID != "" {
-		if _, ok := c.ReadSessions[c.LastReadConversationID]; !ok {
-			c.LastReadConversationID = ""
+func normalizeLastReadConversationID(lastReadConversationID string, sessions map[string]ReadSession) string {
+	normalized := strings.TrimSpace(lastReadConversationID)
+	if normalized == "" {
+		return ""
+	}
+	if _, ok := sessions[normalized]; !ok {
+		return ""
+	}
+	return normalized
+}
+
+func cloneReadSessions(readSessions map[string]ReadSession) map[string]ReadSession {
+	cloned := make(map[string]ReadSession, len(readSessions))
+	for key, session := range readSessions {
+		indexToMessage := make(map[int]string, len(session.IndexToMessage))
+		for index, messageID := range session.IndexToMessage {
+			indexToMessage[index] = messageID
+		}
+		cloned[key] = ReadSession{
+			ConversationID:  session.ConversationID,
+			Username:        session.Username,
+			IndexToMessage:  indexToMessage,
+			LastReadMessage: session.LastReadMessage,
 		}
 	}
-
-	return nil
+	return cloned
 }

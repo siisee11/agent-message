@@ -134,6 +134,8 @@ Run from `cli/` with optional `--server-url` override.
 cd cli
 go run . --server-url http://localhost:8080 register alice 1234
 go run . --server-url http://localhost:8080 login alice 1234
+go run . profile list
+go run . profile switch alice
 ```
 
 Common commands:
@@ -158,6 +160,7 @@ go run . --server-url http://localhost:8080 watch bob
 ```
 
 CLI config is stored at `~/.agent-messenger/config` by default.
+Each successful `login` or `register` also saves a named profile, and `go run . profile switch <username>` swaps the active account locally.
 
 ## Validation and Constraints (Phase 7)
 

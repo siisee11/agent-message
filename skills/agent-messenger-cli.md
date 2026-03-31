@@ -40,19 +40,34 @@ Assume the binary is already built. Use `./agent-messenger <command>` in all exa
 ```bash
 ./agent-messenger login <username> <pin>
 # Output: logged in as <username>
+# Side effect: saves/updates a local profile for this username and makes it active
 ```
 
 ### Logout
 ```bash
 ./agent-messenger logout
 # Output: logged out
-# Clears token locally; attempts remote logout (warns if server unreachable)
+# Clears the active profile token locally; attempts remote logout (warns if server unreachable)
 ```
 
 ### Check current user
 ```bash
 ./agent-messenger whoami
 # Output: <username>
+```
+
+### List and switch saved profiles
+```bash
+./agent-messenger profile list
+# Output (one per line):
+# * alice
+#   bob logged_out
+
+./agent-messenger profile current
+# Output: <active-profile-name>
+
+./agent-messenger profile switch <username>
+# Output: switched to <username>
 ```
 
 ---

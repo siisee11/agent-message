@@ -42,6 +42,9 @@ func TestRunRegisterStoresTokenInConfig(t *testing.T) {
 	if got, want := rt.Config.Token, "reg-token"; got != want {
 		t.Fatalf("token mismatch: got %q want %q", got, want)
 	}
+	if got, want := rt.Config.ActiveProfile, "alice"; got != want {
+		t.Fatalf("active profile mismatch: got %q want %q", got, want)
+	}
 	if got, want := strings.TrimSpace(stdout.String()), "registered alice"; got != want {
 		t.Fatalf("stdout mismatch: got %q want %q", got, want)
 	}
@@ -52,6 +55,12 @@ func TestRunRegisterStoresTokenInConfig(t *testing.T) {
 	}
 	if got, want := persisted.Token, "reg-token"; got != want {
 		t.Fatalf("persisted token mismatch: got %q want %q", got, want)
+	}
+	if got, want := persisted.ActiveProfile, "alice"; got != want {
+		t.Fatalf("persisted active profile mismatch: got %q want %q", got, want)
+	}
+	if got, want := persisted.Profiles["alice"].Token, "reg-token"; got != want {
+		t.Fatalf("persisted profile token mismatch: got %q want %q", got, want)
 	}
 }
 
@@ -84,6 +93,9 @@ func TestRunLoginStoresTokenInConfig(t *testing.T) {
 	if got, want := rt.Config.Token, "login-token"; got != want {
 		t.Fatalf("token mismatch: got %q want %q", got, want)
 	}
+	if got, want := rt.Config.ActiveProfile, "alice"; got != want {
+		t.Fatalf("active profile mismatch: got %q want %q", got, want)
+	}
 	if got, want := strings.TrimSpace(stdout.String()), "logged in as alice"; got != want {
 		t.Fatalf("stdout mismatch: got %q want %q", got, want)
 	}
@@ -94,6 +106,12 @@ func TestRunLoginStoresTokenInConfig(t *testing.T) {
 	}
 	if got, want := persisted.Token, "login-token"; got != want {
 		t.Fatalf("persisted token mismatch: got %q want %q", got, want)
+	}
+	if got, want := persisted.ActiveProfile, "alice"; got != want {
+		t.Fatalf("persisted active profile mismatch: got %q want %q", got, want)
+	}
+	if got, want := persisted.Profiles["alice"].Token, "login-token"; got != want {
+		t.Fatalf("persisted profile token mismatch: got %q want %q", got, want)
 	}
 }
 
@@ -133,6 +151,51 @@ func TestRunLogoutClearsTokenEvenWhenServerFails(t *testing.T) {
 	}
 	if got := persisted.Token; got != "" {
 		t.Fatalf("expected persisted token to be cleared, got %q", got)
+	}
+}
+
+func TestRunLogoutClearsActiveProfileToken(t *testing.T) {
+	t.Parallel()
+
+	rt, stdout, _ := newTestRuntime(t, "http://example.test", "active-token", func(req *http.Request, _ []byte) (*http.Response, error) {
+		if req.URL.Path != "/api/auth/logout" {
+			t.Fatalf("unexpected path: %s", req.URL.Path)
+		}
+		return jsonResponse(http.StatusNoContent, ``), nil
+	})
+	rt.Config.ActiveProfile = "alice"
+	rt.Config.Profiles = map[string]config.Profile{
+		"alice": {
+			Username:  "alice",
+			ServerURL: "http://example.test",
+			Token:     "active-token",
+		},
+		"bob": {
+			Username:  "bob",
+			ServerURL: "http://example.test",
+			Token:     "bob-token",
+		},
+	}
+	if err := rt.ConfigStore.Save(rt.Config); err != nil {
+		t.Fatalf("seed profiles: %v", err)
+	}
+
+	if err := runLogout(rt); err != nil {
+		t.Fatalf("runLogout: %v", err)
+	}
+	if got := strings.TrimSpace(stdout.String()); got != "logged out" {
+		t.Fatalf("stdout mismatch: got %q", got)
+	}
+
+	persisted, err := rt.ConfigStore.Load()
+	if err != nil {
+		t.Fatalf("load persisted config: %v", err)
+	}
+	if got := persisted.Profiles["alice"].Token; got != "" {
+		t.Fatalf("expected alice token to be cleared, got %q", got)
+	}
+	if got, want := persisted.Profiles["bob"].Token, "bob-token"; got != want {
+		t.Fatalf("expected bob token to stay intact, got %q want %q", got, want)
 	}
 }
 

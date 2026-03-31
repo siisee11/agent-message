@@ -9,9 +9,9 @@ import process from 'node:process'
 import { fileURLToPath } from 'node:url'
 
 const DEFAULT_API_HOST = '127.0.0.1'
-const DEFAULT_API_PORT = 8080
+const DEFAULT_API_PORT = 45180
 const DEFAULT_WEB_HOST = '127.0.0.1'
-const DEFAULT_WEB_PORT = 8788
+const DEFAULT_WEB_PORT = 45788
 const STARTUP_ATTEMPTS = 40
 const STARTUP_DELAY_MS = 500
 const PROCESS_STOP_DELAY_MS = 1000
@@ -170,6 +170,7 @@ function runtimePaths(runtimeDir) {
     gatewayLog: join(runtimeDir, 'logs', 'gateway.log'),
     serverPidfile: join(runtimeDir, 'server.pid'),
     gatewayPidfile: join(runtimeDir, 'gateway.pid'),
+    stackMetadataPath: join(runtimeDir, 'stack.json'),
     sqlitePath: join(runtimeDir, 'agent_message.sqlite'),
   }
 }
@@ -216,6 +217,7 @@ async function startStack(options) {
     writeFileSync(paths.gatewayPidfile, `${gatewayChild.pid}\n`)
 
     await waitForHttp(`http://${options.webHost}:${options.webPort}`, 'web gateway')
+    writeStackMetadata(paths.stackMetadataPath, options)
   } catch (error) {
     await stopStack(options, { quiet: true })
     throw error
@@ -231,6 +233,7 @@ async function stopStack(options, { quiet }) {
   const paths = runtimePaths(options.runtimeDir)
   const stoppedServer = await killFromPidfile(paths.serverPidfile)
   const stoppedGateway = await killFromPidfile(paths.gatewayPidfile)
+  rmSync(paths.stackMetadataPath, { force: true })
 
   if (!quiet) {
     if (stoppedServer || stoppedGateway) {
@@ -259,7 +262,8 @@ async function printStatus(options) {
 
 function delegateToBundledCli(args) {
   const cliBinary = resolveBinaryPath('agent-message-cli')
-  const result = spawnSync(cliBinary, args, {
+  const delegatedArgs = buildDelegatedCliArgs(args)
+  const result = spawnSync(cliBinary, delegatedArgs, {
     stdio: 'inherit',
     env: process.env,
   })
@@ -274,6 +278,59 @@ function delegateToBundledCli(args) {
   }
 
   process.exit(result.status ?? 1)
+}
+
+function buildDelegatedCliArgs(args) {
+  if (shouldSkipLocalServerOverride(args) || hasExplicitServerURL(args)) {
+    return args
+  }
+
+  const localServerURL = readLocalServerURL()
+  if (!localServerURL) {
+    return args
+  }
+
+  return ['--server-url', localServerURL, ...args]
+}
+
+function shouldSkipLocalServerOverride(args) {
+  const [command] = args
+  return command === undefined || command === 'config' || command === 'profile'
+}
+
+function hasExplicitServerURL(args) {
+  return args.some((arg) => arg === '--server-url' || arg.startsWith('--server-url='))
+}
+
+function readLocalServerURL() {
+  const paths = runtimePaths(join(os.homedir(), '.agent-message'))
+  const serverPid = readPidfile(paths.serverPidfile)
+  if (serverPid === null || !isPidAlive(serverPid)) {
+    return null
+  }
+
+  try {
+    const raw = readFileSync(paths.stackMetadataPath, 'utf8')
+    const metadata = JSON.parse(raw)
+    const apiHost = typeof metadata.apiHost === 'string' ? metadata.apiHost.trim() : ''
+    const apiPort = metadata.apiPort
+    if (!apiHost || !Number.isInteger(apiPort) || apiPort <= 0 || apiPort > 65535) {
+      return null
+    }
+    return `http://${apiHost}:${apiPort}`
+  } catch {
+    return null
+  }
+}
+
+function writeStackMetadata(path, options) {
+  const metadata = {
+    apiHost: options.apiHost,
+    apiPort: options.apiPort,
+    webHost: options.webHost,
+    webPort: options.webPort,
+  }
+  writeFileSync(path, `${JSON.stringify(metadata, null, 2)}\n`)
 }
 
 function spawnDetached(command, args, env, logFile) {

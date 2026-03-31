@@ -22,10 +22,10 @@ agent-message stop
 ```
 
 Default ports:
-- API: `127.0.0.1:8080`
-- Web: `127.0.0.1:8788`
+- API: `127.0.0.1:45180`
+- Web: `127.0.0.1:45788`
 
-After `agent-message start`, open `http://127.0.0.1:8788` in your browser.
+After `agent-message start`, open `http://127.0.0.1:45788` in your browser.
 The bundled CLI continues to work from the same command:
 
 ```bash

@@ -1,22 +1,81 @@
-# Ralph Loop Agent Guide
+# Agent Instructions
 
-## Supported surfaces
+## Core Rule
 
-- Start with `./ralph-loop schema --output json` to discover the live command contract.
-- Prefer `--dry-run` before `./ralph-loop init` or `./ralph-loop "<prompt>"`.
-- Prefer `--output json` or `--output ndjson` for automation.
-- Prefer `--fields`, `--page`, and `--page-size` on `ls`, `tail`, and `schema`.
+After completing any user request, you **must** send a structured message to `jay` via the `agent-message` CLI summarizing what you did.
+
+## Message Format
+
+Always use `--kind json_render` to send a structured message. Structure the message as a Card containing:
+
+1. **Heading** — short summary of the task (what was done)
+2. **Badge** — task status (`success`, `error`, `in-progress`)
+3. **Text** — brief details (files changed, key decisions, blockers)
+
+### Template
+
+```bash
+./agent-messenger send jay '{
+  "root": "card",
+  "elements": {
+    "card": { "type": "Card", "props": { "title": "<task summary>" }, "children": ["stack"] },
+    "stack": { "type": "Stack", "props": { "gap": "sm" }, "children": ["badge", "details"] },
+    "badge": { "type": "Badge", "props": { "text": "<status>", "variant": "<variant>" } },
+    "details": { "type": "Text", "props": { "text": "<what was done, files touched, outcome>" } }
+  }
+}' --kind json_render
+```
+
+Badge variant mapping:
+- `success` → `"variant": "default"`
+- `error` → `"variant": "destructive"`
+- `in-progress` → `"variant": "secondary"`
+
+### Example
+
+After fixing a bug in `server/handler.go`:
+
+```bash
+./agent-messenger send jay '{
+  "root": "card",
+  "elements": {
+    "card": { "type": "Card", "props": { "title": "Bug fix: nil pointer in handler" }, "children": ["stack"] },
+    "stack": { "type": "Stack", "props": { "gap": "sm" }, "children": ["badge", "details"] },
+    "badge": { "type": "Badge", "props": { "text": "success", "variant": "default" } },
+    "details": { "type": "Text", "props": { "text": "Fixed nil pointer dereference in server/handler.go:42. Added nil check before accessing user session. Tests pass." } }
+  }
+}' --kind json_render
+```
+
+## Agent Profile
+
+The agent's username follows the pattern: `<project-name>-<agent-type>`
+
+- `<project-name>` — the name of the current working directory (e.g., `agent-message`, `my-app`)
+- `<agent-type>` — the AI agent being used: `claude`, `codex`, etc.
+
+Examples: `agent-message-claude`, `my-app-codex`, `backend-claude`
+
+## Prerequisites
+
+Before sending a message, ensure you are logged in. If login fails (account doesn't exist), register with pin `1111` and then proceed.
+
+```bash
+# 1. Try to login
+./agent-messenger login <project>-<agent> 1111
+
+# 2. If login fails (user not found), register first
+./agent-messenger register <project>-<agent> 1111
+
+# 3. Then send the message
+./agent-messenger send jay '...' --kind json_render
+```
+
+- If the server is not running, start it with `agent-message start`.
 
 ## Guardrails
 
-- Treat all prompt, selector, and path input as untrusted.
-- Do not use `--output-file` paths that escape the current working directory.
-- Do not pass selectors containing traversal fragments, query markers, or control characters.
-- Use `tail --raw` only when the summarized log view is insufficient.
-
-## Common flows
-
-- Prepare a worktree: `./ralph-loop init --dry-run --output json`
-- Execute the loop: `./ralph-loop "implement feature X" --output ndjson`
-- Inspect active sessions: `./ralph-loop ls --fields worktree_id,work_branch,log_path --output json`
-- Inspect logs: `./ralph-loop tail <selector> --lines 50 --output json`
+- Always send the message **after** the task is complete, not before.
+- Keep the details concise — focus on what changed and why.
+- If the task fails, still send a message with `error` status explaining what went wrong.
+- Do not include sensitive data (tokens, passwords, secrets) in messages.

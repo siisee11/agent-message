@@ -1,15 +1,15 @@
 import { parseMessageContent, type JsonRenderSpec, type Message } from '../api'
 
-export const MESSAGE_PREVIEW_EMPTY = '대화를 시작해 보세요'
-export const MESSAGE_PREVIEW_DELETED = '삭제된 메시지입니다'
+export const MESSAGE_PREVIEW_EMPTY = 'Start a conversation'
+export const MESSAGE_PREVIEW_DELETED = 'This message was deleted'
 export const MESSAGE_PREVIEW_JSON_RENDER = '[json-render]'
 
 function resolveAttachmentLabel(message: Message): string | undefined {
   if (message.attachment_type === 'image') {
-    return '[이미지]'
+    return '[image]'
   }
   if (message.attachment_type === 'file') {
-    return '[파일]'
+    return '[file]'
   }
   return undefined
 }

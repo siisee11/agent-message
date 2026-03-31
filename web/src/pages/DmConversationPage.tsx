@@ -34,7 +34,7 @@ import styles from './DmConversationPage.module.css'
 
 const MESSAGE_PAGE_SIZE = 20
 const REACTION_EMOJI_OPTIONS = ['👍', '❤️', '😂', '🔥', '🎉']
-const TIMESTAMP_FORMATTER = new Intl.DateTimeFormat(undefined, {
+const TIMESTAMP_FORMATTER = new Intl.DateTimeFormat('en-US', {
   month: 'short',
   day: 'numeric',
   hour: '2-digit',
@@ -103,12 +103,12 @@ function inferAttachmentType(file: File): 'image' | 'file' {
 
 function resolveRealtimeStatusLabel(status: string): string {
   if (status === 'open') {
-    return '연결됨'
+    return 'Connected'
   }
   if (status === 'connecting') {
-    return '연결 중'
+    return 'Connecting'
   }
-  return '대기 중'
+  return 'Idle'
 }
 
 function scrollTimelineToBottom(timeline: HTMLDivElement | null): void {
@@ -261,7 +261,7 @@ export function DmConversationPage() {
       scrollTimelineToBottom(timelineRef.current)
     },
     onError: (error: unknown) => {
-      setComposerError(resolveErrorMessage(error, '메시지를 전송하지 못했습니다.'))
+      setComposerError(resolveErrorMessage(error, 'Failed to send the message.'))
     },
   })
 
@@ -282,7 +282,7 @@ export function DmConversationPage() {
       await queryClient.invalidateQueries({ queryKey: ['conversations'] })
     },
     onError: (error: unknown) => {
-      setComposerError(resolveErrorMessage(error, '메시지를 수정하지 못했습니다.'))
+      setComposerError(resolveErrorMessage(error, 'Failed to edit the message.'))
     },
   })
 
@@ -305,7 +305,7 @@ export function DmConversationPage() {
       await queryClient.invalidateQueries({ queryKey: ['conversations'] })
     },
     onError: (error: unknown) => {
-      setComposerError(resolveErrorMessage(error, '메시지를 삭제하지 못했습니다.'))
+      setComposerError(resolveErrorMessage(error, 'Failed to delete the message.'))
     },
   })
 
@@ -468,7 +468,7 @@ export function DmConversationPage() {
 
   function beginEdit(details: MessageDetails): void {
     if (!canEditMessageForUser(details.message, user?.id)) {
-      setComposerError('json-render 메시지는 수정할 수 없습니다.')
+      setComposerError('json-render messages cannot be edited.')
       setActionMenu(null)
       return
     }
@@ -513,12 +513,12 @@ export function DmConversationPage() {
       if (!editingDetails || !canEditMessageForUser(editingDetails.message, user?.id)) {
         setEditingTarget(null)
         setComposerText('')
-        setComposerError('json-render 메시지는 수정할 수 없습니다.')
+        setComposerError('json-render messages cannot be edited.')
         return
       }
 
       if (trimmedContent === '') {
-        setComposerError('수정 메시지는 비어 있을 수 없습니다.')
+        setComposerError('Edited messages cannot be empty.')
         return
       }
       editMessageMutation.mutate({
@@ -554,7 +554,7 @@ export function DmConversationPage() {
       })
     },
     onError: (error: unknown) => {
-      setComposerError(resolveErrorMessage(error, '리액션을 업데이트하지 못했습니다.'))
+      setComposerError(resolveErrorMessage(error, 'Failed to update the reaction.'))
     },
   })
 
@@ -592,7 +592,7 @@ export function DmConversationPage() {
         <header className={styles.header}>
           <div className={styles.headerBar}>
             <button className={styles.backButton} onClick={() => navigate('/')} type="button">
-              ← 대화 목록
+              ← Conversations
             </button>
             <h2 className={styles.title}>{headerTitle}</h2>
             <span
@@ -621,7 +621,7 @@ export function DmConversationPage() {
           {timelineError ? <p className={styles.error}>{timelineError}</p> : null}
 
           <div className={styles.timelineViewport} ref={timelineRef}>
-            <div ref={timelineContentRef}>
+            <div className={styles.timelineContent} ref={timelineContentRef}>
               {messagePagesQuery.isLoading ? <p className={styles.muted}>Loading messages...</p> : null}
               {messagePagesQuery.isSuccess && messagesAscending.length === 0 ? (
                 <p className={styles.muted}>No messages yet in this conversation.</p>
@@ -645,7 +645,7 @@ export function DmConversationPage() {
                             <span className={styles.timelineMetaRight}>
                               <span className={styles.timestamp}>{formatMessageTimestamp(details.message)}</span>
                               {!details.message.deleted && details.message.edited ? (
-                                <span className={styles.editedBadge}>[수정됨]</span>
+                                <span className={styles.editedBadge}>[edited]</span>
                               ) : null}
                               {canDeleteMessageForUser(details.message, user?.id) ? (
                                 <button
@@ -704,7 +704,7 @@ export function DmConversationPage() {
                               rel="noreferrer"
                               target="_blank"
                             >
-                              첨부 파일 다운로드
+                              Download attachment
                             </a>
                           ) : null}
 

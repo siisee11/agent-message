@@ -1,8 +1,6 @@
 .root {
   margin-top: 0.42rem;
-}
-
-.root {
+  width: 100%;
   max-width: 100%;
 }
 

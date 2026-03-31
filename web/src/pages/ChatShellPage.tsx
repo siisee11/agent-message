@@ -8,7 +8,7 @@ import { summarizeLastMessagePreview } from '../messages/messagePresentation'
 import { useRealtime } from '../realtime'
 import styles from './ChatShellPage.module.css'
 
-const DATE_FORMATTER = new Intl.DateTimeFormat(undefined, {
+const DATE_FORMATTER = new Intl.DateTimeFormat('en-US', {
   month: 'short',
   day: 'numeric',
   hour: '2-digit',
@@ -92,7 +92,7 @@ export function ChatShellPage() {
       navigate(`/dm/${conversationDetails.conversation.id}`)
     },
     onError: (error: unknown) => {
-      setStartDmError(resolveErrorMessage(error, '대화를 시작하지 못했습니다.'))
+      setStartDmError(resolveErrorMessage(error, 'Failed to start the conversation.'))
     },
   })
 
@@ -102,7 +102,7 @@ export function ChatShellPage() {
       navigate('/login', { replace: true })
     },
     onError: (error: unknown) => {
-      setStartDmError(resolveErrorMessage(error, '로그아웃하지 못했습니다.'))
+      setStartDmError(resolveErrorMessage(error, 'Failed to sign out.'))
     },
   })
 
@@ -182,8 +182,8 @@ export function ChatShellPage() {
 
         <section className={styles.composerSection}>
           <div className={styles.sectionHeading}>
-            <h2 className={styles.sectionTitle}>새 대화 시작</h2>
-            <p className={styles.sectionCopy}>사용자명을 입력하면 바로 DM을 열 수 있습니다.</p>
+            <h2 className={styles.sectionTitle}>Start a conversation</h2>
+            <p className={styles.sectionCopy}>Enter a username to open a DM right away.</p>
           </div>
           <form className={styles.searchForm} onSubmit={handleStartDmSubmission}>
             <input
@@ -204,7 +204,9 @@ export function ChatShellPage() {
           {startDmError ? <p className={styles.errorMessage}>{startDmError}</p> : null}
           {hasSearchInput && userSearchQuery.isLoading ? <p className={styles.statusText}>Searching users...</p> : null}
           {hasSearchInput && userSearchQuery.isError ? (
-            <p className={styles.errorMessage}>{resolveErrorMessage(userSearchQuery.error, '사용자를 찾을 수 없습니다.')}</p>
+            <p className={styles.errorMessage}>
+              {resolveErrorMessage(userSearchQuery.error, 'Failed to find users.')}
+            </p>
           ) : null}
           {hasSearchInput && userSearchQuery.isSuccess ? (
             <ul className={styles.searchResults}>
@@ -230,21 +232,23 @@ export function ChatShellPage() {
 
         <section className={styles.listSection}>
           <div className={styles.sectionHeading}>
-            <h2 className={styles.sectionTitle}>대화</h2>
+            <h2 className={styles.sectionTitle}>Conversations</h2>
             <p className={styles.sectionCopy}>
-              {conversations.length > 0 ? `${conversations.length}개의 대화` : '아직 열린 대화가 없습니다.'}
+              {conversations.length > 0
+                ? `${conversations.length} conversation${conversations.length === 1 ? '' : 's'}`
+                : 'No open conversations yet.'}
             </p>
           </div>
           {conversationsQuery.isLoading ? <p className={styles.statusText}>Loading conversations...</p> : null}
           {conversationsQuery.isError ? (
             <p className={styles.errorMessage}>
-              {resolveErrorMessage(conversationsQuery.error, '대화 목록을 불러오지 못했습니다.')}
+              {resolveErrorMessage(conversationsQuery.error, 'Failed to load conversations.')}
             </p>
           ) : null}
           {conversationsQuery.isSuccess && conversations.length === 0 ? (
             <div className={styles.emptyState}>
-              <p className={styles.emptyTitle}>대화가 없습니다</p>
-              <p className={styles.emptyCopy}>위에서 사용자명을 검색해 첫 DM을 시작해 보세요.</p>
+              <p className={styles.emptyTitle}>No conversations yet</p>
+              <p className={styles.emptyCopy}>Search for a username above to start your first DM.</p>
             </div>
           ) : null}
           {conversationsQuery.isSuccess && conversations.length > 0 ? (

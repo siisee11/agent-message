@@ -58,7 +58,7 @@ describe('message presentation helpers', () => {
       attachment_url: 'https://example.test/image.png',
       json_render_spec: { root: 'r1', elements: {} },
     })
-    expect(summarizeLastMessagePreview(imageMessage)).toBe('[이미지] [json-render]')
+    expect(summarizeLastMessagePreview(imageMessage)).toBe('[image] [json-render]')
 
     const fileMessage = createMessage({
       kind: 'json_render',
@@ -66,7 +66,7 @@ describe('message presentation helpers', () => {
       attachment_url: 'https://example.test/file.pdf',
       json_render_spec: { root: 'r1', elements: {} },
     })
-    expect(summarizeLastMessagePreview(fileMessage)).toBe('[파일] [json-render]')
+    expect(summarizeLastMessagePreview(fileMessage)).toBe('[file] [json-render]')
   })
 
   it('allows delete but disallows edit for json_render messages', () => {

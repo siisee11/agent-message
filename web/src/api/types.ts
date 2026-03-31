@@ -38,8 +38,6 @@ export interface Message {
   sender_id: string
   content?: string
   kind?: MessageKind | null
-  message_kind?: MessageKind | null
-  json_render?: JsonRenderSpec | null
   json_render_spec?: JsonRenderSpec | null
   attachment_url?: string
   attachment_type?: AttachmentType

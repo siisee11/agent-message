@@ -2,42 +2,25 @@ import type { ConversationSummary, JsonRenderSpec, Message, MessageDetails, Mess
 
 export const DEFAULT_MESSAGE_KIND: MessageKind = 'text'
 
-function resolveRawMessageKind(message: Pick<Message, 'kind' | 'message_kind'>): unknown {
-  if (message.kind !== undefined && message.kind !== null) {
-    return message.kind
-  }
-  return message.message_kind
-}
-
-export function resolveMessageKind(message: Pick<Message, 'kind' | 'message_kind'>): MessageKind {
-  const rawKind = resolveRawMessageKind(message)
-  if (rawKind === 'json_render') {
+export function resolveMessageKind(message: Pick<Message, 'kind'>): MessageKind {
+  if (message.kind === 'json_render') {
     return 'json_render'
   }
   return DEFAULT_MESSAGE_KIND
 }
 
-export function isJsonRenderMessage(message: Pick<Message, 'kind' | 'message_kind'>): boolean {
+export function isJsonRenderMessage(message: Pick<Message, 'kind'>): boolean {
   return resolveMessageKind(message) === 'json_render'
 }
 
-export function resolveJsonRenderSpec(message: Pick<Message, 'json_render' | 'json_render_spec'>): JsonRenderSpec | null {
-  if (message.json_render_spec !== undefined && message.json_render_spec !== null) {
-    return message.json_render_spec
-  }
-  if (message.json_render !== undefined && message.json_render !== null) {
-    return message.json_render
-  }
-  return null
+export function resolveJsonRenderSpec(message: Pick<Message, 'json_render_spec'>): JsonRenderSpec | null {
+  return message.json_render_spec ?? null
 }
 
 export function normalizeMessageProtocol(message: Message): Message {
-  const kind = resolveMessageKind(message)
-  const jsonRenderSpec = resolveJsonRenderSpec(message)
   return {
     ...message,
-    kind,
-    json_render_spec: jsonRenderSpec ?? undefined,
+    kind: resolveMessageKind(message),
   }
 }
 
@@ -48,18 +31,17 @@ export interface ParsedMessageContent {
 }
 
 export function parseMessageContent(message: Message): ParsedMessageContent {
-  const normalizedMessage = normalizeMessageProtocol(message)
-  if (normalizedMessage.kind === 'json_render') {
+  if (resolveMessageKind(message) === 'json_render') {
     return {
       kind: 'json_render',
       textContent: null,
-      jsonRenderSpec: resolveJsonRenderSpec(normalizedMessage),
+      jsonRenderSpec: resolveJsonRenderSpec(message),
     }
   }
 
   return {
     kind: 'text',
-    textContent: normalizedMessage.content ?? null,
+    textContent: message.content ?? null,
     jsonRenderSpec: null,
   }
 }

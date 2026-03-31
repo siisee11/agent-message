@@ -1,4 +1,47 @@
+@import "tailwindcss";
+@source "../../node_modules/@json-render/shadcn/dist";
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
+}
+
 :root {
+  --background: #ffffff;
+  --foreground: #10213f;
+  --card: #ffffff;
+  --card-foreground: #152b53;
+  --primary: #2454d6;
+  --primary-foreground: #f8fbff;
+  --secondary: #e5efff;
+  --secondary-foreground: #1f3f78;
+  --muted: #f5f9ff;
+  --muted-foreground: #4a6291;
+  --accent: #edf4ff;
+  --accent-foreground: #18305c;
+  --destructive: #b8324f;
+  --border: #c8dafc;
+  --input: #d9e4fb;
+  --ring: #91aff3;
+  --radius: 0.75rem;
   font-family: "Segoe UI", "Noto Sans KR", system-ui, -apple-system, sans-serif;
   line-height: 1.4;
   font-weight: 400;

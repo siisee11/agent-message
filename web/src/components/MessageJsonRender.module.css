@@ -2,30 +2,8 @@
   margin-top: 0.42rem;
 }
 
-.stack {
-  display: grid;
-  gap: 0.34rem;
-}
-
-.text {
-  margin: 0;
-  font-size: 0.9rem;
-  color: #1c335d;
-  white-space: pre-wrap;
-  word-break: break-word;
-}
-
-.badge {
-  display: inline-flex;
-  align-items: center;
-  width: fit-content;
-  border: 1px solid #bfd0f2;
-  border-radius: 999px;
-  background: #f5f9ff;
-  color: #1e3b6d;
-  font-size: 0.74rem;
-  font-weight: 700;
-  padding: 0.16rem 0.42rem;
+.root {
+  max-width: 100%;
 }
 
 .fallback {

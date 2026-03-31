@@ -1,7 +1,8 @@
-import { JSONUIProvider, Renderer, type ComponentRegistry } from '@json-render/react'
+import { JSONUIProvider, Renderer, type ComponentRenderer } from '@json-render/react'
 import type { Spec } from '@json-render/core'
 import type { JsonRenderSpec } from '../api'
 import styles from './MessageJsonRender.module.css'
+import { messageJsonRenderRegistry } from './messageJsonRenderRegistry'
 
 interface MessageJsonRenderProps {
   spec: JsonRenderSpec | null
@@ -57,25 +58,7 @@ function toSpec(value: JsonRenderSpec | null): Spec | null {
   } as Spec
 }
 
-const messageJsonRenderRegistry: ComponentRegistry = {
-  Stack: ({ children }) => <div className={styles.stack}>{children}</div>,
-  Text: ({ element }) => {
-    const text = typeof element.props?.text === 'string' ? element.props.text : ''
-    if (text.trim() === '') {
-      return null
-    }
-    return <p className={styles.text}>{text}</p>
-  },
-  Badge: ({ element }) => {
-    const label = typeof element.props?.label === 'string' ? element.props.label : ''
-    if (label.trim() === '') {
-      return null
-    }
-    return <span className={styles.badge}>{label}</span>
-  },
-}
-
-const messageJsonRenderFallback: ComponentRegistry[string] = ({ element }) => {
+const messageJsonRenderFallback: ComponentRenderer = ({ element }) => {
   const typedElement = element as BareUIElement
   return <p className={styles.fallback}>Unsupported component: {typedElement.type}</p>
 }

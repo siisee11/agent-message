@@ -15,7 +15,7 @@ describe('MessageJsonRender', () => {
             },
             'badge-1': {
               type: 'Badge',
-              props: { label: 'Agent' },
+              props: { text: 'Agent' },
             },
             'text-1': {
               type: 'Text',

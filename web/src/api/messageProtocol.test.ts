@@ -25,12 +25,9 @@ describe('message protocol parsing', () => {
     expect(resolveMessageKind(unknownKindMessage)).toBe('text')
   })
 
-  it('accepts both kind and message_kind for json_render', () => {
+  it('reads json_render only from kind', () => {
     const kindMessage = createMessage({ kind: 'json_render' })
     expect(resolveMessageKind(kindMessage)).toBe('json_render')
-
-    const messageKindMessage = createMessage({ message_kind: 'json_render' })
-    expect(resolveMessageKind(messageKindMessage)).toBe('json_render')
   })
 
   it('keeps text content as text even when it looks like json', () => {
@@ -57,13 +54,11 @@ describe('message protocol parsing', () => {
     })
   })
 
-  it('prefers json_render_spec over json_render when both exist', () => {
+  it('reads json_render_spec from the canonical field only', () => {
     const preferred = { root: 'preferred', elements: {} }
-    const fallback = { root: 'fallback', elements: {} }
     const message = createMessage({
       kind: 'json_render',
       json_render_spec: preferred,
-      json_render: fallback,
     })
     expect(resolveJsonRenderSpec(message)).toBe(preferred)
   })

@@ -6,7 +6,7 @@ import (
 	"sort"
 	"strings"
 
-	"agent-messenger/cli/internal/config"
+	"agent-message/cli/internal/config"
 
 	"github.com/spf13/cobra"
 )
@@ -134,7 +134,7 @@ func resolveStoredProfile(cfg config.Config, rawName string) (string, config.Pro
 		}
 	}
 
-	return "", config.Profile{}, fmt.Errorf("profile %q not found; run `agent-messenger login <username> <pin>` first", name)
+	return "", config.Profile{}, fmt.Errorf("profile %q not found; run `agent-message login <username> <pin>` first", name)
 }
 
 func sortedProfileNames(profiles map[string]config.Profile) []string {

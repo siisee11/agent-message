@@ -1,4 +1,4 @@
-# Agent Messenger — Project Specification
+# Agent Message — Project Specification
 
 A lightweight Telegram-inspired messenger with a server, web client, and CLI client.
 
@@ -187,10 +187,10 @@ created_at timestamp
 ## CLI Client Features
 
 ```
-Usage: agent-messenger <command> [flags]
+Usage: agent-message <command> [flags]
 
 Auth:
-  login <username> <pin>    Log in (stores token in ~/.agent-messenger/config)
+  login <username> <pin>    Log in (stores token in ~/.agent-message/config)
   register <username> <pin> Register new account
   logout                    Clear stored token
 
@@ -217,7 +217,7 @@ Watch mode:
   watch <username>          Stream incoming messages in real-time (SSE)
 ```
 
-Config is stored at `~/.agent-messenger/config` (JSON with server URL and session token).
+Config is stored at `~/.agent-message/config` (JSON with server URL and session token).
 
 ---
 
@@ -257,7 +257,7 @@ Config is stored at `~/.agent-messenger/config` (JSON with server URL and sessio
 ## Project Structure
 
 ```
-agent-messenger/
+agent-message/
 ├── server/              # Go server
 │   ├── main.go
 │   ├── api/             # HTTP handlers

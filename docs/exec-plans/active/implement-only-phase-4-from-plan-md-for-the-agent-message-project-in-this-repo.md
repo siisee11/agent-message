@@ -1,4 +1,4 @@
-# Execution Plan: Implement Only Phase 4 from PLAN.md for Agent Messenger
+# Execution Plan: Implement Only Phase 4 from PLAN.md for Agent Message
 
 ## Goal / scope
 Implement only Phase 4 from `PLAN.md` for the web client foundation under `web/`:
@@ -25,9 +25,9 @@ Reviewed docs for this plan:
 - `AGENTS.md`
 - `PLAN.md`
 - `SPEC.md`
-- `docs/exec-plans/active/implement-only-phase-1-from-plan-md-for-the-agent-messenger-project-in-this-repo.md`
-- `docs/exec-plans/active/implement-only-phase-2-from-plan-md-for-the-agent-messenger-project-in-this-repo.md`
-- `docs/exec-plans/active/implement-only-phase-3-from-plan-md-for-the-agent-messenger-project-in-this-repo.md`
+- `docs/exec-plans/active/implement-only-phase-1-from-plan-md-for-the-agent-message-project-in-this-repo.md`
+- `docs/exec-plans/active/implement-only-phase-2-from-plan-md-for-the-agent-message-project-in-this-repo.md`
+- `docs/exec-plans/active/implement-only-phase-3-from-plan-md-for-the-agent-message-project-in-this-repo.md`
 - `docs/exec-plans/active/continue-only-the-remaining-phase-3-milestones-from-the-current-branch-state-for.md`
 
 Referenced but missing (noted once):
@@ -45,7 +45,7 @@ Referenced but missing (noted once):
 - Verified worktree initialization with:
   - `./ralph-loop init --base-branch main --work-branch ralph-phase-4-web-client-foundation --output json`
 - Verified returned values match prepared environment:
-  - `worktree_path=/Users/dev/git/agent-messenger/.worktrees/phase-4-web-client-foundation`
+  - `worktree_path=/Users/dev/git/agent-message/.worktrees/phase-4-web-client-foundation`
   - `work_branch=ralph-phase-4-web-client-foundation`
   - `base_branch=main`
   - `worktree_id=phase-4-web-client-foundation-1c6918d3`
@@ -131,8 +131,8 @@ Referenced but missing (noted once):
 - `AGENTS.md`
 - `PLAN.md`
 - `SPEC.md`
-- `docs/exec-plans/active/implement-only-phase-1-from-plan-md-for-the-agent-messenger-project-in-this-repo.md`
-- `docs/exec-plans/active/implement-only-phase-2-from-plan-md-for-the-agent-messenger-project-in-this-repo.md`
-- `docs/exec-plans/active/implement-only-phase-3-from-plan-md-for-the-agent-messenger-project-in-this-repo.md`
+- `docs/exec-plans/active/implement-only-phase-1-from-plan-md-for-the-agent-message-project-in-this-repo.md`
+- `docs/exec-plans/active/implement-only-phase-2-from-plan-md-for-the-agent-message-project-in-this-repo.md`
+- `docs/exec-plans/active/implement-only-phase-3-from-plan-md-for-the-agent-message-project-in-this-repo.md`
 - `docs/exec-plans/active/continue-only-the-remaining-phase-3-milestones-from-the-current-branch-state-for.md`
-- `docs/exec-plans/active/implement-only-phase-4-from-plan-md-for-the-agent-messenger-project-in-this-repo.md`
+- `docs/exec-plans/active/implement-only-phase-4-from-plan-md-for-the-agent-message-project-in-this-repo.md`

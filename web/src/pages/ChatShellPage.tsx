@@ -157,7 +157,7 @@ export function ChatShellPage() {
           <div className={styles.headerTop}>
             <div>
               <p className={styles.eyebrow}>Messages</p>
-              <h1 className={styles.brand}>Agent Messenger</h1>
+              <h1 className={styles.brand}>Agent Message</h1>
             </div>
             <button
               className={styles.logoutButton}

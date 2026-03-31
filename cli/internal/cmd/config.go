@@ -6,8 +6,8 @@ import (
 	"fmt"
 	"strings"
 
-	"agent-messenger/cli/internal/api"
-	"agent-messenger/cli/internal/config"
+	"agent-message/cli/internal/api"
+	"agent-message/cli/internal/config"
 
 	"github.com/spf13/cobra"
 )

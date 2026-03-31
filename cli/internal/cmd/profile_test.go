@@ -4,7 +4,7 @@ import (
 	"strings"
 	"testing"
 
-	"agent-messenger/cli/internal/config"
+	"agent-message/cli/internal/config"
 )
 
 func TestRunProfileSwitchActivatesStoredProfile(t *testing.T) {

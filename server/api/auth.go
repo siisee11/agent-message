@@ -10,8 +10,8 @@ import (
 	"strings"
 	"time"
 
-	"agent-messenger/server/models"
-	"agent-messenger/server/store"
+	"agent-message/server/models"
+	"agent-message/server/store"
 
 	"github.com/google/uuid"
 	"golang.org/x/crypto/bcrypt"

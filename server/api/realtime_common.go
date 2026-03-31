@@ -4,8 +4,8 @@ import (
 	"net/http"
 	"strings"
 
-	"agent-messenger/server/models"
-	"agent-messenger/server/store"
+	"agent-message/server/models"
+	"agent-message/server/store"
 )
 
 const (

@@ -10,7 +10,7 @@ import {
 import { ApiError, type AuthResponse, type UserProfile } from '../api'
 import { apiClient } from '../api/runtime'
 
-const AUTH_TOKEN_STORAGE_KEY = 'agent_messenger.auth_token'
+const AUTH_TOKEN_STORAGE_KEY = 'agent_message.auth_token'
 
 type AuthStatus = 'loading' | 'authenticated' | 'unauthenticated'
 
@@ -172,4 +172,3 @@ export function useAuth(): AuthContextValue {
   }
   return context
 }
-

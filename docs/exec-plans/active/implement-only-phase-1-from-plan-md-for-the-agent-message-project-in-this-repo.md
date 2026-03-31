@@ -1,4 +1,4 @@
-# Execution Plan: Implement Only Phase 1 from PLAN.md for Agent Messenger
+# Execution Plan: Implement Only Phase 1 from PLAN.md for Agent Message
 
 ## Goal / scope
 Implement only Phase 1 from `PLAN.md` for the server foundation:
@@ -28,7 +28,7 @@ Out of scope: all Phase 2+ API, WebSocket behaviors, web client work, CLI work, 
 - Relevant docs reviewed: `AGENTS.md`, `PLAN.md`, `SPEC.md`.
 - Not found: `ARCHITECTURE.md`, `docs/PLANS.md`.
 - M1 completed:
-  - Added `server/go.mod` with module `agent-messenger/server`.
+  - Added `server/go.mod` with module `agent-message/server`.
   - Added baseline package structure: `server/api/`, `server/ws/`, `server/store/`, `server/models/`.
   - Added compile-safe wiring:
     - `server/main.go` bootstraps HTTP server on `:8080` with router dependencies.
@@ -116,7 +116,7 @@ Out of scope: all Phase 2+ API, WebSocket behaviors, web client work, CLI work, 
     - Updated `server/api/auth_test.go` for middleware-enforced logout semantics.
   - Implemented env-configured startup in `server/main.go`:
     - `SERVER_ADDR` (default `:8080`)
-    - `SQLITE_DSN` (default `./agent_messenger.sqlite`)
+    - `SQLITE_DSN` (default `./agent_message.sqlite`)
     - `CORS_ALLOWED_ORIGINS` (default `*`, CSV supported)
     - Startup now initializes `store.NewSQLiteStore` (with migration auto-apply) instead of noop store.
   - Added config parser tests in `server/main_test.go`.
@@ -146,4 +146,4 @@ Out of scope: all Phase 2+ API, WebSocket behaviors, web client work, CLI work, 
 - `AGENTS.md`
 - `PLAN.md`
 - `SPEC.md`
-- Target plan file: `docs/exec-plans/active/implement-only-phase-1-from-plan-md-for-the-agent-messenger-project-in-this-repo.md`
+- Target plan file: `docs/exec-plans/active/implement-only-phase-1-from-plan-md-for-the-agent-message-project-in-this-repo.md`

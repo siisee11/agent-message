@@ -25,9 +25,9 @@ Docs reviewed for this continuation plan:
 - `AGENTS.md`
 - `PLAN.md`
 - `SPEC.md`
-- `docs/exec-plans/active/implement-only-phase-1-from-plan-md-for-the-agent-messenger-project-in-this-repo.md`
-- `docs/exec-plans/active/implement-only-phase-2-from-plan-md-for-the-agent-messenger-project-in-this-repo.md`
-- `docs/exec-plans/active/implement-only-phase-3-from-plan-md-for-the-agent-messenger-project-in-this-repo.md`
+- `docs/exec-plans/active/implement-only-phase-1-from-plan-md-for-the-agent-message-project-in-this-repo.md`
+- `docs/exec-plans/active/implement-only-phase-2-from-plan-md-for-the-agent-message-project-in-this-repo.md`
+- `docs/exec-plans/active/implement-only-phase-3-from-plan-md-for-the-agent-message-project-in-this-repo.md`
 
 Referenced but missing (noted once):
 - `ARCHITECTURE.md`
@@ -45,7 +45,7 @@ Referenced but missing (noted once):
 - Verified worktree setup using:
   - `./ralph-loop init --base-branch main --work-branch ralph-phase-3-websocket-reactions --output json`
 - Verified returned values match prepared environment:
-  - `worktree_path=/Users/dev/git/agent-messenger/.worktrees/phase-3-websocket-reactions`
+  - `worktree_path=/Users/dev/git/agent-message/.worktrees/phase-3-websocket-reactions`
   - `work_branch=ralph-phase-3-websocket-reactions`
   - `base_branch=main`
   - `worktree_id=phase-3-websocket-reactions-b4cb9be5`
@@ -120,7 +120,7 @@ Referenced but missing (noted once):
 - `AGENTS.md`
 - `PLAN.md`
 - `SPEC.md`
-- `docs/exec-plans/active/implement-only-phase-1-from-plan-md-for-the-agent-messenger-project-in-this-repo.md`
-- `docs/exec-plans/active/implement-only-phase-2-from-plan-md-for-the-agent-messenger-project-in-this-repo.md`
-- `docs/exec-plans/active/implement-only-phase-3-from-plan-md-for-the-agent-messenger-project-in-this-repo.md`
+- `docs/exec-plans/active/implement-only-phase-1-from-plan-md-for-the-agent-message-project-in-this-repo.md`
+- `docs/exec-plans/active/implement-only-phase-2-from-plan-md-for-the-agent-message-project-in-this-repo.md`
+- `docs/exec-plans/active/implement-only-phase-3-from-plan-md-for-the-agent-message-project-in-this-repo.md`
 - `docs/exec-plans/active/continue-only-the-remaining-phase-3-milestones-from-the-current-branch-state-for.md`

@@ -10,7 +10,7 @@ import (
 	"strings"
 	"time"
 
-	"agent-messenger/server/models"
+	"agent-message/server/models"
 
 	_ "modernc.org/sqlite"
 )

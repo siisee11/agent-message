@@ -1,4 +1,4 @@
-# Execution Plan: Implement Only Phase 6 from PLAN.md for Agent Messenger
+# Execution Plan: Implement Only Phase 6 from PLAN.md for Agent Message
 
 ## Goal / scope
 Implement only Phase 6 from `PLAN.md`: build the full `msgr` CLI client in Go under `cli/` against the existing server REST/WebSocket contract.
@@ -21,12 +21,12 @@ Docs reviewed for this planning step:
 - `AGENTS.md`
 - `PLAN.md`
 - `SPEC.md`
-- `docs/exec-plans/active/implement-only-phase-1-from-plan-md-for-the-agent-messenger-project-in-this-repo.md`
-- `docs/exec-plans/active/implement-only-phase-2-from-plan-md-for-the-agent-messenger-project-in-this-repo.md`
-- `docs/exec-plans/active/implement-only-phase-3-from-plan-md-for-the-agent-messenger-project-in-this-repo.md`
+- `docs/exec-plans/active/implement-only-phase-1-from-plan-md-for-the-agent-message-project-in-this-repo.md`
+- `docs/exec-plans/active/implement-only-phase-2-from-plan-md-for-the-agent-message-project-in-this-repo.md`
+- `docs/exec-plans/active/implement-only-phase-3-from-plan-md-for-the-agent-message-project-in-this-repo.md`
 - `docs/exec-plans/active/continue-only-the-remaining-phase-3-milestones-from-the-current-branch-state-for.md`
-- `docs/exec-plans/active/implement-only-phase-4-from-plan-md-for-the-agent-messenger-project-in-this-repo.md`
-- `docs/exec-plans/active/implement-only-phase-5-from-plan-md-for-the-agent-messenger-project-in-this-repo.md`
+- `docs/exec-plans/active/implement-only-phase-4-from-plan-md-for-the-agent-message-project-in-this-repo.md`
+- `docs/exec-plans/active/implement-only-phase-5-from-plan-md-for-the-agent-message-project-in-this-repo.md`
 
 Referenced but missing (noted once):
 - `ARCHITECTURE.md`
@@ -67,7 +67,7 @@ Referenced but missing (noted once):
 - Verified prepared environment using:
   - `./ralph-loop init --base-branch main --work-branch ralph-phase-6-cli-client`
 - Confirmed returned JSON matches:
-  - `worktree_path=/Users/dev/git/agent-messenger/.worktrees/phase-6-cli-client`
+  - `worktree_path=/Users/dev/git/agent-message/.worktrees/phase-6-cli-client`
   - `work_branch=ralph-phase-6-cli-client`
   - `base_branch=main`
   - `worktree_id=phase-6-cli-client-121b0b8b`
@@ -148,9 +148,9 @@ Referenced but missing (noted once):
 - `AGENTS.md`
 - `PLAN.md`
 - `SPEC.md`
-- `docs/exec-plans/active/implement-only-phase-1-from-plan-md-for-the-agent-messenger-project-in-this-repo.md`
-- `docs/exec-plans/active/implement-only-phase-2-from-plan-md-for-the-agent-messenger-project-in-this-repo.md`
-- `docs/exec-plans/active/implement-only-phase-3-from-plan-md-for-the-agent-messenger-project-in-this-repo.md`
+- `docs/exec-plans/active/implement-only-phase-1-from-plan-md-for-the-agent-message-project-in-this-repo.md`
+- `docs/exec-plans/active/implement-only-phase-2-from-plan-md-for-the-agent-message-project-in-this-repo.md`
+- `docs/exec-plans/active/implement-only-phase-3-from-plan-md-for-the-agent-message-project-in-this-repo.md`
 - `docs/exec-plans/active/continue-only-the-remaining-phase-3-milestones-from-the-current-branch-state-for.md`
-- `docs/exec-plans/active/implement-only-phase-4-from-plan-md-for-the-agent-messenger-project-in-this-repo.md`
-- `docs/exec-plans/active/implement-only-phase-5-from-plan-md-for-the-agent-messenger-project-in-this-repo.md`
+- `docs/exec-plans/active/implement-only-phase-4-from-plan-md-for-the-agent-message-project-in-this-repo.md`
+- `docs/exec-plans/active/implement-only-phase-5-from-plan-md-for-the-agent-message-project-in-this-repo.md`

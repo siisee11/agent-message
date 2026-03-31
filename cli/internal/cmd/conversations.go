@@ -6,7 +6,7 @@ import (
 	"fmt"
 	"strings"
 
-	"agent-messenger/cli/internal/api"
+	"agent-message/cli/internal/api"
 
 	"github.com/spf13/cobra"
 )
@@ -104,7 +104,7 @@ func ensureLoggedIn(rt *Runtime) error {
 	if strings.TrimSpace(rt.Config.Token) != "" {
 		return nil
 	}
-	return errors.New("not logged in; run `agent-messenger login <username> <pin>`")
+	return errors.New("not logged in; run `agent-message login <username> <pin>`")
 }
 
 func resolveOtherUsername(details api.ConversationDetails, requestedUsername string) string {

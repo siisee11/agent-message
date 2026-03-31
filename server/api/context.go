@@ -3,7 +3,7 @@ package api
 import (
 	"context"
 
-	"agent-messenger/server/models"
+	"agent-message/server/models"
 )
 
 type contextKey string

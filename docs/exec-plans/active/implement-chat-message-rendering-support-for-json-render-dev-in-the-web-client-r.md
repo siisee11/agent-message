@@ -25,14 +25,14 @@ Relevant docs reviewed:
 - `PLAN.md`
 - `SPEC.md`
 - `README.md`
-- `docs/exec-plans/active/implement-only-phase-1-from-plan-md-for-the-agent-messenger-project-in-this-repo.md`
-- `docs/exec-plans/active/implement-only-phase-2-from-plan-md-for-the-agent-messenger-project-in-this-repo.md`
-- `docs/exec-plans/active/implement-only-phase-3-from-plan-md-for-the-agent-messenger-project-in-this-repo.md`
+- `docs/exec-plans/active/implement-only-phase-1-from-plan-md-for-the-agent-message-project-in-this-repo.md`
+- `docs/exec-plans/active/implement-only-phase-2-from-plan-md-for-the-agent-message-project-in-this-repo.md`
+- `docs/exec-plans/active/implement-only-phase-3-from-plan-md-for-the-agent-message-project-in-this-repo.md`
 - `docs/exec-plans/active/continue-only-the-remaining-phase-3-milestones-from-the-current-branch-state-for.md`
-- `docs/exec-plans/active/implement-only-phase-4-from-plan-md-for-the-agent-messenger-project-in-this-repo.md`
-- `docs/exec-plans/active/implement-only-phase-5-from-plan-md-for-the-agent-messenger-project-in-this-repo.md`
-- `docs/exec-plans/active/implement-only-phase-6-from-plan-md-for-the-agent-messenger-project-in-this-repo.md`
-- `docs/exec-plans/active/implement-only-phase-7-from-plan-md-for-the-agent-messenger-project-in-this-repo.md`
+- `docs/exec-plans/active/implement-only-phase-4-from-plan-md-for-the-agent-message-project-in-this-repo.md`
+- `docs/exec-plans/active/implement-only-phase-5-from-plan-md-for-the-agent-message-project-in-this-repo.md`
+- `docs/exec-plans/active/implement-only-phase-6-from-plan-md-for-the-agent-message-project-in-this-repo.md`
+- `docs/exec-plans/active/implement-only-phase-7-from-plan-md-for-the-agent-message-project-in-this-repo.md`
 
 Referenced but missing (noted once):
 - `ARCHITECTURE.md`
@@ -48,7 +48,7 @@ Referenced but missing (noted once):
 ## Current progress
 - Ran `./ralph-loop init --base-branch main --work-branch ralph-react19-json-render-chat --output json`.
 - Verified output matches prepared environment:
-  - `worktree_path=/Users/dev/git/agent-messenger/.worktrees/react19-json-render-chat`
+  - `worktree_path=/Users/dev/git/agent-message/.worktrees/react19-json-render-chat`
   - `work_branch=ralph-react19-json-render-chat`
   - `base_branch=main`
   - `worktree_id=react19-json-render-chat-fd2a1bcf`
@@ -156,7 +156,7 @@ Referenced but missing (noted once):
 - `PLAN.md`
 - `SPEC.md`
 - `README.md`
-- `docs/exec-plans/active/implement-only-phase-4-from-plan-md-for-the-agent-messenger-project-in-this-repo.md`
-- `docs/exec-plans/active/implement-only-phase-5-from-plan-md-for-the-agent-messenger-project-in-this-repo.md`
-- `docs/exec-plans/active/implement-only-phase-6-from-plan-md-for-the-agent-messenger-project-in-this-repo.md`
-- `docs/exec-plans/active/implement-only-phase-7-from-plan-md-for-the-agent-messenger-project-in-this-repo.md`
+- `docs/exec-plans/active/implement-only-phase-4-from-plan-md-for-the-agent-message-project-in-this-repo.md`
+- `docs/exec-plans/active/implement-only-phase-5-from-plan-md-for-the-agent-message-project-in-this-repo.md`
+- `docs/exec-plans/active/implement-only-phase-6-from-plan-md-for-the-agent-message-project-in-this-repo.md`
+- `docs/exec-plans/active/implement-only-phase-7-from-plan-md-for-the-agent-message-project-in-this-repo.md`

@@ -1,7 +1,7 @@
 .PHONY: cli-build cli-test cli-clean
 
 CLI_DIR := cli
-CLI_BINARY := agent-messenger
+CLI_BINARY := agent-message
 
 cli-build:
 	cd $(CLI_DIR) && go build -o ../$(CLI_BINARY) .

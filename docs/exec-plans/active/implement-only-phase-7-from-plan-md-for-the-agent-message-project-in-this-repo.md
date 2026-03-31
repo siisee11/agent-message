@@ -1,4 +1,4 @@
-# Execution Plan: Implement Only Phase 7 from PLAN.md for Agent Messenger
+# Execution Plan: Implement Only Phase 7 from PLAN.md for Agent Message
 
 ## Goal / scope
 Implement only Phase 7 from `PLAN.md` in this worktree, reusing existing contracts unless Phase 7 explicitly requires changes.
@@ -26,13 +26,13 @@ Docs reviewed for this plan:
 - `AGENTS.md`
 - `PLAN.md`
 - `SPEC.md`
-- `docs/exec-plans/active/implement-only-phase-1-from-plan-md-for-the-agent-messenger-project-in-this-repo.md`
-- `docs/exec-plans/active/implement-only-phase-2-from-plan-md-for-the-agent-messenger-project-in-this-repo.md`
-- `docs/exec-plans/active/implement-only-phase-3-from-plan-md-for-the-agent-messenger-project-in-this-repo.md`
+- `docs/exec-plans/active/implement-only-phase-1-from-plan-md-for-the-agent-message-project-in-this-repo.md`
+- `docs/exec-plans/active/implement-only-phase-2-from-plan-md-for-the-agent-message-project-in-this-repo.md`
+- `docs/exec-plans/active/implement-only-phase-3-from-plan-md-for-the-agent-message-project-in-this-repo.md`
 - `docs/exec-plans/active/continue-only-the-remaining-phase-3-milestones-from-the-current-branch-state-for.md`
-- `docs/exec-plans/active/implement-only-phase-4-from-plan-md-for-the-agent-messenger-project-in-this-repo.md`
-- `docs/exec-plans/active/implement-only-phase-5-from-plan-md-for-the-agent-messenger-project-in-this-repo.md`
-- `docs/exec-plans/active/implement-only-phase-6-from-plan-md-for-the-agent-messenger-project-in-this-repo.md`
+- `docs/exec-plans/active/implement-only-phase-4-from-plan-md-for-the-agent-message-project-in-this-repo.md`
+- `docs/exec-plans/active/implement-only-phase-5-from-plan-md-for-the-agent-message-project-in-this-repo.md`
+- `docs/exec-plans/active/implement-only-phase-6-from-plan-md-for-the-agent-message-project-in-this-repo.md`
 
 Referenced but missing (noted once):
 - `ARCHITECTURE.md`
@@ -70,7 +70,7 @@ Referenced but missing (noted once):
 - Verified environment initialization:
   - Ran `./ralph-loop init --base-branch main --work-branch ralph-phase-7-integration-polish`.
   - Confirmed JSON values:
-    - `worktree_path=/Users/dev/git/agent-messenger/.worktrees/phase-7-integration-polish`
+    - `worktree_path=/Users/dev/git/agent-message/.worktrees/phase-7-integration-polish`
     - `work_branch=ralph-phase-7-integration-polish`
     - `base_branch=main`
     - `worktree_id=phase-7-integration-polish-8ab3ca8c`
@@ -136,8 +136,8 @@ Referenced but missing (noted once):
     - `server` service built from repo root using `server/Dockerfile`.
     - Server env defaults for Postgres backend:
       - `DB_DRIVER=postgres`
-      - `POSTGRES_DSN=postgres://agent:agent@postgres:5432/agent_messenger?sslmode=disable`
-      - `UPLOAD_DIR=/var/lib/agent-messenger/uploads`
+      - `POSTGRES_DSN=postgres://agent:agent@postgres:5432/agent_message?sslmode=disable`
+      - `UPLOAD_DIR=/var/lib/agent-message/uploads`
       - `SERVER_ADDR=:8080`
       - `CORS_ALLOWED_ORIGINS` for local web dev.
     - Port mappings:
@@ -191,10 +191,10 @@ Referenced but missing (noted once):
 - `AGENTS.md`
 - `PLAN.md`
 - `SPEC.md`
-- `docs/exec-plans/active/implement-only-phase-1-from-plan-md-for-the-agent-messenger-project-in-this-repo.md`
-- `docs/exec-plans/active/implement-only-phase-2-from-plan-md-for-the-agent-messenger-project-in-this-repo.md`
-- `docs/exec-plans/active/implement-only-phase-3-from-plan-md-for-the-agent-messenger-project-in-this-repo.md`
+- `docs/exec-plans/active/implement-only-phase-1-from-plan-md-for-the-agent-message-project-in-this-repo.md`
+- `docs/exec-plans/active/implement-only-phase-2-from-plan-md-for-the-agent-message-project-in-this-repo.md`
+- `docs/exec-plans/active/implement-only-phase-3-from-plan-md-for-the-agent-message-project-in-this-repo.md`
 - `docs/exec-plans/active/continue-only-the-remaining-phase-3-milestones-from-the-current-branch-state-for.md`
-- `docs/exec-plans/active/implement-only-phase-4-from-plan-md-for-the-agent-messenger-project-in-this-repo.md`
-- `docs/exec-plans/active/implement-only-phase-5-from-plan-md-for-the-agent-messenger-project-in-this-repo.md`
-- `docs/exec-plans/active/implement-only-phase-6-from-plan-md-for-the-agent-messenger-project-in-this-repo.md`
+- `docs/exec-plans/active/implement-only-phase-4-from-plan-md-for-the-agent-message-project-in-this-repo.md`
+- `docs/exec-plans/active/implement-only-phase-5-from-plan-md-for-the-agent-message-project-in-this-repo.md`
+- `docs/exec-plans/active/implement-only-phase-6-from-plan-md-for-the-agent-message-project-in-this-repo.md`

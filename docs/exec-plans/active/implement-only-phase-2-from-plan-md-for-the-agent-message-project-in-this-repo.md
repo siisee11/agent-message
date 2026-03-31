@@ -1,4 +1,4 @@
-# Execution Plan: Implement Only Phase 2 from PLAN.md for Agent Messenger
+# Execution Plan: Implement Only Phase 2 from PLAN.md for Agent Message
 
 ## Goal / scope
 Implement only Phase 2 from `PLAN.md` on top of the completed Phase 1 server:
@@ -25,7 +25,7 @@ Phase 1 has already established:
 - Auth endpoints and bearer-token middleware
 - CORS middleware and basic API routing
 
-Required docs reviewed for this plan: `AGENTS.md`, `PLAN.md`, `SPEC.md`, `docs/exec-plans/active/implement-only-phase-1-from-plan-md-for-the-agent-messenger-project-in-this-repo.md`.
+Required docs reviewed for this plan: `AGENTS.md`, `PLAN.md`, `SPEC.md`, `docs/exec-plans/active/implement-only-phase-1-from-plan-md-for-the-agent-message-project-in-this-repo.md`.
 Not found (noted once): `ARCHITECTURE.md`, `docs/PLANS.md`.
 
 ## Milestones
@@ -56,7 +56,7 @@ Not found (noted once): `ARCHITECTURE.md`, `docs/PLANS.md`.
 ## Current progress
 - Phase 2 setup initialization verified with:
   - `./ralph-loop init --base-branch main --work-branch ralph-phase-2-core-rest-api --output json`
-  - Verified JSON fields: `worktree_path=/Users/dev/git/agent-messenger/.worktrees/phase-2-core-rest-api`, `work_branch=ralph-phase-2-core-rest-api`, `base_branch=main`, `worktree_id=phase-2-core-rest-api-8a22ad8c`.
+  - Verified JSON fields: `worktree_path=/Users/dev/git/agent-message/.worktrees/phase-2-core-rest-api`, `work_branch=ralph-phase-2-core-rest-api`, `base_branch=main`, `worktree_id=phase-2-core-rest-api-8a22ad8c`.
 - Execution plan created for Phase 2 implementation.
 - M1 completed:
   - Added Phase 2 API/domain DTOs in `server/models/phase2.go`:
@@ -215,5 +215,5 @@ Not found (noted once): `ARCHITECTURE.md`, `docs/PLANS.md`.
 - `AGENTS.md`
 - `PLAN.md`
 - `SPEC.md`
-- `docs/exec-plans/active/implement-only-phase-1-from-plan-md-for-the-agent-messenger-project-in-this-repo.md`
-- `docs/exec-plans/active/implement-only-phase-2-from-plan-md-for-the-agent-messenger-project-in-this-repo.md`
+- `docs/exec-plans/active/implement-only-phase-1-from-plan-md-for-the-agent-message-project-in-this-repo.md`
+- `docs/exec-plans/active/implement-only-phase-2-from-plan-md-for-the-agent-message-project-in-this-repo.md`

@@ -1,6 +1,6 @@
-# Agent Messenger
+# Agent Message
 
-Agent Messenger is a direct-message stack with three clients:
+Agent Message is a direct-message stack with three clients:
 - HTTP/SSE server (`server/`)
 - Web app (`web/`)
 - CLI (`cli/`)
@@ -25,7 +25,7 @@ go run .
 Default server settings:
 - `SERVER_ADDR=:8080`
 - `DB_DRIVER=sqlite`
-- `SQLITE_DSN=./agent_messenger.sqlite`
+- `SQLITE_DSN=./agent_message.sqlite`
 - `UPLOAD_DIR=./uploads`
 - `CORS_ALLOWED_ORIGINS=*`
 
@@ -46,7 +46,7 @@ This starts:
 - `postgres` on `localhost:5432`
 - `server` on `localhost:8080` with:
   - `DB_DRIVER=postgres`
-  - `POSTGRES_DSN=postgres://agent:agent@postgres:5432/agent_messenger?sslmode=disable`
+  - `POSTGRES_DSN=postgres://agent:agent@postgres:5432/agent_message?sslmode=disable`
 
 To stop and remove containers:
 
@@ -95,7 +95,7 @@ From the project root, you can start the SQLite-backed API server and the produc
 
 This will:
 - build `web/dist`
-- build the Go server binary into `~/.agent-messenger/bin`
+- build the Go server binary into `~/.agent-message/bin`
 - start the API on `127.0.0.1:18080`
 - start the local web gateway on `127.0.0.1:8788`
 
@@ -117,9 +117,9 @@ If you also want to start or stop the named tunnel that serves `https://agent.na
 The repo now includes a publishable npm package surface for macOS (`arm64` and `x64`). The npm command keeps the existing CLI behavior and also adds local stack lifecycle commands:
 
 ```bash
-agent-messenger start
-agent-messenger status
-agent-messenger stop
+agent-message start
+agent-message status
+agent-message stop
 ```
 
 Default npm launcher ports:
@@ -129,9 +129,9 @@ Default npm launcher ports:
 You can override runtime location and ports when needed:
 
 ```bash
-agent-messenger start --runtime-dir /tmp/agent-messenger --api-port 28080 --web-port 28788
-agent-messenger status --runtime-dir /tmp/agent-messenger --api-port 28080 --web-port 28788
-agent-messenger stop --runtime-dir /tmp/agent-messenger
+agent-message start --runtime-dir /tmp/agent-message --api-port 28080 --web-port 28788
+agent-message status --runtime-dir /tmp/agent-message --api-port 28080 --web-port 28788
+agent-message stop --runtime-dir /tmp/agent-message
 ```
 
 When publishing, `npm pack` / `npm publish` will run the package `prepack` hook, which:
@@ -153,10 +153,10 @@ PWA install:
 
 ## Claude Code Skill
 
-Install the agent-messenger CLI skill to give Claude Code full knowledge of this project's CLI commands, flags, and json_render component catalog:
+Install the Agent Message CLI skill to give Claude Code full knowledge of this project's CLI commands, flags, and json_render component catalog:
 
 ```bash
-npx skills add https://github.com/siisee11/agent-messenger --skill agent-messenger-cli
+npx skills add https://github.com/siisee11/agent-message --skill agent-message-cli
 ```
 
 ## CLI Quickstart
@@ -192,7 +192,7 @@ go run . --server-url http://localhost:8080 unreact 1 👍
 go run . --server-url http://localhost:8080 watch bob
 ```
 
-CLI config is stored at `~/.agent-messenger/config` by default.
+CLI config is stored at `~/.agent-message/config` by default.
 Each successful `login` or `register` also saves a named profile, and `go run . profile switch <username>` swaps the active account locally.
 
 ## Validation and Constraints (Phase 7)

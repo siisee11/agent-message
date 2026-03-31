@@ -2,7 +2,7 @@
 set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-RUNTIME_DIR="${HOME}/.agent-messenger"
+RUNTIME_DIR="${HOME}/.agent-message"
 INCLUDE_TUNNEL=0
 
 for arg in "$@"; do
@@ -74,7 +74,7 @@ kill_matching_processes() {
 kill_from_pidfile "${RUNTIME_DIR}/server.pid"
 kill_from_pidfile "${RUNTIME_DIR}/gateway.pid"
 
-kill_matching_processes "${RUNTIME_DIR}/bin/agent-messenger-server"
+kill_matching_processes "${RUNTIME_DIR}/bin/agent-message-server"
 kill_matching_processes "${ROOT_DIR}/deploy/agent_gateway.mjs"
 
 if [[ "$INCLUDE_TUNNEL" -eq 1 ]]; then

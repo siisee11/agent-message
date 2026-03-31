@@ -1,4 +1,4 @@
-module agent-messenger/cli
+module agent-message/cli
 
 go 1.26
 

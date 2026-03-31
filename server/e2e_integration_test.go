@@ -12,10 +12,10 @@ import (
 	"strings"
 	"testing"
 
-	"agent-messenger/server/api"
-	"agent-messenger/server/models"
-	"agent-messenger/server/realtime"
-	"agent-messenger/server/store"
+	"agent-message/server/api"
+	"agent-message/server/models"
+	"agent-message/server/realtime"
+	"agent-message/server/store"
 )
 
 func TestServerStackE2EHappyPath(t *testing.T) {

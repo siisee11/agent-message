@@ -51,9 +51,9 @@ run('npm', ['run', 'build'], {
 cpSync(join(rootDir, 'web', 'dist'), webDistDir, { recursive: true })
 cpSync(join(rootDir, 'deploy', 'agent_gateway.mjs'), join(runtimeDir, 'agent_gateway.mjs'))
 
-buildGoBinary('server', join(runtimeBinDir, 'agent-messenger-server-darwin-arm64'), 'arm64')
-buildGoBinary('server', join(runtimeBinDir, 'agent-messenger-server-darwin-amd64'), 'amd64')
-buildGoBinary('cli', join(runtimeBinDir, 'agent-messenger-cli-darwin-arm64'), 'arm64')
-buildGoBinary('cli', join(runtimeBinDir, 'agent-messenger-cli-darwin-amd64'), 'amd64')
+buildGoBinary('server', join(runtimeBinDir, 'agent-message-server-darwin-arm64'), 'arm64')
+buildGoBinary('server', join(runtimeBinDir, 'agent-message-server-darwin-amd64'), 'amd64')
+buildGoBinary('cli', join(runtimeBinDir, 'agent-message-cli-darwin-arm64'), 'arm64')
+buildGoBinary('cli', join(runtimeBinDir, 'agent-message-cli-darwin-amd64'), 'amd64')
 
 console.log(`Prepared npm bundle in ${runtimeDir}`)

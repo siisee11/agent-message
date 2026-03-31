@@ -5,7 +5,7 @@ import (
 	"net/http"
 	"strings"
 
-	"agent-messenger/server/models"
+	"agent-message/server/models"
 )
 
 type uploadHandler struct {

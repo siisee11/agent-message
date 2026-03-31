@@ -1,4 +1,4 @@
-# Execution Plan: Implement Only Phase 5 from PLAN.md for Agent Messenger
+# Execution Plan: Implement Only Phase 5 from PLAN.md for Agent Message
 
 ## Goal / scope
 Implement only Phase 5 from `PLAN.md` in `web/`, building the full chat UI on top of the existing Phase 4 web foundation and existing server contract:
@@ -25,11 +25,11 @@ Reviewed docs for this plan:
 - `AGENTS.md`
 - `PLAN.md`
 - `SPEC.md`
-- `docs/exec-plans/active/implement-only-phase-1-from-plan-md-for-the-agent-messenger-project-in-this-repo.md`
-- `docs/exec-plans/active/implement-only-phase-2-from-plan-md-for-the-agent-messenger-project-in-this-repo.md`
-- `docs/exec-plans/active/implement-only-phase-3-from-plan-md-for-the-agent-messenger-project-in-this-repo.md`
+- `docs/exec-plans/active/implement-only-phase-1-from-plan-md-for-the-agent-message-project-in-this-repo.md`
+- `docs/exec-plans/active/implement-only-phase-2-from-plan-md-for-the-agent-message-project-in-this-repo.md`
+- `docs/exec-plans/active/implement-only-phase-3-from-plan-md-for-the-agent-message-project-in-this-repo.md`
 - `docs/exec-plans/active/continue-only-the-remaining-phase-3-milestones-from-the-current-branch-state-for.md`
-- `docs/exec-plans/active/implement-only-phase-4-from-plan-md-for-the-agent-messenger-project-in-this-repo.md`
+- `docs/exec-plans/active/implement-only-phase-4-from-plan-md-for-the-agent-message-project-in-this-repo.md`
 
 Referenced but missing (noted once):
 - `ARCHITECTURE.md`
@@ -70,7 +70,7 @@ Referenced but missing (noted once):
 - Worktree/branch initialization verified via:
   - `./ralph-loop init --base-branch main --work-branch ralph-phase-5-web-client-chat-ui --output json`
 - Verified fields match prepared environment:
-  - `worktree_path=/Users/dev/git/agent-messenger/.worktrees/phase-5-web-client-chat-ui`
+  - `worktree_path=/Users/dev/git/agent-message/.worktrees/phase-5-web-client-chat-ui`
   - `work_branch=ralph-phase-5-web-client-chat-ui`
   - `base_branch=main`
   - `worktree_id=phase-5-web-client-chat-ui-a3cdc51d`
@@ -180,9 +180,9 @@ Referenced but missing (noted once):
 - `AGENTS.md`
 - `PLAN.md`
 - `SPEC.md`
-- `docs/exec-plans/active/implement-only-phase-1-from-plan-md-for-the-agent-messenger-project-in-this-repo.md`
-- `docs/exec-plans/active/implement-only-phase-2-from-plan-md-for-the-agent-messenger-project-in-this-repo.md`
-- `docs/exec-plans/active/implement-only-phase-3-from-plan-md-for-the-agent-messenger-project-in-this-repo.md`
+- `docs/exec-plans/active/implement-only-phase-1-from-plan-md-for-the-agent-message-project-in-this-repo.md`
+- `docs/exec-plans/active/implement-only-phase-2-from-plan-md-for-the-agent-message-project-in-this-repo.md`
+- `docs/exec-plans/active/implement-only-phase-3-from-plan-md-for-the-agent-message-project-in-this-repo.md`
 - `docs/exec-plans/active/continue-only-the-remaining-phase-3-milestones-from-the-current-branch-state-for.md`
-- `docs/exec-plans/active/implement-only-phase-4-from-plan-md-for-the-agent-messenger-project-in-this-repo.md`
-- `docs/exec-plans/active/implement-only-phase-5-from-plan-md-for-the-agent-messenger-project-in-this-repo.md`
+- `docs/exec-plans/active/implement-only-phase-4-from-plan-md-for-the-agent-message-project-in-this-repo.md`
+- `docs/exec-plans/active/implement-only-phase-5-from-plan-md-for-the-agent-message-project-in-this-repo.md`

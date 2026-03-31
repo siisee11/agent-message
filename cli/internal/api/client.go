@@ -33,7 +33,7 @@ type errorPayload struct {
 	Error string `json:"error"`
 }
 
-// Client is a REST client for the Agent Messenger server contract.
+// Client is a REST client for the Agent Message server contract.
 type Client struct {
 	httpClient *http.Client
 	baseURL    *url.URL

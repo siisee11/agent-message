@@ -5,8 +5,8 @@ import (
 	"net/http"
 	"strings"
 
-	"agent-messenger/server/realtime"
-	"agent-messenger/server/store"
+	"agent-message/server/realtime"
+	"agent-message/server/store"
 )
 
 type Dependencies struct {

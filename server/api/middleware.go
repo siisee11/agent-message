@@ -6,7 +6,7 @@ import (
 	"slices"
 	"strings"
 
-	"agent-messenger/server/store"
+	"agent-message/server/store"
 )
 
 func BearerAuthMiddleware(dataStore store.Store) func(http.Handler) http.Handler {

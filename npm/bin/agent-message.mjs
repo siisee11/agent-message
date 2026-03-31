@@ -59,15 +59,15 @@ async function main() {
 
 function printRootUsage() {
   console.error(`Usage:
-  agent-messenger start [--runtime-dir <dir>] [--api-host <host>] [--api-port <port>] [--web-host <host>] [--web-port <port>]
-  agent-messenger stop [--runtime-dir <dir>]
-  agent-messenger status [--runtime-dir <dir>] [--api-host <host>] [--api-port <port>] [--web-host <host>] [--web-port <port>]
-  agent-messenger <existing-cli-command> [...args]`)
+  agent-message start [--runtime-dir <dir>] [--api-host <host>] [--api-port <port>] [--web-host <host>] [--web-port <port>]
+  agent-message stop [--runtime-dir <dir>]
+  agent-message status [--runtime-dir <dir>] [--api-host <host>] [--api-port <port>] [--web-host <host>] [--web-port <port>]
+  agent-message <existing-cli-command> [...args]`)
 }
 
 function parseLifecycleOptions(args) {
   const options = {
-    runtimeDir: join(os.homedir(), '.agent-messenger'),
+    runtimeDir: join(os.homedir(), '.agent-message'),
     apiHost: DEFAULT_API_HOST,
     apiPort: DEFAULT_API_PORT,
     webHost: DEFAULT_WEB_HOST,
@@ -128,8 +128,8 @@ async function ensureBundleReady() {
   const requiredPaths = [
     bundleGatewayPath,
     bundleWebDistDir,
-    resolveBinaryPath('agent-messenger-server'),
-    resolveBinaryPath('agent-messenger-cli'),
+    resolveBinaryPath('agent-message-server'),
+    resolveBinaryPath('agent-message-cli'),
   ]
 
   for (const target of requiredPaths) {
@@ -140,8 +140,8 @@ async function ensureBundleReady() {
     }
   }
 
-  await access(resolveBinaryPath('agent-messenger-server'), constants.X_OK)
-  await access(resolveBinaryPath('agent-messenger-cli'), constants.X_OK)
+  await access(resolveBinaryPath('agent-message-server'), constants.X_OK)
+  await access(resolveBinaryPath('agent-message-cli'), constants.X_OK)
 }
 
 function resolveBinaryPath(baseName) {
@@ -170,7 +170,7 @@ function runtimePaths(runtimeDir) {
     gatewayLog: join(runtimeDir, 'logs', 'gateway.log'),
     serverPidfile: join(runtimeDir, 'server.pid'),
     gatewayPidfile: join(runtimeDir, 'gateway.pid'),
-    sqlitePath: join(runtimeDir, 'agent_messenger.sqlite'),
+    sqlitePath: join(runtimeDir, 'agent_message.sqlite'),
   }
 }
 
@@ -185,7 +185,7 @@ async function startStack(options) {
   writeFileSync(paths.serverLog, '')
   writeFileSync(paths.gatewayLog, '')
 
-  const serverBinary = resolveBinaryPath('agent-messenger-server')
+  const serverBinary = resolveBinaryPath('agent-message-server')
   const gatewayChild = { pid: null }
 
   try {
@@ -221,7 +221,7 @@ async function startStack(options) {
     throw error
   }
 
-  console.log('Agent Messenger is up.')
+  console.log('Agent Message is up.')
   console.log(`API:  http://${options.apiHost}:${options.apiPort}`)
   console.log(`Web:  http://${options.webHost}:${options.webPort}`)
   console.log(`Logs: ${paths.serverLog} ${paths.gatewayLog}`)
@@ -234,9 +234,9 @@ async function stopStack(options, { quiet }) {
 
   if (!quiet) {
     if (stoppedServer || stoppedGateway) {
-      console.log('Agent Messenger is stopped.')
+      console.log('Agent Message is stopped.')
     } else {
-      console.log('Agent Messenger is not running.')
+      console.log('Agent Message is not running.')
     }
   }
 }
@@ -258,7 +258,7 @@ async function printStatus(options) {
 }
 
 function delegateToBundledCli(args) {
-  const cliBinary = resolveBinaryPath('agent-messenger-cli')
+  const cliBinary = resolveBinaryPath('agent-message-cli')
   const result = spawnSync(cliBinary, args, {
     stdio: 'inherit',
     env: process.env,

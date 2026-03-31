@@ -11,7 +11,7 @@ import (
 )
 
 const (
-	defaultDirName   = ".agent-messenger"
+	defaultDirName   = ".agent-message"
 	defaultFileName  = "config"
 	defaultServerURL = "http://localhost:8080"
 )
@@ -33,7 +33,7 @@ type ReadSession struct {
 	LastReadMessage string         `json:"last_read_message,omitempty"`
 }
 
-// Config is persisted at ~/.agent-messenger/config.
+// Config is persisted at ~/.agent-message/config.
 type Config struct {
 	ServerURL              string                 `json:"server_url"`
 	Token                  string                 `json:"token,omitempty"`

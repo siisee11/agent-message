@@ -10,7 +10,7 @@ import (
 	"net/http"
 	"strings"
 
-	"agent-messenger/cli/internal/api"
+	"agent-message/cli/internal/api"
 
 	"github.com/spf13/cobra"
 )

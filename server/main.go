@@ -8,15 +8,15 @@ import (
 	"os"
 	"strings"
 
-	"agent-messenger/server/api"
-	"agent-messenger/server/realtime"
-	"agent-messenger/server/store"
+	"agent-message/server/api"
+	"agent-message/server/realtime"
+	"agent-message/server/store"
 )
 
 const (
 	defaultServerAddr = ":8080"
 	defaultDBDriver   = "sqlite"
-	defaultSQLiteDSN  = "./agent_messenger.sqlite"
+	defaultSQLiteDSN  = "./agent_message.sqlite"
 	defaultUploadDir  = "./uploads"
 )
 
@@ -55,7 +55,7 @@ func main() {
 		UploadDir:          cfg.UploadDir,
 	})
 
-	log.Printf("agent-messenger server listening on %s", cfg.ServerAddr)
+	log.Printf("agent-message server listening on %s", cfg.ServerAddr)
 	log.Printf("db driver: %s", driver)
 	if driver == defaultDBDriver {
 		log.Printf("sqlite dsn: %s", cfg.SQLiteDSN)

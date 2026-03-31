@@ -1,4 +1,4 @@
-# Execution Plan: Implement Only Phase 3 from PLAN.md for Agent Messenger
+# Execution Plan: Implement Only Phase 3 from PLAN.md for Agent Message
 
 ## Goal / scope
 Implement only Phase 3 from `PLAN.md` on top of completed Phases 1 and 2:
@@ -17,7 +17,7 @@ Out of scope: Phase 4+ web/CLI deliverables, PostgreSQL support work, and non-Ph
 
 Phase 1 and Phase 2 execution plans show the server already has auth middleware, SQLite persistence, messages API, and routing in place. Those are the integration points for Phase 3.
 
-Reviewed docs: `AGENTS.md`, `PLAN.md`, `SPEC.md`, `docs/exec-plans/active/implement-only-phase-1-from-plan-md-for-the-agent-messenger-project-in-this-repo.md`, `docs/exec-plans/active/implement-only-phase-2-from-plan-md-for-the-agent-messenger-project-in-this-repo.md`.
+Reviewed docs: `AGENTS.md`, `PLAN.md`, `SPEC.md`, `docs/exec-plans/active/implement-only-phase-1-from-plan-md-for-the-agent-message-project-in-this-repo.md`, `docs/exec-plans/active/implement-only-phase-2-from-plan-md-for-the-agent-message-project-in-this-repo.md`.
 Not found (noted once): `ARCHITECTURE.md`, `docs/PLANS.md`.
 
 ## Milestones
@@ -31,7 +31,7 @@ Not found (noted once): `ARCHITECTURE.md`, `docs/PLANS.md`.
 ## Current progress
 - Worktree re-init verified with:
   - `./ralph-loop init --base-branch main --work-branch ralph-phase-3-websocket-reactions --output json`
-  - Verified JSON fields: `worktree_path=/Users/dev/git/agent-messenger/.worktrees/phase-3-websocket-reactions`, `work_branch=ralph-phase-3-websocket-reactions`, `base_branch=main`, `worktree_id=phase-3-websocket-reactions-b4cb9be5`.
+  - Verified JSON fields: `worktree_path=/Users/dev/git/agent-message/.worktrees/phase-3-websocket-reactions`, `work_branch=ralph-phase-3-websocket-reactions`, `base_branch=main`, `worktree_id=phase-3-websocket-reactions-b4cb9be5`.
 - Required/relevant docs reviewed and scoped for Phase 3 implementation.
 - Implemented `server/ws/hub.go` hub primitives for Phase 3:
   - Client registration/unregistration with user identity tracking
@@ -97,6 +97,6 @@ Not found (noted once): `ARCHITECTURE.md`, `docs/PLANS.md`.
 - `AGENTS.md`
 - `PLAN.md`
 - `SPEC.md`
-- `docs/exec-plans/active/implement-only-phase-1-from-plan-md-for-the-agent-messenger-project-in-this-repo.md`
-- `docs/exec-plans/active/implement-only-phase-2-from-plan-md-for-the-agent-messenger-project-in-this-repo.md`
-- `docs/exec-plans/active/implement-only-phase-3-from-plan-md-for-the-agent-messenger-project-in-this-repo.md`
+- `docs/exec-plans/active/implement-only-phase-1-from-plan-md-for-the-agent-message-project-in-this-repo.md`
+- `docs/exec-plans/active/implement-only-phase-2-from-plan-md-for-the-agent-message-project-in-this-repo.md`
+- `docs/exec-plans/active/implement-only-phase-3-from-plan-md-for-the-agent-message-project-in-this-repo.md`

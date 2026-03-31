@@ -9,7 +9,7 @@ import (
 	"net/url"
 	"testing"
 
-	"agent-messenger/server/models"
+	"agent-message/server/models"
 )
 
 func TestMessagesEndpoints(t *testing.T) {

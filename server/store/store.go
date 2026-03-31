@@ -4,7 +4,7 @@ import (
 	"context"
 	"errors"
 
-	"agent-messenger/server/models"
+	"agent-message/server/models"
 )
 
 var (

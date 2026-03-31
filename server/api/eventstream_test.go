@@ -12,8 +12,8 @@ import (
 	"testing"
 	"time"
 
-	"agent-messenger/server/realtime"
-	"agent-messenger/server/store"
+	"agent-message/server/realtime"
+	"agent-message/server/store"
 )
 
 func TestEventStreamAuthValidation(t *testing.T) {

@@ -6,7 +6,7 @@ import (
 	"strings"
 	"testing"
 
-	"agent-messenger/cli/internal/config"
+	"agent-message/cli/internal/config"
 )
 
 func TestRunEditMessageByIndex(t *testing.T) {

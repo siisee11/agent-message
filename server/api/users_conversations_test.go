@@ -7,7 +7,7 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	"agent-messenger/server/models"
+	"agent-message/server/models"
 )
 
 func TestUsersEndpoints(t *testing.T) {

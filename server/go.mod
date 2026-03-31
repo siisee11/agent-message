@@ -1,4 +1,4 @@
-module agent-messenger/server
+module agent-message/server
 
 go 1.26
 

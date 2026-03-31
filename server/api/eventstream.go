@@ -11,8 +11,8 @@ import (
 	"strings"
 	"syscall"
 
-	"agent-messenger/server/realtime"
-	"agent-messenger/server/store"
+	"agent-message/server/realtime"
+	"agent-message/server/store"
 )
 
 type eventStreamHandler struct {

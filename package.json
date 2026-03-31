@@ -1,10 +1,10 @@
 {
-  "name": "agent-messenger",
+  "name": "agent-message",
   "version": "0.1.0",
-  "description": "Agent Messenger CLI and local stack launcher for macOS",
+  "description": "Agent Message CLI and local stack launcher for macOS",
   "type": "module",
   "bin": {
-    "agent-messenger": "./npm/bin/agent-messenger.mjs"
+    "agent-message": "./npm/bin/agent-message.mjs"
   },
   "files": [
     "README.md",
@@ -28,6 +28,6 @@
   ],
   "repository": {
     "type": "git",
-    "url": "https://github.com/siisee11/agent-messenger.git"
+    "url": "https://github.com/siisee11/agent-message.git"
   }
 }

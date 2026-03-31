@@ -2,11 +2,11 @@
 set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-RUNTIME_DIR="${HOME}/.agent-messenger"
+RUNTIME_DIR="${HOME}/.agent-message"
 BIN_DIR="${RUNTIME_DIR}/bin"
 LOG_DIR="${RUNTIME_DIR}/logs"
 UPLOAD_DIR="${RUNTIME_DIR}/uploads"
-SERVER_BIN="${BIN_DIR}/agent-messenger-server"
+SERVER_BIN="${BIN_DIR}/agent-message-server"
 SERVER_LOG="${LOG_DIR}/server.log"
 GATEWAY_LOG="${LOG_DIR}/gateway.log"
 TUNNEL_LOG="${LOG_DIR}/named-tunnel.log"
@@ -85,7 +85,7 @@ start_process \
   env \
   SERVER_ADDR=:18080 \
   DB_DRIVER=sqlite \
-  SQLITE_DSN="${RUNTIME_DIR}/agent_messenger.sqlite" \
+  SQLITE_DSN="${RUNTIME_DIR}/agent_message.sqlite" \
   UPLOAD_DIR="$UPLOAD_DIR" \
   CORS_ALLOWED_ORIGINS=* \
   "$SERVER_BIN"

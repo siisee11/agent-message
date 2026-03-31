@@ -9,7 +9,7 @@ import (
 	"slices"
 	"strings"
 
-	"agent-messenger/server/models"
+	"agent-message/server/models"
 
 	_ "github.com/jackc/pgx/v5/stdlib"
 )

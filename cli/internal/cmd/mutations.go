@@ -7,7 +7,7 @@ import (
 	"strconv"
 	"strings"
 
-	"agent-messenger/cli/internal/config"
+	"agent-message/cli/internal/config"
 
 	"github.com/spf13/cobra"
 )
@@ -176,7 +176,7 @@ func resolveMessageIDFromLastRead(rt *Runtime, indexArg string) (messageID strin
 
 	messageID = strings.TrimSpace(session.IndexToMessage[index])
 	if messageID == "" {
-		return "", config.ReadSession{}, fmt.Errorf("index %d not found in last read session; run `agent-messenger read <username>` first", index)
+		return "", config.ReadSession{}, fmt.Errorf("index %d not found in last read session; run `agent-message read <username>` first", index)
 	}
 	return messageID, session, nil
 }
@@ -191,14 +191,14 @@ func parseMessageIndex(raw string) (int, error) {
 
 func resolveLastReadSession(rt *Runtime) (config.ReadSession, error) {
 	if rt.Config.ReadSessions == nil || len(rt.Config.ReadSessions) == 0 {
-		return config.ReadSession{}, errors.New("no read session found; run `agent-messenger read <username>` first")
+		return config.ReadSession{}, errors.New("no read session found; run `agent-message read <username>` first")
 	}
 
 	conversationID := strings.TrimSpace(rt.Config.LastReadConversationID)
 	if conversationID != "" {
 		session, ok := rt.Config.ReadSessions[conversationID]
 		if !ok {
-			return config.ReadSession{}, errors.New("last read session is unavailable; run `agent-messenger read <username>` again")
+			return config.ReadSession{}, errors.New("last read session is unavailable; run `agent-message read <username>` again")
 		}
 		return session, nil
 	}
@@ -208,5 +208,5 @@ func resolveLastReadSession(rt *Runtime) (config.ReadSession, error) {
 			return session, nil
 		}
 	}
-	return config.ReadSession{}, errors.New("multiple read sessions found; run `agent-messenger read <username>` to select one")
+	return config.ReadSession{}, errors.New("multiple read sessions found; run `agent-message read <username>` to select one")
 }

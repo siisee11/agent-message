@@ -11,7 +11,7 @@ import (
 	"slices"
 	"strings"
 
-	"agent-messenger/server/models"
+	"agent-message/server/models"
 
 	"github.com/google/uuid"
 )

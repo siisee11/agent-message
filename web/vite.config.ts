@@ -9,9 +9,9 @@ export default defineConfig({
       registerType: 'autoUpdate',
       includeAssets: ['favicon.svg', 'apple-touch-icon.png', 'masked-icon.svg'],
       manifest: {
-        name: 'Agent Messenger',
-        short_name: 'Messenger',
-        description: 'Phone-first direct messaging app for Agent Messenger.',
+        name: 'Agent Message',
+        short_name: 'Agent Message',
+        description: 'Phone-first direct messaging app for Agent Message.',
         theme_color: '#2454d6',
         background_color: '#edf3ff',
         display: 'standalone',

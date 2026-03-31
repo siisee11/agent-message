@@ -8,7 +8,7 @@ import (
 	"testing"
 	"time"
 
-	"agent-messenger/server/models"
+	"agent-message/server/models"
 )
 
 func TestSQLiteStoreAppliesMigrations(t *testing.T) {

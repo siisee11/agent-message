@@ -6,8 +6,8 @@ import (
 	"os"
 	"strings"
 
-	"agent-messenger/cli/internal/api"
-	"agent-messenger/cli/internal/config"
+	"agent-message/cli/internal/api"
+	"agent-message/cli/internal/config"
 
 	"github.com/spf13/cobra"
 )
@@ -35,8 +35,8 @@ func NewRootCommand() *cobra.Command {
 	var serverURLOverride string
 
 	cmd := &cobra.Command{
-		Use:   "agent-messenger",
-		Short: "CLI client for Agent Messenger",
+		Use:   "agent-message",
+		Short: "CLI client for Agent Message",
 		PersistentPreRunE: func(command *cobra.Command, _ []string) error {
 			store := config.NewStore(configPath)
 			cfg, err := store.Load()

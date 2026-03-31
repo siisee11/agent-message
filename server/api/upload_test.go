@@ -9,7 +9,7 @@ import (
 	"strings"
 	"testing"
 
-	"agent-messenger/server/models"
+	"agent-message/server/models"
 )
 
 func TestUploadEndpointAndStaticServing(t *testing.T) {

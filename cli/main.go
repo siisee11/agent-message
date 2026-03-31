@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"os"
 
-	"agent-messenger/cli/internal/cmd"
+	"agent-message/cli/internal/cmd"
 )
 
 func main() {

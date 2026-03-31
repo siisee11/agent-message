@@ -6,7 +6,7 @@ import (
 	"strings"
 	"testing"
 
-	"agent-messenger/cli/internal/config"
+	"agent-message/cli/internal/config"
 )
 
 func TestRunConfigPathPrintsStorePath(t *testing.T) {
@@ -113,11 +113,11 @@ func TestRunConfigSetRejectsUnsupportedKey(t *testing.T) {
 	}
 }
 
-func TestDefaultPathUsesAgentMessengerDirectory(t *testing.T) {
+func TestDefaultPathUsesAgentMessageDirectory(t *testing.T) {
 	t.Parallel()
 
 	path := config.DefaultPath()
-	if got, want := filepath.Base(filepath.Dir(path)), ".agent-messenger"; got != want {
+	if got, want := filepath.Base(filepath.Dir(path)), ".agent-message"; got != want {
 		t.Fatalf("config directory mismatch: got %q want %q", got, want)
 	}
 	if got, want := filepath.Base(path), "config"; got != want {

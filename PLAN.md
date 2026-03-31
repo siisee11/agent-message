@@ -1,4 +1,4 @@
-# Agent Messenger — Implementation Plan
+# Agent Message — Implementation Plan
 
 ## Phase 1: Server Foundation
 

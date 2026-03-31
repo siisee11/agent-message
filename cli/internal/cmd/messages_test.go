@@ -6,7 +6,7 @@ import (
 	"strings"
 	"testing"
 
-	"agent-messenger/cli/internal/api"
+	"agent-message/cli/internal/api"
 )
 
 func TestRunSendMessageResolvesConversationAndSends(t *testing.T) {

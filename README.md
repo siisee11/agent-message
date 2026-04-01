@@ -50,6 +50,11 @@ agent-message status --runtime-dir /tmp/agent-message --api-port 28080 --web-por
 agent-message stop --runtime-dir /tmp/agent-message
 ```
 
+Web Push for installed PWA notifications:
+- `agent-message start` automatically creates and reuses a local VAPID keypair.
+- The generated config is stored in `<runtime-dir>/web-push.json`.
+- To override it, set `WEB_PUSH_VAPID_PUBLIC_KEY`, `WEB_PUSH_VAPID_PRIVATE_KEY`, and optionally `WEB_PUSH_SUBJECT` before `agent-message start`.
+
 PWA install:
 - Open the deployed web app in Safari on iPhone.
 - Use `Share -> Add to Home Screen`.
@@ -88,12 +93,17 @@ Default server settings:
 - `SQLITE_DSN=./agent_message.sqlite`
 - `UPLOAD_DIR=./uploads`
 - `CORS_ALLOWED_ORIGINS=*`
+- `WEB_PUSH_VAPID_PUBLIC_KEY`, `WEB_PUSH_VAPID_PRIVATE_KEY`, `WEB_PUSH_SUBJECT` are optional, but required if you want push notifications when running `go run .` directly
 
 Example override:
 
 ```bash
 cd server
-DB_DRIVER=sqlite SQLITE_DSN=./dev.sqlite UPLOAD_DIR=./uploads go run .
+DB_DRIVER=sqlite SQLITE_DSN=./dev.sqlite UPLOAD_DIR=./uploads \
+WEB_PUSH_VAPID_PUBLIC_KEY=... \
+WEB_PUSH_VAPID_PRIVATE_KEY=... \
+WEB_PUSH_SUBJECT=mailto:you@example.com \
+go run .
 ```
 
 ### Option B: Local production-like stack (Server + PostgreSQL)

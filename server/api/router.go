@@ -5,6 +5,7 @@ import (
 	"net/http"
 	"strings"
 
+	"agent-message/server/push"
 	"agent-message/server/realtime"
 	"agent-message/server/store"
 )
@@ -12,6 +13,7 @@ import (
 type Dependencies struct {
 	Store              store.Store
 	Hub                *realtime.Hub
+	Push               *push.Service
 	CORSAllowedOrigins []string
 	UploadDir          string
 }
@@ -34,7 +36,9 @@ func NewRouter(deps Dependencies) http.Handler {
 	usersHandler := newUsersHandler(deps.Store)
 	conversationsHandler := newConversationsHandler(deps.Store, hub)
 	messagesHandler := newMessagesHandler(deps.Store, hub)
+	messagesHandler.notifier = deps.Push
 	eventStreamHandler := newEventStreamHandler(deps.Store, hub)
+	pushHandler := newPushHandler(deps.Store, deps.Push)
 	messagesHandler.uploadDir = uploadDir
 	uploadHandler := newUploadHandler(uploadDir)
 	authRequired := BearerAuthMiddleware(deps.Store)
@@ -45,6 +49,8 @@ func NewRouter(deps Dependencies) http.Handler {
 
 	mux.Handle("/api/users", authRequired(http.HandlerFunc(usersHandler.handleUsers)))
 	mux.Handle("/api/users/me", authRequired(http.HandlerFunc(usersHandler.handleMe)))
+	mux.Handle("/api/push/config", authRequired(http.HandlerFunc(pushHandler.handleConfig)))
+	mux.Handle("/api/push/subscriptions", authRequired(http.HandlerFunc(pushHandler.handleSubscriptions)))
 
 	mux.Handle("/api/conversations", authRequired(http.HandlerFunc(conversationsHandler.handleConversationsCollection)))
 	mux.Handle("/api/conversations/", authRequired(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {

@@ -9,6 +9,7 @@ import {
 } from 'react'
 import { ApiError, type AuthResponse, type UserProfile } from '../api'
 import { apiClient } from '../api/runtime'
+import { disablePushNotifications } from '../notifications/push'
 
 const AUTH_TOKEN_STORAGE_KEY = 'agent_message.auth_token'
 
@@ -140,6 +141,7 @@ export function AuthProvider({ children }: PropsWithChildren) {
 
   const logout = useCallback(async (): Promise<void> => {
     try {
+      await disablePushNotifications()
       await apiClient.logout()
     } catch (error: unknown) {
       if (!(error instanceof ApiError) || error.status !== 401) {

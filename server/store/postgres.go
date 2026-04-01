@@ -185,6 +185,77 @@ func (s *PostgresStore) GetUserBySessionToken(ctx context.Context, token string)
 	return s.getUserByQuery(ctx, query, token)
 }
 
+func (s *PostgresStore) UpsertPushSubscription(ctx context.Context, params models.UpsertPushSubscriptionParams) (models.PushSubscription, error) {
+	const query = `
+		INSERT INTO push_subscriptions (
+			id, user_id, endpoint, p256dh, auth, user_agent, created_at, updated_at
+		)
+		VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+		ON CONFLICT(endpoint) DO UPDATE SET
+			user_id = excluded.user_id,
+			p256dh = excluded.p256dh,
+			auth = excluded.auth,
+			user_agent = excluded.user_agent,
+			updated_at = excluded.updated_at
+	`
+
+	_, err := s.execContext(
+		ctx,
+		query,
+		params.ID,
+		params.UserID,
+		params.Endpoint,
+		params.P256DH,
+		params.Auth,
+		params.UserAgent,
+		formatTime(params.CreatedAt),
+		formatTime(params.UpdatedAt),
+	)
+	if err != nil {
+		return models.PushSubscription{}, fmt.Errorf("upsert push subscription: %w", err)
+	}
+
+	return s.getPushSubscriptionByEndpoint(ctx, params.Endpoint)
+}
+
+func (s *PostgresStore) DeletePushSubscriptionByEndpoint(ctx context.Context, endpoint string) error {
+	const query = `DELETE FROM push_subscriptions WHERE endpoint = ?`
+	return deletePushSubscription(ctx, s.execContext, query, endpoint)
+}
+
+func (s *PostgresStore) DeletePushSubscriptionByEndpointForUser(ctx context.Context, userID, endpoint string) error {
+	const query = `DELETE FROM push_subscriptions WHERE user_id = ? AND endpoint = ?`
+	return deletePushSubscription(ctx, s.execContext, query, userID, endpoint)
+}
+
+func (s *PostgresStore) ListPushSubscriptionsByUser(ctx context.Context, userID string) ([]models.PushSubscription, error) {
+	const query = `
+		SELECT id, user_id, endpoint, p256dh, auth, user_agent, created_at, updated_at
+		FROM push_subscriptions
+		WHERE user_id = ?
+		ORDER BY created_at ASC, id ASC
+	`
+
+	rows, err := s.queryContext(ctx, query, userID)
+	if err != nil {
+		return nil, fmt.Errorf("list push subscriptions: %w", err)
+	}
+	defer rows.Close()
+
+	subscriptions := make([]models.PushSubscription, 0)
+	for rows.Next() {
+		subscription, err := scanPushSubscription(rows)
+		if err != nil {
+			return nil, fmt.Errorf("scan push subscription: %w", err)
+		}
+		subscriptions = append(subscriptions, subscription)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("iterate push subscriptions: %w", err)
+	}
+	return subscriptions, nil
+}
+
 func (s *PostgresStore) SearchUsersByUsername(ctx context.Context, params models.SearchUsersParams) ([]models.User, error) {
 	limit := params.Limit
 	if limit <= 0 {
@@ -1047,4 +1118,22 @@ func getReactionByQueryRowPG(row *sql.Row) (models.Reaction, error) {
 	reaction.CreatedAt = createdAt
 
 	return reaction, nil
+}
+
+func (s *PostgresStore) getPushSubscriptionByEndpoint(ctx context.Context, endpoint string) (models.PushSubscription, error) {
+	const query = `
+		SELECT id, user_id, endpoint, p256dh, auth, user_agent, created_at, updated_at
+		FROM push_subscriptions
+		WHERE endpoint = ?
+	`
+
+	row := s.queryRowContext(ctx, query, endpoint)
+	subscription, err := scanPushSubscription(row)
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return models.PushSubscription{}, ErrNotFound
+		}
+		return models.PushSubscription{}, fmt.Errorf("select push subscription: %w", err)
+	}
+	return subscription, nil
 }

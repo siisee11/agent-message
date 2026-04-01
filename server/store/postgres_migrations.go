@@ -110,6 +110,24 @@ var postgresMigrations = []migration{
 			ALTER TABLE messages ADD COLUMN json_render_spec TEXT NULL;
 		`,
 	},
+	{
+		version: 9,
+		name:    "create_push_subscriptions",
+		sql: `
+			CREATE TABLE push_subscriptions (
+				id TEXT PRIMARY KEY,
+				user_id TEXT NOT NULL,
+				endpoint TEXT NOT NULL UNIQUE,
+				p256dh TEXT NOT NULL,
+				auth TEXT NOT NULL,
+				user_agent TEXT NOT NULL DEFAULT '',
+				created_at TEXT NOT NULL,
+				updated_at TEXT NOT NULL,
+				FOREIGN KEY(user_id) REFERENCES users(id) ON DELETE CASCADE
+			);
+			CREATE INDEX idx_push_subscriptions_user_id ON push_subscriptions(user_id);
+		`,
+	},
 }
 
 func (s *PostgresStore) migrate(ctx context.Context) error {

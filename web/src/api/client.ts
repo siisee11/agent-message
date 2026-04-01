@@ -3,13 +3,16 @@ import type {
   ConversationDetails,
   ConversationSummary,
   EditMessageRequest,
+  DeletePushSubscriptionRequest,
   ListConversationsQuery,
   ListMessagesQuery,
   LoginRequest,
   Message,
   MessageDetails,
+  PushConfigResponse,
   Reaction,
   RegisterRequest,
+  SavePushSubscriptionRequest,
   SearchUsersQuery,
   SendMessageInput,
   StartConversationRequest,
@@ -296,6 +299,31 @@ export class ApiClient {
       method: 'POST',
       path: '/api/upload',
       body: formData,
+    })
+  }
+
+  async getPushConfig(): Promise<PushConfigResponse> {
+    return this.requestJSON<PushConfigResponse>({
+      method: 'GET',
+      path: '/api/push/config',
+    })
+  }
+
+  async savePushSubscription(input: SavePushSubscriptionRequest): Promise<void> {
+    await this.requestVoid({
+      method: 'POST',
+      path: '/api/push/subscriptions',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(input),
+    })
+  }
+
+  async deletePushSubscription(input: DeletePushSubscriptionRequest): Promise<void> {
+    await this.requestVoid({
+      method: 'DELETE',
+      path: '/api/push/subscriptions',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(input),
     })
   }
 

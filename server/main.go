@@ -9,6 +9,7 @@ import (
 	"strings"
 
 	"agent-message/server/api"
+	"agent-message/server/push"
 	"agent-message/server/realtime"
 	"agent-message/server/store"
 )
@@ -21,12 +22,15 @@ const (
 )
 
 type config struct {
-	ServerAddr         string
-	DBDriver           string
-	SQLiteDSN          string
-	PostgresDSN        string
-	CORSAllowedOrigins []string
-	UploadDir          string
+	ServerAddr             string
+	DBDriver               string
+	SQLiteDSN              string
+	PostgresDSN            string
+	CORSAllowedOrigins     []string
+	UploadDir              string
+	WebPushVAPIDPublicKey  string
+	WebPushVAPIDPrivateKey string
+	WebPushSubject         string
 }
 
 func main() {
@@ -44,6 +48,15 @@ func main() {
 		}
 	}()
 
+	pushService, err := push.NewService(dataStore, push.Config{
+		VAPIDPublicKey:  cfg.WebPushVAPIDPublicKey,
+		VAPIDPrivateKey: cfg.WebPushVAPIDPrivateKey,
+		Subject:         cfg.WebPushSubject,
+	})
+	if err != nil {
+		log.Fatalf("failed to initialize web push: %v", err)
+	}
+
 	if err := os.MkdirAll(cfg.UploadDir, 0o755); err != nil {
 		log.Fatalf("failed to create upload dir: %v", err)
 	}
@@ -51,6 +64,7 @@ func main() {
 	handler := api.NewRouter(api.Dependencies{
 		Store:              dataStore,
 		Hub:                hub,
+		Push:               pushService,
 		CORSAllowedOrigins: cfg.CORSAllowedOrigins,
 		UploadDir:          cfg.UploadDir,
 	})
@@ -62,6 +76,7 @@ func main() {
 	}
 	log.Printf("cors allowed origins: %s", strings.Join(cfg.CORSAllowedOrigins, ","))
 	log.Printf("upload dir: %s", cfg.UploadDir)
+	log.Printf("web push enabled: %t", pushService.Enabled())
 	if err := http.ListenAndServe(cfg.ServerAddr, handler); err != nil && !errors.Is(err, http.ErrServerClosed) {
 		log.Fatalf("server stopped: %v", err)
 	}
@@ -69,12 +84,15 @@ func main() {
 
 func loadConfigFromEnv() config {
 	return config{
-		ServerAddr:         envOrDefault("SERVER_ADDR", defaultServerAddr),
-		DBDriver:           envOrDefault("DB_DRIVER", defaultDBDriver),
-		SQLiteDSN:          envOrDefault("SQLITE_DSN", defaultSQLiteDSN),
-		PostgresDSN:        envOrDefault("POSTGRES_DSN", strings.TrimSpace(os.Getenv("DATABASE_URL"))),
-		CORSAllowedOrigins: parseCSVEnv("CORS_ALLOWED_ORIGINS", "*"),
-		UploadDir:          envOrDefault("UPLOAD_DIR", defaultUploadDir),
+		ServerAddr:             envOrDefault("SERVER_ADDR", defaultServerAddr),
+		DBDriver:               envOrDefault("DB_DRIVER", defaultDBDriver),
+		SQLiteDSN:              envOrDefault("SQLITE_DSN", defaultSQLiteDSN),
+		PostgresDSN:            envOrDefault("POSTGRES_DSN", strings.TrimSpace(os.Getenv("DATABASE_URL"))),
+		CORSAllowedOrigins:     parseCSVEnv("CORS_ALLOWED_ORIGINS", "*"),
+		UploadDir:              envOrDefault("UPLOAD_DIR", defaultUploadDir),
+		WebPushVAPIDPublicKey:  strings.TrimSpace(os.Getenv("WEB_PUSH_VAPID_PUBLIC_KEY")),
+		WebPushVAPIDPrivateKey: strings.TrimSpace(os.Getenv("WEB_PUSH_VAPID_PRIVATE_KEY")),
+		WebPushSubject:         strings.TrimSpace(os.Getenv("WEB_PUSH_SUBJECT")),
 	}
 }
 

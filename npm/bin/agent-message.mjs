@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 
 import { spawn, spawnSync } from 'node:child_process'
+import { generateKeyPairSync } from 'node:crypto'
 import { closeSync, existsSync, mkdirSync, openSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
 import { access, constants } from 'node:fs/promises'
 import os from 'node:os'
@@ -15,6 +16,7 @@ const DEFAULT_WEB_PORT = 45788
 const STARTUP_ATTEMPTS = 40
 const STARTUP_DELAY_MS = 500
 const PROCESS_STOP_DELAY_MS = 1000
+const DEFAULT_WEB_PUSH_SUBJECT = 'mailto:agent-message@local.invalid'
 
 const scriptDir = dirname(fileURLToPath(import.meta.url))
 const packageRoot = resolve(scriptDir, '..', '..')
@@ -193,6 +195,7 @@ function runtimePaths(runtimeDir) {
     tunnelPidfile: join(runtimeDir, 'named-tunnel.pid'),
     stackMetadataPath: join(runtimeDir, 'stack.json'),
     sqlitePath: join(runtimeDir, 'agent_message.sqlite'),
+    webPushConfigPath: join(runtimeDir, 'web-push.json'),
   }
 }
 
@@ -215,6 +218,7 @@ async function startStack(options) {
   const launchSpec = options.dev ? buildDevLaunchSpec(paths) : buildBundledLaunchSpec()
 
   try {
+    const webPushConfig = ensureWebPushConfig(paths)
     const serverChild = spawnDetached(launchSpec.serverCommand, launchSpec.serverArgs, {
       ...process.env,
       SERVER_ADDR: `${options.apiHost}:${options.apiPort}`,
@@ -222,6 +226,9 @@ async function startStack(options) {
       SQLITE_DSN: paths.sqlitePath,
       UPLOAD_DIR: paths.uploadDir,
       CORS_ALLOWED_ORIGINS: '*',
+      WEB_PUSH_VAPID_PUBLIC_KEY: webPushConfig.publicKey,
+      WEB_PUSH_VAPID_PRIVATE_KEY: webPushConfig.privateKey,
+      WEB_PUSH_SUBJECT: webPushConfig.subject,
     }, paths.serverLog)
     writeFileSync(paths.serverPidfile, `${serverChild.pid}\n`)
 
@@ -262,9 +269,98 @@ async function startStack(options) {
   console.log(`API:  http://${options.apiHost}:${options.apiPort}`)
   console.log(`Web:  http://${options.webHost}:${options.webPort}`)
   console.log(`Logs: ${paths.serverLog} ${paths.gatewayLog}`)
+  console.log(`Web Push: ${paths.webPushConfigPath}`)
   if (options.withTunnel) {
     console.log(`Tunnel: https://agent.namjaeyoun.com`)
     console.log(`Tunnel log: ${paths.tunnelLog}`)
+  }
+}
+
+function ensureWebPushConfig(paths) {
+  const envPublicKey = process.env.WEB_PUSH_VAPID_PUBLIC_KEY?.trim() ?? ''
+  const envPrivateKey = process.env.WEB_PUSH_VAPID_PRIVATE_KEY?.trim() ?? ''
+  const envSubject = process.env.WEB_PUSH_SUBJECT?.trim() ?? ''
+
+  if ((envPublicKey && !envPrivateKey) || (!envPublicKey && envPrivateKey)) {
+    throw new Error('WEB_PUSH_VAPID_PUBLIC_KEY and WEB_PUSH_VAPID_PRIVATE_KEY must be set together.')
+  }
+
+  if (envPublicKey && envPrivateKey) {
+    return {
+      publicKey: envPublicKey,
+      privateKey: envPrivateKey,
+      subject: envSubject || DEFAULT_WEB_PUSH_SUBJECT,
+    }
+  }
+
+  const stored = readStoredWebPushConfig(paths.webPushConfigPath)
+  if (stored) {
+    const resolved = {
+      publicKey: stored.publicKey,
+      privateKey: stored.privateKey,
+      subject: envSubject || stored.subject || DEFAULT_WEB_PUSH_SUBJECT,
+    }
+    if (resolved.subject !== stored.subject) {
+      writeStoredWebPushConfig(paths.webPushConfigPath, resolved)
+    }
+    return resolved
+  }
+
+  const generated = generateWebPushConfig(envSubject || DEFAULT_WEB_PUSH_SUBJECT)
+  writeStoredWebPushConfig(paths.webPushConfigPath, generated)
+  return generated
+}
+
+function readStoredWebPushConfig(path) {
+  if (!existsSync(path)) {
+    return null
+  }
+
+  try {
+    const parsed = JSON.parse(readFileSync(path, 'utf8'))
+    const publicKey = typeof parsed.publicKey === 'string' ? parsed.publicKey.trim() : ''
+    const privateKey = typeof parsed.privateKey === 'string' ? parsed.privateKey.trim() : ''
+    const subject = typeof parsed.subject === 'string' ? parsed.subject.trim() : ''
+    if (!publicKey || !privateKey) {
+      return null
+    }
+    return {
+      publicKey,
+      privateKey,
+      subject: subject || DEFAULT_WEB_PUSH_SUBJECT,
+    }
+  } catch {
+    return null
+  }
+}
+
+function writeStoredWebPushConfig(path, config) {
+  writeFileSync(path, `${JSON.stringify(config, null, 2)}\n`)
+}
+
+function generateWebPushConfig(subject) {
+  const { privateKey, publicKey } = generateKeyPairSync('ec', {
+    namedCurve: 'prime256v1',
+  })
+  const privateJWK = privateKey.export({ format: 'jwk' })
+  const publicJWK = publicKey.export({ format: 'jwk' })
+
+  if (
+    typeof privateJWK.d !== 'string' ||
+    typeof publicJWK.x !== 'string' ||
+    typeof publicJWK.y !== 'string'
+  ) {
+    throw new Error('failed to generate VAPID keys')
+  }
+
+  const x = Buffer.from(publicJWK.x, 'base64url')
+  const y = Buffer.from(publicJWK.y, 'base64url')
+  const publicKeyBytes = Buffer.concat([Buffer.from([0x04]), x, y])
+
+  return {
+    publicKey: publicKeyBytes.toString('base64url'),
+    privateKey: privateJWK.d,
+    subject,
   }
 }
 

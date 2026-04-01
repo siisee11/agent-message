@@ -20,6 +20,17 @@ type CreateSessionParams struct {
 	CreatedAt time.Time
 }
 
+type UpsertPushSubscriptionParams struct {
+	ID        string
+	UserID    string
+	Endpoint  string
+	P256DH    string
+	Auth      string
+	UserAgent string
+	CreatedAt time.Time
+	UpdatedAt time.Time
+}
+
 // SearchUsersParams defines a username-prefix search query.
 type SearchUsersParams struct {
 	Query string

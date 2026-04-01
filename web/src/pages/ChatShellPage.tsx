@@ -1,10 +1,16 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { NavLink, useNavigate } from 'react-router-dom'
 import { ApiError, type ConversationSummary, type Message, type UserProfile } from '../api'
 import { apiClient } from '../api/runtime'
 import { useAuth } from '../auth'
 import { summarizeLastMessagePreview } from '../messages/messagePresentation'
+import {
+  disablePushNotifications,
+  enablePushNotifications,
+  getPushState,
+  type PushState,
+} from '../notifications/push'
 import { useRealtime } from '../realtime'
 import styles from './ChatShellPage.module.css'
 
@@ -60,6 +66,14 @@ export function ChatShellPage() {
 
   const [searchInput, setSearchInput] = useState('')
   const [startDmError, setStartDmError] = useState<string | null>(null)
+  const [pushState, setPushState] = useState<PushState>({
+    supported: false,
+    configured: false,
+    enabled: false,
+    permission: 'unsupported',
+  })
+  const [pushError, setPushError] = useState<string | null>(null)
+  const [pushLoading, setPushLoading] = useState(true)
 
   const normalizedSearchInput = searchInput.trim()
 
@@ -105,6 +119,82 @@ export function ChatShellPage() {
       setStartDmError(resolveErrorMessage(error, 'Failed to sign out.'))
     },
   })
+
+  const pushMutation = useMutation({
+    mutationFn: async () => {
+      if (pushState.enabled) {
+        await disablePushNotifications()
+        return getPushState()
+      }
+      return enablePushNotifications()
+    },
+    onSuccess: (nextPushState) => {
+      setPushError(null)
+      setPushState(nextPushState)
+    },
+    onError: (error: unknown) => {
+      setPushError(resolveErrorMessage(error, 'Failed to update notification settings.'))
+    },
+  })
+
+  useEffect(() => {
+    let cancelled = false
+
+    void getPushState()
+      .then((state) => {
+        if (cancelled) {
+          return
+        }
+        setPushState(state)
+        setPushLoading(false)
+      })
+      .catch((error: unknown) => {
+        if (cancelled) {
+          return
+        }
+        setPushError(resolveErrorMessage(error, 'Failed to load notification settings.'))
+        setPushLoading(false)
+      })
+
+    return () => {
+      cancelled = true
+    }
+  }, [])
+
+  function resolvePushButtonLabel(): string {
+    if (pushMutation.isPending || pushLoading) {
+      return 'Checking...'
+    }
+    if (pushState.enabled) {
+      return 'Disable notifications'
+    }
+    if (!pushState.supported) {
+      return 'Notifications unavailable'
+    }
+    if (!pushState.configured) {
+      return 'Notifications unavailable'
+    }
+    if (pushState.permission === 'denied') {
+      return 'Notifications blocked'
+    }
+    return 'Enable notifications'
+  }
+
+  function resolvePushStatusText(): string {
+    if (pushState.enabled) {
+      return 'Installed device notifications are active.'
+    }
+    if (!pushState.supported) {
+      return 'This browser does not support push notifications.'
+    }
+    if (!pushState.configured) {
+      return 'Push notifications are not configured on the server.'
+    }
+    if (pushState.permission === 'denied') {
+      return 'Browser permission is blocked for this app.'
+    }
+    return 'Enable push alerts for new messages.'
+  }
 
   function handleStartDmSubmission(event: React.FormEvent<HTMLFormElement>): void {
     event.preventDefault()
@@ -178,6 +268,24 @@ export function ChatShellPage() {
                   : 'Offline'}
             </span>
           </div>
+          <div className={styles.headerMeta}>
+            <button
+              className={styles.logoutButton}
+              disabled={
+                pushLoading ||
+                pushMutation.isPending ||
+                !pushState.supported ||
+                !pushState.configured ||
+                (pushState.permission === 'denied' && !pushState.enabled)
+              }
+              onClick={() => pushMutation.mutate()}
+              type="button"
+            >
+              {resolvePushButtonLabel()}
+            </button>
+            <p className={styles.currentUser}>{resolvePushStatusText()}</p>
+          </div>
+          {pushError ? <p className={styles.errorMessage}>{pushError}</p> : null}
         </header>
 
         <section className={styles.composerSection}>

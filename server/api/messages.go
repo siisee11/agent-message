@@ -1,6 +1,7 @@
 package api
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
 	"log"
@@ -12,6 +13,7 @@ import (
 	"time"
 
 	"agent-message/server/models"
+	"agent-message/server/push"
 	"agent-message/server/realtime"
 	"agent-message/server/store"
 
@@ -21,6 +23,7 @@ import (
 type messagesHandler struct {
 	store     store.Store
 	hub       *realtime.Hub
+	notifier  *push.Service
 	nowFn     func() time.Time
 	uploadDir string
 }
@@ -264,6 +267,7 @@ func (h *messagesHandler) handleCreateMessage(w http.ResponseWriter, r *http.Req
 
 	log.Printf("message created conversation=%s message=%s sender=%s attachment=%t", conversationID, message.ID, user.ID, message.AttachmentURL != nil)
 	h.broadcastConversationEvent(conversationID, realtime.EventTypeMessageNew, message)
+	h.notifyConversationMessage(conversationID, user, message)
 	writeJSON(w, http.StatusCreated, message)
 }
 
@@ -386,6 +390,67 @@ func reactionRemovedEventData(reaction models.Reaction) map[string]string {
 		"emoji":      reaction.Emoji,
 		"user_id":    reaction.UserID,
 	}
+}
+
+func (h *messagesHandler) notifyConversationMessage(conversationID string, sender models.User, message models.Message) {
+	if h.notifier == nil || !h.notifier.Enabled() {
+		return
+	}
+
+	go func() {
+		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+		defer cancel()
+
+		details, err := h.store.GetConversationByIDForUser(ctx, models.GetConversationForUserParams{
+			ConversationID: conversationID,
+			UserID:         sender.ID,
+		})
+		if err != nil {
+			log.Printf("push conversation lookup failed conversation=%s sender=%s: %v", conversationID, sender.ID, err)
+			return
+		}
+
+		recipientID := details.ParticipantA.ID
+		if recipientID == sender.ID {
+			recipientID = details.ParticipantB.ID
+		}
+
+		if err := h.notifier.NotifyMessage(ctx, recipientID, push.MessageNotification{
+			ConversationID: conversationID,
+			MessageID:      message.ID,
+			SenderID:       sender.ID,
+			SenderName:     sender.Username,
+			Preview:        messageNotificationPreview(message),
+			URL:            "/dm/" + conversationID,
+		}); err != nil {
+			log.Printf("push notify failed conversation=%s message=%s recipient=%s: %v", conversationID, message.ID, recipientID, err)
+		}
+	}()
+}
+
+func messageNotificationPreview(message models.Message) string {
+	switch {
+	case message.Deleted:
+		return "Deleted message"
+	case message.Content != nil && strings.TrimSpace(*message.Content) != "":
+		return truncateNotificationText(strings.TrimSpace(*message.Content), 140)
+	case message.Kind == models.MessageKindJSONRender:
+		return "Sent an interactive card"
+	case message.AttachmentType != nil && *message.AttachmentType == models.AttachmentTypeImage:
+		return "Sent an image"
+	case message.AttachmentType != nil && *message.AttachmentType == models.AttachmentTypeFile:
+		return "Sent a file"
+	default:
+		return "New message"
+	}
+}
+
+func truncateNotificationText(value string, limit int) string {
+	runes := []rune(value)
+	if len(runes) <= limit {
+		return value
+	}
+	return strings.TrimSpace(string(runes[:limit])) + "…"
 }
 
 func (h *messagesHandler) parseCreateMessagePayload(

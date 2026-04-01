@@ -22,6 +22,10 @@ type Store interface {
 	GetSessionByToken(ctx context.Context, token string) (models.Session, error)
 	DeleteSessionByToken(ctx context.Context, token string) error
 	GetUserBySessionToken(ctx context.Context, token string) (models.User, error)
+	UpsertPushSubscription(ctx context.Context, params models.UpsertPushSubscriptionParams) (models.PushSubscription, error)
+	DeletePushSubscriptionByEndpoint(ctx context.Context, endpoint string) error
+	DeletePushSubscriptionByEndpointForUser(ctx context.Context, userID, endpoint string) error
+	ListPushSubscriptionsByUser(ctx context.Context, userID string) ([]models.PushSubscription, error)
 	SearchUsersByUsername(ctx context.Context, params models.SearchUsersParams) ([]models.User, error)
 	ListConversationsByUser(ctx context.Context, params models.ListUserConversationsParams) ([]models.ConversationSummary, error)
 	GetOrCreateDirectConversation(ctx context.Context, params models.GetOrCreateDirectConversationParams) (models.Conversation, error)
@@ -71,6 +75,22 @@ func (s *NoopStore) DeleteSessionByToken(_ context.Context, _ string) error {
 
 func (s *NoopStore) GetUserBySessionToken(_ context.Context, _ string) (models.User, error) {
 	return models.User{}, ErrNotImplemented
+}
+
+func (s *NoopStore) UpsertPushSubscription(_ context.Context, _ models.UpsertPushSubscriptionParams) (models.PushSubscription, error) {
+	return models.PushSubscription{}, ErrNotImplemented
+}
+
+func (s *NoopStore) DeletePushSubscriptionByEndpoint(_ context.Context, _ string) error {
+	return ErrNotImplemented
+}
+
+func (s *NoopStore) DeletePushSubscriptionByEndpointForUser(_ context.Context, _, _ string) error {
+	return ErrNotImplemented
+}
+
+func (s *NoopStore) ListPushSubscriptionsByUser(_ context.Context, _ string) ([]models.PushSubscription, error) {
+	return nil, ErrNotImplemented
 }
 
 func (s *NoopStore) SearchUsersByUsername(_ context.Context, _ models.SearchUsersParams) ([]models.User, error) {

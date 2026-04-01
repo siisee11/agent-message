@@ -83,6 +83,25 @@ export interface UploadResponse {
   url: string
 }
 
+export interface WebPushKeys {
+  p256dh: string
+  auth: string
+}
+
+export interface PushConfigResponse {
+  enabled: boolean
+  vapid_public_key?: string
+}
+
+export interface SavePushSubscriptionRequest {
+  endpoint: string
+  keys: WebPushKeys
+}
+
+export interface DeletePushSubscriptionRequest {
+  endpoint: string
+}
+
 export interface StartConversationRequest {
   username: string
 }

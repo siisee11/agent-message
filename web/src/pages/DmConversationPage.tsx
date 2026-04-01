@@ -24,7 +24,7 @@ import {
   MESSAGE_PREVIEW_DELETED,
   resolveMessageRenderContent,
 } from '../messages/messagePresentation'
-import { useRealtime } from '../realtime'
+import { formatRealtimeStatusLabel, useRealtime } from '../realtime'
 import {
   fallbackSender,
   prependMessageToPages,
@@ -99,16 +99,6 @@ function formatMessageTimestamp(message: Message): string {
 
 function inferAttachmentType(file: File): 'image' | 'file' {
   return file.type.startsWith('image/') ? 'image' : 'file'
-}
-
-function resolveRealtimeStatusLabel(status: string): string {
-  if (status === 'open') {
-    return 'Connected'
-  }
-  if (status === 'connecting') {
-    return 'Connecting'
-  }
-  return 'Idle'
 }
 
 function scrollTimelineToBottom(timeline: HTMLDivElement | null): void {
@@ -600,7 +590,7 @@ export function DmConversationPage() {
         : 'Conversation'
   const headerStatus = conversationQuery.isError
     ? resolveErrorMessage(conversationQuery.error, 'Failed to load conversation.')
-    : resolveRealtimeStatusLabel(realtime.status)
+    : formatRealtimeStatusLabel(realtime.status)
 
   return (
     <section className={styles.page}>

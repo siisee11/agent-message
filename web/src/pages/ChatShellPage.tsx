@@ -11,7 +11,7 @@ import {
   getPushState,
   type PushState,
 } from '../notifications/push'
-import { useRealtime } from '../realtime'
+import { formatRealtimeStatusLabel, useRealtime } from '../realtime'
 import styles from './ChatShellPage.module.css'
 
 const DATE_FORMATTER = new Intl.DateTimeFormat('en-US', {
@@ -260,13 +260,7 @@ export function ChatShellPage() {
           </div>
           <div className={styles.headerMeta}>
             <p className={styles.currentUser}>{user ? `@${user.username}` : 'Unknown user'}</p>
-            <span className={styles.statusBadge}>
-              {realtime.status === 'open'
-                ? 'Live'
-                : realtime.status === 'connecting'
-                  ? 'Connecting'
-                  : 'Offline'}
-            </span>
+            <span className={styles.statusBadge}>{formatRealtimeStatusLabel(realtime.status)}</span>
           </div>
           <div className={styles.headerMeta}>
             <button

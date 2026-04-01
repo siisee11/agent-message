@@ -166,9 +166,14 @@ export function useEventStream(options: UseEventStreamOptions): UseEventStreamRe
     const source = new EventSource(normalizedURL)
     eventSourceRef.current = source
 
+    const isActiveSource = (): boolean => eventSourceRef.current === source
+
     const handleKnownEvent =
       (listener?: (event: any) => void) =>
       (event: MessageEvent<string>): void => {
+        if (!isActiveSource()) {
+          return
+        }
         const serverEvent = parseServerEvent(event.data)
         if (!serverEvent) {
           return
@@ -179,11 +184,17 @@ export function useEventStream(options: UseEventStreamOptions): UseEventStreamRe
       }
 
     source.onopen = () => {
+      if (!isActiveSource()) {
+        return
+      }
       setStatus('open')
       onOpen?.()
     }
 
     source.onerror = () => {
+      if (!isActiveSource()) {
+        return
+      }
       setStatus(source.readyState === EventSource.CLOSED ? 'closed' : 'connecting')
       onError?.()
     }
@@ -195,6 +206,8 @@ export function useEventStream(options: UseEventStreamOptions): UseEventStreamRe
     source.addEventListener('reaction.removed', handleKnownEvent(onReactionRemoved))
 
     return () => {
+      source.onopen = null
+      source.onerror = null
       source.close()
       if (eventSourceRef.current === source) {
         eventSourceRef.current = null

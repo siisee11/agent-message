@@ -597,8 +597,13 @@ export function DmConversationPage() {
       <div className={styles.panel}>
         <header className={styles.header}>
           <div className={styles.headerBar}>
-            <button className={styles.backButton} onClick={() => navigate('/')} type="button">
-              ← Conversations
+            <button
+              aria-label="Back to conversations"
+              className={styles.backButton}
+              onClick={() => navigate('/')}
+              type="button"
+            >
+              ←
             </button>
             <h2 className={styles.title}>{headerTitle}</h2>
             <span

@@ -1,7 +1,7 @@
-import { useEffect, useMemo, useState } from 'react'
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { useEffect, useState } from 'react'
+import { useMutation, useQuery } from '@tanstack/react-query'
 import { NavLink, useNavigate } from 'react-router-dom'
-import { ApiError, type ConversationSummary, type Message, type UserProfile } from '../api'
+import { ApiError, type ConversationSummary, type Message } from '../api'
 import { apiClient } from '../api/runtime'
 import { useAuth } from '../auth'
 import { summarizeLastMessagePreview } from '../messages/messagePresentation'
@@ -44,28 +44,12 @@ function formatLastMessageTime(lastMessage?: Message): string {
   return DATE_FORMATTER.format(new Date(parsed))
 }
 
-function filterSearchResults(results: UserProfile[] | undefined, currentUserId: string | undefined): UserProfile[] {
-  if (!results) {
-    return []
-  }
-  if (!currentUserId) {
-    return results
-  }
-  return results.filter((candidate) => candidate.id !== currentUserId)
-}
-
-function isConversationWithUser(summary: ConversationSummary, userId: string): boolean {
-  return summary.other_user.id === userId
-}
-
 export function ChatShellPage() {
   const navigate = useNavigate()
-  const queryClient = useQueryClient()
   const { user, logout } = useAuth()
   const realtime = useRealtime()
 
-  const [searchInput, setSearchInput] = useState('')
-  const [startDmError, setStartDmError] = useState<string | null>(null)
+  const [pageError, setPageError] = useState<string | null>(null)
   const [pushState, setPushState] = useState<PushState>({
     supported: false,
     configured: false,
@@ -75,39 +59,9 @@ export function ChatShellPage() {
   const [pushError, setPushError] = useState<string | null>(null)
   const [pushLoading, setPushLoading] = useState(true)
 
-  const normalizedSearchInput = searchInput.trim()
-
   const conversationsQuery = useQuery({
     queryKey: ['conversations'],
     queryFn: () => apiClient.listConversations(),
-  })
-
-  const userSearchQuery = useQuery({
-    queryKey: ['users', 'search', normalizedSearchInput],
-    queryFn: () =>
-      apiClient.searchUsers({
-        username: normalizedSearchInput,
-        limit: 8,
-      }),
-    enabled: normalizedSearchInput.length > 0,
-  })
-
-  const userSearchResults = useMemo(
-    () => filterSearchResults(userSearchQuery.data, user?.id),
-    [user?.id, userSearchQuery.data],
-  )
-
-  const startConversationMutation = useMutation({
-    mutationFn: (username: string) => apiClient.startConversation({ username }),
-    onSuccess: async (conversationDetails) => {
-      setStartDmError(null)
-      setSearchInput('')
-      await queryClient.invalidateQueries({ queryKey: ['conversations'] })
-      navigate(`/dm/${conversationDetails.conversation.id}`)
-    },
-    onError: (error: unknown) => {
-      setStartDmError(resolveErrorMessage(error, 'Failed to start the conversation.'))
-    },
   })
 
   const logoutMutation = useMutation({
@@ -116,7 +70,7 @@ export function ChatShellPage() {
       navigate('/login', { replace: true })
     },
     onError: (error: unknown) => {
-      setStartDmError(resolveErrorMessage(error, 'Failed to sign out.'))
+      setPageError(resolveErrorMessage(error, 'Failed to sign out.'))
     },
   })
 
@@ -129,6 +83,7 @@ export function ChatShellPage() {
       return enablePushNotifications()
     },
     onSuccess: (nextPushState) => {
+      setPageError(null)
       setPushError(null)
       setPushState(nextPushState)
     },
@@ -196,22 +151,6 @@ export function ChatShellPage() {
     return 'Enable push alerts for new messages.'
   }
 
-  function handleStartDmSubmission(event: React.FormEvent<HTMLFormElement>): void {
-    event.preventDefault()
-    const username = normalizedSearchInput
-    if (username === '') {
-      return
-    }
-
-    setStartDmError(null)
-    startConversationMutation.mutate(username)
-  }
-
-  function handleStartDmWithCandidate(username: string): void {
-    setStartDmError(null)
-    startConversationMutation.mutate(username)
-  }
-
   function renderConversationItem(summary: ConversationSummary) {
     const preview = summarizeLastMessagePreview(summary.last_message)
     const timestamp = formatLastMessageTime(summary.last_message)
@@ -238,7 +177,6 @@ export function ChatShellPage() {
   }
 
   const conversations = conversationsQuery.data ?? []
-  const hasSearchInput = normalizedSearchInput.length > 0
 
   return (
     <main className={styles.page}>
@@ -279,58 +217,9 @@ export function ChatShellPage() {
             </button>
             <p className={styles.currentUser}>{resolvePushStatusText()}</p>
           </div>
+          {pageError ? <p className={styles.errorMessage}>{pageError}</p> : null}
           {pushError ? <p className={styles.errorMessage}>{pushError}</p> : null}
         </header>
-
-        <section className={styles.composerSection}>
-          <div className={styles.sectionHeading}>
-            <h2 className={styles.sectionTitle}>Start a conversation</h2>
-            <p className={styles.sectionCopy}>Enter a username to open a DM right away.</p>
-          </div>
-          <form className={styles.searchForm} onSubmit={handleStartDmSubmission}>
-            <input
-              aria-label="Search username"
-              className={styles.searchInput}
-              onChange={(event) => setSearchInput(event.target.value)}
-              placeholder="@username"
-              value={searchInput}
-            />
-            <button
-              className={styles.searchSubmit}
-              disabled={normalizedSearchInput.length === 0 || startConversationMutation.isPending}
-              type="submit"
-            >
-              {startConversationMutation.isPending ? 'Opening...' : 'Open'}
-            </button>
-          </form>
-          {startDmError ? <p className={styles.errorMessage}>{startDmError}</p> : null}
-          {hasSearchInput && userSearchQuery.isLoading ? <p className={styles.statusText}>Searching users...</p> : null}
-          {hasSearchInput && userSearchQuery.isError ? (
-            <p className={styles.errorMessage}>
-              {resolveErrorMessage(userSearchQuery.error, 'Failed to find users.')}
-            </p>
-          ) : null}
-          {hasSearchInput && userSearchQuery.isSuccess ? (
-            <ul className={styles.searchResults}>
-              {userSearchResults.map((candidate) => {
-                const alreadyOpen = conversations.some((summary) => isConversationWithUser(summary, candidate.id))
-                return (
-                  <li key={candidate.id}>
-                    <button
-                      className={styles.searchResultButton}
-                      onClick={() => handleStartDmWithCandidate(candidate.username)}
-                      type="button"
-                    >
-                      <span className={styles.searchResultName}>@{candidate.username}</span>
-                      <span className={styles.searchResultAction}>{alreadyOpen ? 'Open chat' : 'New chat'}</span>
-                    </button>
-                  </li>
-                )
-              })}
-              {userSearchResults.length === 0 ? <li className={styles.statusText}>No users found.</li> : null}
-            </ul>
-          ) : null}
-        </section>
 
         <section className={styles.listSection}>
           <div className={styles.sectionHeading}>
@@ -349,8 +238,8 @@ export function ChatShellPage() {
           ) : null}
           {conversationsQuery.isSuccess && conversations.length === 0 ? (
             <div className={styles.emptyState}>
-              <p className={styles.emptyTitle}>No conversations yet</p>
-              <p className={styles.emptyCopy}>Search for a username above to start your first DM.</p>
+              <p className={styles.emptyTitle}>No reports yet</p>
+              <p className={styles.emptyCopy}>Agent work updates will appear here when a conversation is created.</p>
             </div>
           ) : null}
           {conversationsQuery.isSuccess && conversations.length > 0 ? (

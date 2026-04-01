@@ -1,8 +1,13 @@
 package cmd
 
 import (
+	"bytes"
 	"encoding/json"
+	"io"
+	"mime"
+	"mime/multipart"
 	"net/http"
+	"os"
 	"strings"
 	"testing"
 
@@ -56,7 +61,7 @@ func TestRunSendMessageResolvesConversationAndSends(t *testing.T) {
 		}
 	})
 
-	if err := runSendMessage(rt, "bob", "hello world", "text"); err != nil {
+	if err := runSendMessage(rt, "bob", "hello world", "text", ""); err != nil {
 		t.Fatalf("runSendMessage: %v", err)
 	}
 	if !seenOpen || !seenSend {
@@ -110,11 +115,124 @@ func TestRunSendMessageSupportsJSONRenderKind(t *testing.T) {
 		}
 	})
 
-	if err := runSendMessage(rt, "bob", `{"root":"stack-1","elements":{"stack-1":{"type":"Stack"}}}`, "json_render"); err != nil {
+	if err := runSendMessage(rt, "bob", `{"root":"stack-1","elements":{"stack-1":{"type":"Stack"}}}`, "json_render", ""); err != nil {
 		t.Fatalf("runSendMessage(json_render): %v", err)
 	}
 	if got, want := strings.TrimSpace(stdout.String()), "sent m-json"; got != want {
 		t.Fatalf("stdout mismatch: got %q want %q", got, want)
+	}
+}
+
+func TestRunSendMessageSupportsAttachment(t *testing.T) {
+	t.Parallel()
+
+	attachmentPath := createTestAttachmentFile(t, "diagram.png", []byte("png-bytes"))
+
+	rt, stdout, _ := newTestRuntime(t, "http://example.test", "tok-send", func(req *http.Request, body []byte) (*http.Response, error) {
+		switch {
+		case req.Method == http.MethodPost && req.URL.Path == "/api/conversations":
+			return jsonResponse(http.StatusOK, `{
+				"conversation":{"id":"c-send","participant_a":"u1","participant_b":"u2","created_at":"2026-01-01T00:00:00Z"},
+				"participant_a":{"id":"u1","username":"alice","created_at":"2026-01-01T00:00:00Z"},
+				"participant_b":{"id":"u2","username":"bob","created_at":"2026-01-01T00:00:00Z"}
+			}`), nil
+		case req.Method == http.MethodPost && req.URL.Path == "/api/conversations/c-send/messages":
+			mediaType, params, err := mime.ParseMediaType(req.Header.Get("Content-Type"))
+			if err != nil {
+				t.Fatalf("parse content type: %v", err)
+			}
+			if got, want := mediaType, "multipart/form-data"; got != want {
+				t.Fatalf("content type mismatch: got %q want %q", got, want)
+			}
+
+			reader := multipart.NewReader(bytes.NewReader(body), params["boundary"])
+			contentFieldSeen := false
+			attachmentSeen := false
+
+			for {
+				part, err := reader.NextPart()
+				if err == io.EOF {
+					break
+				}
+				if err != nil {
+					t.Fatalf("read multipart part: %v", err)
+				}
+
+				partBody, err := io.ReadAll(part)
+				if err != nil {
+					t.Fatalf("read multipart part body: %v", err)
+				}
+
+				switch part.FormName() {
+				case "content":
+					contentFieldSeen = true
+					if got, want := string(partBody), "hello with image"; got != want {
+						t.Fatalf("content mismatch: got %q want %q", got, want)
+					}
+				case "attachment":
+					attachmentSeen = true
+					if got, want := part.FileName(), "diagram.png"; got != want {
+						t.Fatalf("attachment filename mismatch: got %q want %q", got, want)
+					}
+					if got, want := part.Header.Get("Content-Type"), "image/png"; got != want {
+						t.Fatalf("attachment content type mismatch: got %q want %q", got, want)
+					}
+					if got, want := string(partBody), "png-bytes"; got != want {
+						t.Fatalf("attachment body mismatch: got %q want %q", got, want)
+					}
+				default:
+					t.Fatalf("unexpected multipart field: %q", part.FormName())
+				}
+			}
+
+			if !contentFieldSeen {
+				t.Fatalf("expected content field")
+			}
+			if !attachmentSeen {
+				t.Fatalf("expected attachment field")
+			}
+
+			return jsonResponse(http.StatusCreated, `{
+				"id":"m-attachment",
+				"conversation_id":"c-send",
+				"sender_id":"u1",
+				"content":"hello with image",
+				"attachment_url":"/static/uploads/diagram.png",
+				"attachment_type":"image",
+				"edited":false,
+				"deleted":false,
+				"created_at":"2026-01-01T00:00:00Z",
+				"updated_at":"2026-01-01T00:00:00Z"
+			}`), nil
+		default:
+			t.Fatalf("unexpected request: %s %s", req.Method, req.URL.Path)
+			return nil, nil
+		}
+	})
+
+	if err := runSendMessage(rt, "bob", "hello with image", "text", attachmentPath); err != nil {
+		t.Fatalf("runSendMessage(attachment): %v", err)
+	}
+	if got, want := strings.TrimSpace(stdout.String()), "sent m-attachment"; got != want {
+		t.Fatalf("stdout mismatch: got %q want %q", got, want)
+	}
+}
+
+func TestRunSendMessageRejectsAttachmentForJSONRender(t *testing.T) {
+	t.Parallel()
+
+	attachmentPath := createTestAttachmentFile(t, "diagram.png", []byte("png-bytes"))
+	rt, _, _ := newTestRuntime(t, "http://example.test", "tok-send", func(req *http.Request, _ []byte) (*http.Response, error) {
+		t.Fatalf("unexpected request: %s %s", req.Method, req.URL.Path)
+		return nil, nil
+	})
+
+	err := runSendMessage(rt, "bob", `{"root":"stack-1"}`, "json_render", attachmentPath)
+	if err == nil {
+		t.Fatalf("expected error")
+	}
+	if got := err.Error(); !strings.Contains(got, "attachments are only supported with kind text") {
+		t.Fatalf("unexpected error: %q", got)
 	}
 }
 
@@ -244,4 +362,14 @@ func TestMessageTextUsesJSONRenderPlaceholder(t *testing.T) {
 	if got, want := messageText(details), "[json-render]"; got != want {
 		t.Fatalf("messageText mismatch: got %q want %q", got, want)
 	}
+}
+
+func createTestAttachmentFile(t *testing.T, name string, contents []byte) string {
+	t.Helper()
+
+	path := t.TempDir() + string(os.PathSeparator) + name
+	if err := os.WriteFile(path, contents, 0o644); err != nil {
+		t.Fatalf("write attachment file: %v", err)
+	}
+	return path
 }

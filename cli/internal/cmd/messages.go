@@ -17,19 +17,30 @@ const defaultReadLimit = 20
 
 func newSendMessageCommand(rt *Runtime) *cobra.Command {
 	var kind string
+	var attachmentPath string
 	cmd := &cobra.Command{
-		Use:   "send <username> <text-or-inline-json>",
+		Use:   "send <username> [text-or-inline-json]",
 		Short: "Send a message to a user",
-		Args:  cobra.ExactArgs(2),
+		Args: func(_ *cobra.Command, args []string) error {
+			if len(args) < 1 || len(args) > 2 {
+				return fmt.Errorf("accepts 1 to 2 arg(s), received %d", len(args))
+			}
+			return nil
+		},
 		RunE: func(_ *cobra.Command, args []string) error {
-			return runSendMessage(rt, args[0], args[1], kind)
+			text := ""
+			if len(args) == 2 {
+				text = args[1]
+			}
+			return runSendMessage(rt, args[0], text, kind, attachmentPath)
 		},
 	}
 	cmd.Flags().StringVar(&kind, "kind", "text", "Message kind: text or json_render")
+	cmd.Flags().StringVar(&attachmentPath, "attach", "", "Path to a file or image to attach")
 	return cmd
 }
 
-func runSendMessage(rt *Runtime, username, text, kind string) error {
+func runSendMessage(rt *Runtime, username, text, kind, attachmentPath string) error {
 	if err := ensureRuntime(rt); err != nil {
 		return err
 	}
@@ -42,17 +53,34 @@ func runSendMessage(rt *Runtime, username, text, kind string) error {
 		trimmedKind = "text"
 	}
 
+	trimmedAttachmentPath := strings.TrimSpace(attachmentPath)
+	if trimmedAttachmentPath != "" && trimmedKind != "text" {
+		return errors.New("attachments are only supported with kind text")
+	}
+
 	conversationID, err := resolveConversationIDByUsername(context.Background(), rt, username)
 	if err != nil {
 		return err
 	}
 
-	request, err := buildSendMessageRequest(text, trimmedKind)
-	if err != nil {
-		return err
+	var message api.Message
+	if trimmedAttachmentPath != "" {
+		var content *string
+		trimmedText := strings.TrimSpace(text)
+		if trimmedText != "" {
+			content = &trimmedText
+		}
+		message, err = rt.Client.SendAttachmentMessage(context.Background(), conversationID, api.SendAttachmentMessageRequest{
+			Content:        content,
+			AttachmentPath: trimmedAttachmentPath,
+		})
+	} else {
+		request, buildErr := buildSendMessageRequest(text, trimmedKind)
+		if buildErr != nil {
+			return buildErr
+		}
+		message, err = rt.Client.SendMessage(context.Background(), conversationID, request)
 	}
-
-	message, err := rt.Client.SendMessage(context.Background(), conversationID, request)
 	if err != nil {
 		return err
 	}

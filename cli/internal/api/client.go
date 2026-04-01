@@ -7,9 +7,14 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"mime"
+	"mime/multipart"
 	"net/http"
+	"net/textproto"
 	"net/url"
+	"os"
 	"path"
+	"path/filepath"
 	"strconv"
 	"strings"
 	"time"
@@ -182,10 +187,129 @@ type SendMessageRequest struct {
 	JSONRenderSpec json.RawMessage `json:"json_render_spec,omitempty"`
 }
 
+type SendAttachmentMessageRequest struct {
+	Content        *string
+	AttachmentPath string
+}
+
 func (c *Client) SendMessage(ctx context.Context, conversationID string, input SendMessageRequest) (Message, error) {
 	var out Message
 	err := c.doJSON(ctx, http.MethodPost, "/api/conversations/"+url.PathEscape(conversationID)+"/messages", input, &out)
 	return out, err
+}
+
+func (c *Client) SendAttachmentMessage(ctx context.Context, conversationID string, input SendAttachmentMessageRequest) (Message, error) {
+	if c.baseURL == nil {
+		return Message{}, errors.New("server URL is not configured")
+	}
+
+	attachmentPath := strings.TrimSpace(input.AttachmentPath)
+	if attachmentPath == "" {
+		return Message{}, errors.New("attachment path is required")
+	}
+
+	file, err := os.Open(attachmentPath)
+	if err != nil {
+		return Message{}, fmt.Errorf("open attachment: %w", err)
+	}
+	defer file.Close()
+
+	info, err := file.Stat()
+	if err != nil {
+		return Message{}, fmt.Errorf("stat attachment: %w", err)
+	}
+	if info.IsDir() {
+		return Message{}, errors.New("attachment path must be a file")
+	}
+
+	var body bytes.Buffer
+	writer := multipart.NewWriter(&body)
+
+	if input.Content != nil {
+		trimmedContent := strings.TrimSpace(*input.Content)
+		if trimmedContent != "" {
+			if err := writer.WriteField("content", trimmedContent); err != nil {
+				return Message{}, fmt.Errorf("write multipart content field: %w", err)
+			}
+		}
+	}
+
+	part, err := writer.CreatePart(buildAttachmentPartHeader(filepath.Base(attachmentPath), detectAttachmentContentType(file, attachmentPath)))
+	if err != nil {
+		return Message{}, fmt.Errorf("create multipart attachment field: %w", err)
+	}
+	if _, err := io.Copy(part, file); err != nil {
+		return Message{}, fmt.Errorf("write multipart attachment field: %w", err)
+	}
+	if err := writer.Close(); err != nil {
+		return Message{}, fmt.Errorf("close multipart writer: %w", err)
+	}
+
+	u := *c.baseURL
+	u.Path = strings.TrimSuffix(c.baseURL.Path, "/") + "/api/conversations/" + url.PathEscape(conversationID) + "/messages"
+
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, u.String(), &body)
+	if err != nil {
+		return Message{}, fmt.Errorf("build request: %w", err)
+	}
+	req.Header.Set("Content-Type", writer.FormDataContentType())
+	if c.token != "" {
+		req.Header.Set("Authorization", "Bearer "+c.token)
+	}
+
+	resp, err := c.httpClient.Do(req)
+	if err != nil {
+		return Message{}, fmt.Errorf("perform request: %w", err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode < 200 || resp.StatusCode > 299 {
+		var payload errorPayload
+		if decodeErr := json.NewDecoder(resp.Body).Decode(&payload); decodeErr != nil {
+			payload.Error = strings.TrimSpace(resp.Status)
+		}
+		return Message{}, &APIError{StatusCode: resp.StatusCode, Message: strings.TrimSpace(payload.Error)}
+	}
+
+	var out Message
+	if err := json.NewDecoder(resp.Body).Decode(&out); err != nil {
+		return Message{}, fmt.Errorf("decode response body: %w", err)
+	}
+	return out, nil
+}
+
+func buildAttachmentPartHeader(filename, contentType string) textproto.MIMEHeader {
+	header := make(textproto.MIMEHeader)
+	header.Set("Content-Disposition", fmt.Sprintf(`form-data; name="attachment"; filename="%s"`, escapeMultipartFilename(filename)))
+	header.Set("Content-Type", contentType)
+	return header
+}
+
+func escapeMultipartFilename(filename string) string {
+	replacer := strings.NewReplacer("\\", "\\\\", `"`, "\\\"")
+	return replacer.Replace(filename)
+}
+
+func detectAttachmentContentType(file *os.File, attachmentPath string) string {
+	contentType := strings.TrimSpace(mime.TypeByExtension(strings.ToLower(filepath.Ext(attachmentPath))))
+	if contentType != "" {
+		mediaType, _, err := mime.ParseMediaType(contentType)
+		if err == nil && strings.TrimSpace(mediaType) != "" {
+			return mediaType
+		}
+	}
+
+	var sniff [512]byte
+	n, err := file.Read(sniff[:])
+	if err == nil || errors.Is(err, io.EOF) {
+		if _, seekErr := file.Seek(0, io.SeekStart); seekErr == nil && n > 0 {
+			return http.DetectContentType(sniff[:n])
+		}
+	}
+	if _, seekErr := file.Seek(0, io.SeekStart); seekErr == nil {
+		return "application/octet-stream"
+	}
+	return "application/octet-stream"
 }
 
 func (c *Client) EditMessage(ctx context.Context, messageID, content string) (Message, error) {

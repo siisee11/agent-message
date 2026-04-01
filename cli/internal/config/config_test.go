@@ -79,7 +79,7 @@ func TestSaveLoadRoundTripWithActiveProfile(t *testing.T) {
 		Profiles: map[string]Profile{
 			"alice": {
 				Username:  "alice",
-				ServerURL: "http://localhost:8080",
+				ServerURL: DefaultServerURL(),
 				Token:     "stale-token",
 				ReadSessions: map[string]ReadSession{
 					" conv-1 ": {

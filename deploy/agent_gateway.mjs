@@ -4,8 +4,8 @@ import http from 'node:http'
 import { basename, extname, join, normalize, resolve } from 'node:path'
 
 const host = process.env.AGENT_GATEWAY_HOST ?? '127.0.0.1'
-const port = Number(process.env.AGENT_GATEWAY_PORT ?? '8788')
-const apiOrigin = process.env.AGENT_API_ORIGIN ?? 'http://127.0.0.1:18080'
+const port = Number(process.env.AGENT_GATEWAY_PORT ?? '45788')
+const apiOrigin = process.env.AGENT_API_ORIGIN ?? 'http://127.0.0.1:8080'
 const distDir = resolve(process.env.AGENT_WEB_DIST ?? join(process.cwd(), 'web', 'dist'))
 const indexPath = join(distDir, 'index.html')
 

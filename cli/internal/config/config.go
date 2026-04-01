@@ -13,7 +13,7 @@ import (
 const (
 	defaultDirName   = ".agent-message"
 	defaultFileName  = "config"
-	defaultServerURL = "http://localhost:8080"
+	defaultServerURL = "https://am.namjaeyoun.com"
 )
 
 // Profile stores auth and read-session state for a saved account.

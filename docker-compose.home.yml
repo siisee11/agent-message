@@ -49,7 +49,7 @@ services:
         condition: service_started
     environment:
       AGENT_GATEWAY_HOST: 0.0.0.0
-      AGENT_GATEWAY_PORT: 8788
+      AGENT_GATEWAY_PORT: 45788
       AGENT_API_ORIGIN: http://server:8080
       AGENT_WEB_DIST: /app/web/dist
 

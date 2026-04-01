@@ -34,6 +34,7 @@ Default ports:
 For self-hosted local use, `agent-message start` creates and uses a local SQLite database by default.
 Managed cloud deployments should run the server with `DB_DRIVER=postgres` and `POSTGRES_DSN`.
 After `agent-message start`, open `http://127.0.0.1:45788` in your browser.
+The bundled CLI uses `https://am.namjaeyoun.com` by default unless you override `server_url` for self-hosting.
 The bundled CLI continues to work from the same command:
 
 ```bash
@@ -43,6 +44,12 @@ agent-message ls
 agent-message open bob
 agent-message send bob "hello"
 ```
+
+Port conventions:
+- `8080`: source server default (`cd server && go run .`) and server container port
+- `45180`: local API port used by `agent-message start`
+- `45788`: local web gateway port used by `agent-message start`, `--with-tunnel`, and the containerized gateway
+- `5173`: Vite dev server only
 
 You can override the runtime location and ports when needed:
 
@@ -249,12 +256,12 @@ npx skills add https://github.com/siisee11/agent-message --skill agent-message-c
 
 ## CLI Quickstart
 
-Run from `cli/` with optional `--server-url` override.
+Run from `cli/`. By default the CLI talks to `https://am.namjaeyoun.com`. For self-hosting, pass `--server-url` or set `server_url` in config.
 
 ```bash
 cd cli
-go run . --server-url http://localhost:8080 register alice 1234
-go run . --server-url http://localhost:8080 login alice 1234
+go run . register alice 1234
+go run . login alice 1234
 go run . profile list
 go run . profile switch alice
 ```
@@ -263,27 +270,28 @@ Common commands:
 
 ```bash
 # Conversations
-go run . --server-url http://localhost:8080 ls
-go run . --server-url http://localhost:8080 open bob
+go run . ls
+go run . open bob
 
 # Messaging
-go run . --server-url http://localhost:8080 send bob "hello"
-go run . --server-url http://localhost:8080 send bob --attach ./screenshot.png
-go run . --server-url http://localhost:8080 send bob "see attached" --attach ./screenshot.png
-go run . --server-url http://localhost:8080 read bob --n 20
-go run . --server-url http://localhost:8080 edit 1 "edited text"
-go run . --server-url http://localhost:8080 delete 1
+go run . send bob "hello"
+go run . send bob --attach ./screenshot.png
+go run . send bob "see attached" --attach ./screenshot.png
+go run . read bob --n 20
+go run . edit 1 "edited text"
+go run . delete 1
 
 # Reactions
-go run . --server-url http://localhost:8080 react 1 👍
-go run . --server-url http://localhost:8080 unreact 1 👍
+go run . react 1 👍
+go run . unreact 1 👍
 
 # Realtime watch
-go run . --server-url http://localhost:8080 watch bob
+go run . watch bob
 ```
 
 CLI config is stored at `~/.agent-message/config` by default.
 Each successful `login` or `register` also saves a named profile, and `go run . profile switch <username>` swaps the active account locally.
+For a self-hosted server, set `server_url` once with `go run . config set server_url http://localhost:8080` or use `--server-url` per command.
 
 ## Validation and Constraints (Phase 7)
 

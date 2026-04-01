@@ -2,21 +2,24 @@
 
 FROM golang:1.26-bookworm AS build
 WORKDIR /src
+ARG TARGETOS=linux
+ARG TARGETARCH=amd64
 
 COPY server/go.mod server/go.sum ./
 RUN go mod download
 
 COPY server/. ./
-RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -trimpath -ldflags='-s -w' -o /out/agent-message-server .
+RUN CGO_ENABLED=0 GOOS=$TARGETOS GOARCH=$TARGETARCH go build -trimpath -ldflags='-s -w' -o /out/agent-message-server .
 
 FROM alpine:3.20
-RUN addgroup -S app && adduser -S -G app app
+RUN apk add --no-cache nodejs && addgroup -S app && adduser -S -G app app
 WORKDIR /app
 
 COPY --from=build /out/agent-message-server /usr/local/bin/agent-message-server
+COPY server/docker-entrypoint.sh /usr/local/bin/docker-entrypoint.sh
 
 ENV SERVER_ADDR=:8080
 EXPOSE 8080
 
 USER app
-ENTRYPOINT ["/usr/local/bin/agent-message-server"]
+ENTRYPOINT ["/usr/local/bin/docker-entrypoint.sh"]

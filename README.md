@@ -133,6 +133,46 @@ To also remove persisted DB/uploads volumes:
 docker compose down -v
 ```
 
+## Home Server Container Deploy
+
+For a home Mac server, you can run the managed-cloud stack entirely with containers. The `gateway` image builds `web/dist` during `docker compose build`, so you do not need to run `npm run build` on the host first.
+
+1. Copy the example env file and fill in your values:
+
+```bash
+cp .env.home.example .env.home
+```
+
+Required values:
+- `APP_HOSTNAME`
+- `POSTGRES_PASSWORD`
+- `CLOUDFLARE_TUNNEL_TOKEN`
+
+Web push keys are optional in `.env.home`.
+- If `WEB_PUSH_VAPID_PUBLIC_KEY` / `WEB_PUSH_VAPID_PRIVATE_KEY` are blank, the server container generates them on first boot and stores them in the `web_push_data` volume.
+- If `WEB_PUSH_SUBJECT` is blank, it defaults to `https://<APP_HOSTNAME>`.
+
+2. Start the stack:
+
+```bash
+docker compose --env-file .env.home -f docker-compose.home.yml up -d --build
+```
+
+3. Check status:
+
+```bash
+docker compose --env-file .env.home -f docker-compose.home.yml ps
+docker compose --env-file .env.home -f docker-compose.home.yml logs -f
+```
+
+The home-server stack includes:
+- `postgres`
+- `server`
+- `gateway`
+- `cloudflared`
+
+Only `127.0.0.1:8788` is exposed on the Mac. Public traffic should come through Cloudflare Tunnel.
+
 ## Web Quickstart
 
 ```bash

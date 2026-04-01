@@ -1,0 +1,10 @@
+.git
+.worktree
+.worktrees
+node_modules
+web/node_modules
+npm/runtime
+server/*.sqlite
+server/*.sqlite-*
+*.tgz
+**/.DS_Store

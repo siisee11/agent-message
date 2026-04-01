@@ -31,6 +31,8 @@ Default ports:
 - API: `127.0.0.1:45180`
 - Web: `127.0.0.1:45788`
 
+For self-hosted local use, `agent-message start` creates and uses a local SQLite database by default.
+Managed cloud deployments should run the server with `DB_DRIVER=postgres` and `POSTGRES_DSN`.
 After `agent-message start`, open `http://127.0.0.1:45788` in your browser.
 The bundled CLI continues to work from the same command:
 
@@ -107,7 +109,7 @@ WEB_PUSH_SUBJECT=mailto:you@example.com \
 go run .
 ```
 
-### Option B: Local production-like stack (Server + PostgreSQL)
+### Local production-like stack (Server + PostgreSQL)
 
 ```bash
 docker compose up --build
@@ -226,6 +228,8 @@ go run . --server-url http://localhost:8080 open bob
 
 # Messaging
 go run . --server-url http://localhost:8080 send bob "hello"
+go run . --server-url http://localhost:8080 send bob --attach ./screenshot.png
+go run . --server-url http://localhost:8080 send bob "see attached" --attach ./screenshot.png
 go run . --server-url http://localhost:8080 read bob --n 20
 go run . --server-url http://localhost:8080 edit 1 "edited text"
 go run . --server-url http://localhost:8080 delete 1

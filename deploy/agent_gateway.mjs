@@ -87,6 +87,9 @@ async function proxyRequest(req, res) {
     upstream.status,
     Object.fromEntries(upstream.headers.entries()),
   )
+  if (upstream.headers.get('content-type')?.startsWith('text/event-stream')) {
+    res.flushHeaders()
+  }
 
   if (!upstream.body) {
     res.end()

@@ -89,6 +89,41 @@ export function RealtimeProvider({ children }: PropsWithChildren) {
     setMessageReactions((state) => removeReactionFromState(state, removal))
   }, [])
 
+  const handleMessageNewEvent = useCallback(
+    ({ data }: { data: Message }) => {
+      handleMessageNew(data)
+    },
+    [handleMessageNew],
+  )
+
+  const handleMessageEditedEvent = useCallback(
+    ({ data }: { data: Message }) => {
+      handleMessageEdited(data)
+    },
+    [handleMessageEdited],
+  )
+
+  const handleMessageDeletedEvent = useCallback(
+    ({ data }: { data: { id: string } }) => {
+      handleMessageDeleted(data.id)
+    },
+    [handleMessageDeleted],
+  )
+
+  const handleReactionAddedEvent = useCallback(
+    ({ data }: { data: Reaction }) => {
+      applyReactionAdded(data)
+    },
+    [applyReactionAdded],
+  )
+
+  const handleReactionRemovedEvent = useCallback(
+    ({ data }: { data: { message_id: string; emoji: string; user_id: string } }) => {
+      applyReactionRemoved(data)
+    },
+    [applyReactionRemoved],
+  )
+
   useEffect(() => {
     if (!token) {
       setMessageReactions({})
@@ -98,11 +133,11 @@ export function RealtimeProvider({ children }: PropsWithChildren) {
   const eventStream = useEventStream({
     token,
     enabled: Boolean(isAuthenticated && token),
-    onMessageNew: ({ data }) => handleMessageNew(data),
-    onMessageEdited: ({ data }) => handleMessageEdited(data),
-    onMessageDeleted: ({ data }) => handleMessageDeleted(data.id),
-    onReactionAdded: ({ data }) => applyReactionAdded(data),
-    onReactionRemoved: ({ data }) => applyReactionRemoved(data),
+    onMessageNew: handleMessageNewEvent,
+    onMessageEdited: handleMessageEditedEvent,
+    onMessageDeleted: handleMessageDeletedEvent,
+    onReactionAdded: handleReactionAddedEvent,
+    onReactionRemoved: handleReactionRemovedEvent,
   })
 
   const value = useMemo<RealtimeContextValue>(

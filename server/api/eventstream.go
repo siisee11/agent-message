@@ -10,6 +10,7 @@ import (
 	"net/http"
 	"strings"
 	"syscall"
+	"time"
 
 	"agent-message/server/realtime"
 	"agent-message/server/store"
@@ -19,6 +20,8 @@ type eventStreamHandler struct {
 	store store.Store
 	hub   *realtime.Hub
 }
+
+const eventStreamHeartbeatInterval = 25 * time.Second
 
 func newEventStreamHandler(s store.Store, hub *realtime.Hub) *eventStreamHandler {
 	if hub == nil {
@@ -84,12 +87,28 @@ func (h *eventStreamHandler) handleEventStream(w http.ResponseWriter, r *http.Re
 	w.Header().Set("Connection", "keep-alive")
 	w.Header().Set("X-Accel-Buffering", "no")
 	w.WriteHeader(http.StatusOK)
+	if err := writeSSEComment(w, "connected"); err != nil {
+		if !isExpectedSSEDisconnect(err) {
+			log.Printf("sse bootstrap write failed user=%s: %v", user.ID, err)
+		}
+		return
+	}
 	flusher.Flush()
+	heartbeatTicker := time.NewTicker(eventStreamHeartbeatInterval)
+	defer heartbeatTicker.Stop()
 
 	for {
 		select {
 		case <-r.Context().Done():
 			return
+		case <-heartbeatTicker.C:
+			if err := writeSSEComment(w, "keep-alive"); err != nil {
+				if !isExpectedSSEDisconnect(err) {
+					log.Printf("sse heartbeat failed user=%s: %v", user.ID, err)
+				}
+				return
+			}
+			flusher.Flush()
 		case event := <-client.Send:
 			if err := writeSSEEvent(w, event); err != nil {
 				if !isExpectedSSEDisconnect(err) {
@@ -107,6 +126,11 @@ func isExpectedSSEDisconnect(err error) bool {
 		errors.Is(err, net.ErrClosed) ||
 		errors.Is(err, syscall.EPIPE) ||
 		errors.Is(err, syscall.ECONNRESET)
+}
+
+func writeSSEComment(w http.ResponseWriter, comment string) error {
+	_, err := fmt.Fprintf(w, ": %s\n\n", comment)
+	return err
 }
 
 func writeSSEEvent(w http.ResponseWriter, event realtime.Event) error {

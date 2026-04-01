@@ -171,7 +171,7 @@ The home-server stack includes:
 - `gateway`
 - `cloudflared`
 
-Only `127.0.0.1:8788` is exposed on the Mac. Public traffic should come through Cloudflare Tunnel.
+No host port needs to be exposed on the Mac. Public traffic should come through Cloudflare Tunnel.
 
 ## Web Quickstart
 

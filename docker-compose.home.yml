@@ -51,8 +51,6 @@ services:
       AGENT_GATEWAY_PORT: 8788
       AGENT_API_ORIGIN: http://server:8080
       AGENT_WEB_DIST: /app/web/dist
-    ports:
-      - "127.0.0.1:8788:8788"
 
   cloudflared:
     image: cloudflare/cloudflared:latest

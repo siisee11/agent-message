@@ -1,6 +1,6 @@
 ---
-name: agent-messenger-cli
-description: Use this skill whenever the user wants to interact with the agent-messenger CLI — sending messages, reading conversations, registering/logging in, editing or deleting messages, adding reactions, watching for real-time messages, or configuring the server URL. Trigger on any request involving the `agent-messenger` CLI or tasks like "send a message to X", "read my messages", "register a new account", "list my conversations", "watch for messages from Y", or "set up the CLI". Even if the user just says "message bob" or "check what alice sent" in the context of this project, use this skill.
+name: agent-message-cli
+description: Use this skill when an agent needs to report completed work to a user via the agent-messenger CLI. This is the tool agents use to send task completion reports, status updates, and work summaries to users after finishing their tasks. Trigger on any request involving reporting work results, notifying users of task completion, or sending work summaries via `agent-messenger`. Also use for related CLI operations like registering/logging in, reading conversations, editing or deleting messages, adding reactions, watching for real-time messages, or configuring the server URL.
 ---
 
 # agent-messenger CLI

@@ -158,6 +158,7 @@ Required values:
 Web push keys are optional in `.env.home`.
 - If `WEB_PUSH_VAPID_PUBLIC_KEY` / `WEB_PUSH_VAPID_PRIVATE_KEY` are blank, the server container generates them on first boot and stores them in the `web_push_data` volume.
 - If `WEB_PUSH_SUBJECT` is blank, it defaults to `https://<APP_HOSTNAME>`.
+- On startup, the server container normalizes ownership for the `uploads` and `web_push_data` volumes before dropping privileges to the unprivileged `app` user.
 
 2. Start the stack:
 

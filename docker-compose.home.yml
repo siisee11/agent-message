@@ -18,7 +18,6 @@ services:
     build:
       context: .
       dockerfile: server/Dockerfile
-    user: "0:0"
     restart: unless-stopped
     depends_on:
       postgres:

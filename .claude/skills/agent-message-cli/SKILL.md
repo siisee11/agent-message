@@ -1,6 +1,6 @@
 ---
 name: agent-message-cli
-description: Use this skill when an agent needs to report completed work to a user via the agent-messenger CLI. This is the tool agents use to send task completion reports, status updates, and work summaries to users after finishing their tasks. Trigger on any request involving reporting work results, notifying users of task completion, or sending work summaries via `agent-messenger`. Also use for related CLI operations like registering/logging in, reading conversations, editing or deleting messages, adding reactions, watching for real-time messages, or configuring the server URL.
+description: Use this skill when an agent needs to report completed work or to send message to a user via the agent-messenger CLI. This is the tool agents use to send task completion reports, status updates, and work summaries to users after finishing their tasks. Trigger on any request involving reporting work results, notifying users of task completion, or sending work summaries via `agent-messenger`. Also use for related CLI operations like registering/logging in, reading conversations, editing or deleting messages, adding reactions, watching for real-time messages, or configuring the server URL.
 ---
 
 # agent-messenger CLI

@@ -17,6 +17,7 @@ const STARTUP_ATTEMPTS = 40
 const STARTUP_DELAY_MS = 500
 const PROCESS_STOP_DELAY_MS = 1000
 const DEFAULT_WEB_PUSH_SUBJECT = 'mailto:agent-message@local.invalid'
+const DEFAULT_TUNNEL_WEB_PUSH_SUBJECT = 'https://agent-message.namjaeyoun.com'
 
 const scriptDir = dirname(fileURLToPath(import.meta.url))
 const packageRoot = resolve(scriptDir, '..', '..')
@@ -218,7 +219,7 @@ async function startStack(options) {
   const launchSpec = options.dev ? buildDevLaunchSpec(paths) : buildBundledLaunchSpec()
 
   try {
-    const webPushConfig = ensureWebPushConfig(paths)
+    const webPushConfig = ensureWebPushConfig(paths, options)
     const serverChild = spawnDetached(launchSpec.serverCommand, launchSpec.serverArgs, {
       ...process.env,
       SERVER_ADDR: `${options.apiHost}:${options.apiPort}`,
@@ -276,10 +277,11 @@ async function startStack(options) {
   }
 }
 
-function ensureWebPushConfig(paths) {
+function ensureWebPushConfig(paths, options) {
   const envPublicKey = process.env.WEB_PUSH_VAPID_PUBLIC_KEY?.trim() ?? ''
   const envPrivateKey = process.env.WEB_PUSH_VAPID_PRIVATE_KEY?.trim() ?? ''
   const envSubject = process.env.WEB_PUSH_SUBJECT?.trim() ?? ''
+  const defaultSubject = resolveDefaultWebPushSubject(options)
 
   if ((envPublicKey && !envPrivateKey) || (!envPublicKey && envPrivateKey)) {
     throw new Error('WEB_PUSH_VAPID_PUBLIC_KEY and WEB_PUSH_VAPID_PRIVATE_KEY must be set together.')
@@ -289,16 +291,20 @@ function ensureWebPushConfig(paths) {
     return {
       publicKey: envPublicKey,
       privateKey: envPrivateKey,
-      subject: envSubject || DEFAULT_WEB_PUSH_SUBJECT,
+      subject: envSubject || defaultSubject,
     }
   }
 
   const stored = readStoredWebPushConfig(paths.webPushConfigPath)
   if (stored) {
+    const storedSubject = stored.subject || ''
+    const shouldMigrateDefaultSubject =
+      storedSubject === '' ||
+      (storedSubject === DEFAULT_WEB_PUSH_SUBJECT && defaultSubject !== DEFAULT_WEB_PUSH_SUBJECT)
     const resolved = {
       publicKey: stored.publicKey,
       privateKey: stored.privateKey,
-      subject: envSubject || stored.subject || DEFAULT_WEB_PUSH_SUBJECT,
+      subject: envSubject || (shouldMigrateDefaultSubject ? defaultSubject : storedSubject),
     }
     if (resolved.subject !== stored.subject) {
       writeStoredWebPushConfig(paths.webPushConfigPath, resolved)
@@ -306,9 +312,16 @@ function ensureWebPushConfig(paths) {
     return resolved
   }
 
-  const generated = generateWebPushConfig(envSubject || DEFAULT_WEB_PUSH_SUBJECT)
+  const generated = generateWebPushConfig(envSubject || defaultSubject)
   writeStoredWebPushConfig(paths.webPushConfigPath, generated)
   return generated
+}
+
+function resolveDefaultWebPushSubject(options) {
+  if (options?.withTunnel) {
+    return DEFAULT_TUNNEL_WEB_PUSH_SUBJECT
+  }
+  return DEFAULT_WEB_PUSH_SUBJECT
 }
 
 function readStoredWebPushConfig(path) {

@@ -54,6 +54,7 @@ Web Push for installed PWA notifications:
 - `agent-message start` automatically creates and reuses a local VAPID keypair.
 - The generated config is stored in `<runtime-dir>/web-push.json`.
 - To override it, set `WEB_PUSH_VAPID_PUBLIC_KEY`, `WEB_PUSH_VAPID_PRIVATE_KEY`, and optionally `WEB_PUSH_SUBJECT` before `agent-message start`.
+- iPhone web push needs the app to be installed from a public HTTPS origin. For local development, use `agent-message start --with-tunnel`; otherwise use a deployed HTTPS host.
 
 PWA install:
 - Open the deployed web app in Safari on iPhone.
@@ -183,6 +184,7 @@ agent-message stop --dev
 ```
 
 `--with-tunnel` assumes the default web listener `127.0.0.1:45788`, because the checked-in Cloudflare config points there.
+Use `--with-tunnel` when testing iPhone push notifications from a local checkout; without a public HTTPS origin, Safari-installed PWAs will not receive web push reliably.
 
 When publishing from the repo, `npm pack` / `npm publish` will run the package `prepack` hook, which:
 - builds `web/dist`

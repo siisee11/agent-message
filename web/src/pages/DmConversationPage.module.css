@@ -101,7 +101,8 @@
 .timelineViewport {
   min-height: 0;
   position: relative;
-  overflow: auto;
+  overflow-y: auto;
+  overflow-x: hidden;
   overscroll-behavior: contain;
   -webkit-overflow-scrolling: touch;
   border: 0;

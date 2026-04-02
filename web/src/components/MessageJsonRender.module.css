@@ -68,6 +68,7 @@
 
 .markdown {
   min-width: 0;
+  max-width: 100%;
 }
 
 .markdown :global(*:first-child) {
@@ -118,18 +119,38 @@
   border-radius: 0.38rem;
   background: rgba(203, 218, 245, 0.42);
   font-family: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace;
+  white-space: break-spaces;
 }
 
 .markdown :global(pre) {
+  display: block;
+  max-width: 100%;
   overflow-x: auto;
   padding: 0.7rem 0.8rem;
   border-radius: 0.7rem;
   background: #f4f7fc;
 }
 
+.markdown :global(table) {
+  display: block;
+  width: max-content;
+  max-width: 100%;
+  overflow-x: auto;
+}
+
+.markdown :global(img),
+.markdown :global(svg),
+.markdown :global(video),
+.markdown :global(canvas),
+.markdown :global(iframe) {
+  display: block;
+  max-width: 100%;
+}
+
 .markdown :global(pre code) {
   padding: 0;
   background: transparent;
+  white-space: inherit;
 }
 
 .approvalCard {

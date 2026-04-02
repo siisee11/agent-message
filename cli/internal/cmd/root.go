@@ -76,6 +76,7 @@ func NewRootCommand() *cobra.Command {
 		newReactCommand(rt),
 		newUnreactCommand(rt),
 		newWatchCommand(rt),
+		newWaitCommand(rt),
 	)
 
 	return cmd

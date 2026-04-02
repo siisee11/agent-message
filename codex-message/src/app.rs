@@ -1,6 +1,3 @@
-use std::collections::HashSet;
-use std::time::Duration;
-
 use anyhow::{Context, Result, anyhow};
 use rand::Rng;
 use serde_json::Map;
@@ -10,7 +7,7 @@ use uuid::Uuid;
 
 use crate::Config;
 use crate::SandboxArg;
-use crate::agent_message::{AgentMessageClient, Message};
+use crate::agent_message::{AgentMessageClient, Message, MessageWatch};
 use crate::codex::{CodexAppServer, IncomingMessage};
 use crate::render::{ApprovalAction, approval_spec, report_spec};
 
@@ -43,7 +40,7 @@ struct Runtime {
     chat_id: String,
     to_username: String,
     agent_client: AgentMessageClient,
-    seen_message_ids: HashSet<String>,
+    message_watch: MessageWatch,
     codex: CodexAppServer,
     thread_id: String,
 }
@@ -64,6 +61,12 @@ impl Runtime {
 
         register_agent_account(&agent_client, &username, &pin).await?;
         println!("registered agent profile: {username} (chat_id: {chat_id})");
+
+        let message_watch = agent_client
+            .watch_messages(&to_username)
+            .await
+            .context("start agent-message watch stream")?;
+        println!("agent-message watch stream ready for {to_username}");
 
         let startup_text = format!(
             "codex-message session started\nchat_id: {chat_id}\nusername: {username}\npin: {pin}\n\nReply in this DM to run Codex."
@@ -89,7 +92,7 @@ impl Runtime {
             chat_id,
             to_username,
             agent_client,
-            seen_message_ids: HashSet::new(),
+            message_watch,
             codex,
             thread_id,
         })
@@ -99,6 +102,7 @@ impl Runtime {
         loop {
             tokio::select! {
                 _ = tokio::signal::ctrl_c() => {
+                    self.message_watch.shutdown().await?;
                     self.codex.shutdown().await?;
                     return Ok(());
                 }
@@ -152,39 +156,28 @@ impl Runtime {
 
     async fn next_target_message(&mut self) -> Result<Message> {
         loop {
-            let messages = self
-                .agent_client
-                .read_messages(&self.to_username, 20)
+            let message = self
+                .message_watch
+                .next_message()
                 .await
-                .context("poll messages from agent-message")?;
-
-            for message in messages.into_iter().rev() {
-                if !self.seen_message_ids.insert(message.id.clone()) {
-                    continue;
-                }
-                if !message
-                    .sender_username
-                    .eq_ignore_ascii_case(&self.to_username)
-                {
-                    continue;
-                }
-                if extract_request_text(&message).is_none() {
-                    continue;
-                }
-                if let Err(error) = self
-                    .agent_client
-                    .react_to_message(&message, READ_REACTION_EMOJI)
-                    .await
-                {
-                    eprintln!(
-                        "warning: failed to add read reaction to {}: {error}",
-                        message.id
-                    );
-                }
-                return Ok(message);
+                .context("read next event from agent-message watch stream")?;
+            if !message.sender_username.eq_ignore_ascii_case(&self.to_username) {
+                continue;
             }
-
-            tokio::time::sleep(Duration::from_secs(2)).await;
+            if extract_request_text(&message).is_none() {
+                continue;
+            }
+            if let Err(error) = self
+                .agent_client
+                .react_to_message(&message, READ_REACTION_EMOJI)
+                .await
+            {
+                eprintln!(
+                    "warning: failed to add read reaction to {}: {error}",
+                    message.id
+                );
+            }
+            return Ok(message);
         }
     }
 

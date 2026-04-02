@@ -173,6 +173,7 @@ type flagSpec struct {
 	kind      flagKind
 	stringDst *string
 	intDst    *int
+	boolDst   *bool
 }
 
 type flagKind int
@@ -180,6 +181,7 @@ type flagKind int
 const (
 	flagKindString flagKind = iota + 1
 	flagKindInt
+	flagKindBool
 )
 
 func NewFlagSet() *FlagSet {
@@ -207,6 +209,17 @@ func (f *FlagSet) IntP(name, shorthand string, value int, _ string) *int {
 		intDst:    dst,
 	})
 	return dst
+}
+
+func (f *FlagSet) BoolVar(dst *bool, name string, value bool, _ string) {
+	if dst != nil {
+		*dst = value
+	}
+	f.specs = append(f.specs, &flagSpec{
+		name:    strings.TrimSpace(name),
+		kind:    flagKindBool,
+		boolDst: dst,
+	})
 }
 
 type flagRegistry struct {
@@ -306,7 +319,9 @@ func (r *flagRegistry) consumeFlag(args []string, idx int) (int, error) {
 		if !ok {
 			return 0, fmt.Errorf("unknown flag: --%s", name)
 		}
-		if !hasValue {
+		if !hasValue && spec.kind == flagKindBool {
+			value = "true"
+		} else if !hasValue {
 			if idx+1 >= len(args) {
 				return 0, fmt.Errorf("flag needs an argument: --%s", name)
 			}
@@ -340,7 +355,9 @@ func (r *flagRegistry) consumeFlag(args []string, idx int) (int, error) {
 	if !ok {
 		return 0, fmt.Errorf("unknown shorthand flag: -%s", name)
 	}
-	if !hasInlineValue {
+	if !hasInlineValue && spec.kind == flagKindBool {
+		value = "true"
+	} else if !hasInlineValue {
 		if idx+1 >= len(args) {
 			return 0, fmt.Errorf("flag needs an argument: -%s", name)
 		}
@@ -379,6 +396,19 @@ func applyFlagValue(spec *flagSpec, value string) error {
 			return fmt.Errorf("invalid integer value: %s", value)
 		}
 		*spec.intDst = parsed
+		return nil
+	case flagKindBool:
+		if spec.boolDst == nil {
+			return errors.New("bool flag has no target")
+		}
+		parsed, err := strconv.ParseBool(trimmed)
+		if err != nil {
+			if spec.name != "" {
+				return fmt.Errorf("invalid argument %q for --%s", value, spec.name)
+			}
+			return fmt.Errorf("invalid boolean value: %s", value)
+		}
+		*spec.boolDst = parsed
 		return nil
 	default:
 		return errors.New("unsupported flag type")

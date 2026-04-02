@@ -9,6 +9,7 @@ import (
 	"io"
 	"net/http"
 	"strings"
+	"time"
 
 	"agent-message/cli/internal/api"
 
@@ -27,18 +28,79 @@ type watchStream interface {
 
 var connectWatchStream = connectSSEWatchStream
 
+type watchOptions struct {
+	jsonOutput bool
+	once       bool
+}
+
+type watchConversation struct {
+	conversationID string
+	senderNames    map[string]string
+}
+
+type watchJSONEvent struct {
+	Type           string           `json:"type"`
+	ConversationID string           `json:"conversation_id"`
+	Message        watchJSONMessage `json:"message"`
+}
+
+type watchJSONMessage struct {
+	ID             string          `json:"id"`
+	ConversationID string          `json:"conversation_id"`
+	Sender         watchJSONSender `json:"sender"`
+	Content        *string         `json:"content,omitempty"`
+	Kind           string          `json:"kind"`
+	JSONRenderSpec json.RawMessage `json:"json_render_spec,omitempty"`
+	AttachmentURL  *string         `json:"attachment_url,omitempty"`
+	AttachmentType *string         `json:"attachment_type,omitempty"`
+	Edited         bool            `json:"edited"`
+	Deleted        bool            `json:"deleted"`
+	CreatedAt      string          `json:"created_at"`
+	UpdatedAt      string          `json:"updated_at"`
+}
+
+type watchJSONSender struct {
+	ID       string `json:"id"`
+	Username string `json:"username,omitempty"`
+}
+
 func newWatchCommand(rt *Runtime) *cobra.Command {
-	return &cobra.Command{
+	var jsonOutput bool
+	cmd := &cobra.Command{
 		Use:   "watch <username>",
 		Short: "Watch incoming messages in real time",
 		Args:  cobra.ExactArgs(1),
 		RunE: func(_ *cobra.Command, args []string) error {
-			return runWatch(rt, args[0])
+			return runWatchWithOptions(rt, args[0], watchOptions{jsonOutput: jsonOutput})
 		},
 	}
+	cmd.Flags().BoolVar(&jsonOutput, "json", false, "Output matching events as NDJSON")
+	return cmd
+}
+
+func newWaitCommand(rt *Runtime) *cobra.Command {
+	var jsonOutput bool
+	cmd := &cobra.Command{
+		Use:   "wait <username>",
+		Short: "Wait for the next message in a conversation",
+		Args:  cobra.ExactArgs(1),
+		RunE: func(_ *cobra.Command, args []string) error {
+			return runWatchWithOptions(rt, args[0], watchOptions{jsonOutput: jsonOutput, once: true})
+		},
+	}
+	cmd.Flags().BoolVar(&jsonOutput, "json", false, "Output the next matching event as NDJSON")
+	return cmd
 }
 
 func runWatch(rt *Runtime, username string) error {
+	return runWatchWithOptions(rt, username, watchOptions{})
+}
+
+func runWait(rt *Runtime, username string) error {
+	return runWatchWithOptions(rt, username, watchOptions{once: true})
+}
+
+func runWatchWithOptions(rt *Runtime, username string, options watchOptions) error {
 	if err := ensureRuntime(rt); err != nil {
 		return err
 	}
@@ -46,10 +108,11 @@ func runWatch(rt *Runtime, username string) error {
 		return err
 	}
 
-	conversationID, err := resolveConversationIDByUsername(context.Background(), rt, username)
+	details, err := resolveConversationByUsername(context.Background(), rt, username)
 	if err != nil {
 		return err
 	}
+	conversation := newWatchConversation(details)
 
 	streamURL, err := rt.Client.EventStreamURL()
 	if err != nil {
@@ -80,11 +143,20 @@ func runWatch(rt *Runtime, username string) error {
 			_, _ = fmt.Fprintf(rt.Stderr, "warning: failed to decode stream message.new payload: %v\n", err)
 			continue
 		}
-		if strings.TrimSpace(message.ConversationID) != conversationID {
+		if !conversation.matches(message) {
 			continue
 		}
 
-		_, _ = fmt.Fprintf(rt.Stdout, "%s %s: %s\n", message.ID, strings.TrimSpace(message.SenderID), watchMessageText(message))
+		if options.jsonOutput {
+			if err := writeWatchJSONEvent(rt.Stdout, conversation, event.Type, message); err != nil {
+				return fmt.Errorf("write watch JSON event: %w", err)
+			}
+		} else {
+			_, _ = fmt.Fprintf(rt.Stdout, "%s %s: %s\n", message.ID, strings.TrimSpace(message.SenderID), watchMessageText(message))
+		}
+		if options.once {
+			return nil
+		}
 	}
 }
 
@@ -108,6 +180,60 @@ func watchMessageText(message api.Message) string {
 		}
 	}
 	return ""
+}
+
+func newWatchConversation(details api.ConversationDetails) watchConversation {
+	senderNames := map[string]string{
+		strings.TrimSpace(details.ParticipantA.ID): strings.TrimSpace(details.ParticipantA.Username),
+		strings.TrimSpace(details.ParticipantB.ID): strings.TrimSpace(details.ParticipantB.Username),
+	}
+	delete(senderNames, "")
+	return watchConversation{
+		conversationID: strings.TrimSpace(details.Conversation.ID),
+		senderNames:    senderNames,
+	}
+}
+
+func (c watchConversation) matches(message api.Message) bool {
+	return strings.TrimSpace(message.ConversationID) == c.conversationID
+}
+
+func (c watchConversation) senderUsername(senderID string) string {
+	return c.senderNames[strings.TrimSpace(senderID)]
+}
+
+func writeWatchJSONEvent(w io.Writer, conversation watchConversation, eventType string, message api.Message) error {
+	encoder := json.NewEncoder(w)
+	encoder.SetEscapeHTML(false)
+	return encoder.Encode(watchJSONEvent{
+		Type:           strings.TrimSpace(eventType),
+		ConversationID: strings.TrimSpace(message.ConversationID),
+		Message: watchJSONMessage{
+			ID:             strings.TrimSpace(message.ID),
+			ConversationID: strings.TrimSpace(message.ConversationID),
+			Sender: watchJSONSender{
+				ID:       strings.TrimSpace(message.SenderID),
+				Username: conversation.senderUsername(message.SenderID),
+			},
+			Content:        message.Content,
+			Kind:           watchMessageKind(message),
+			JSONRenderSpec: message.JSONRenderSpec,
+			AttachmentURL:  message.AttachmentURL,
+			AttachmentType: message.AttachmentType,
+			Edited:         message.Edited,
+			Deleted:        message.Deleted,
+			CreatedAt:      message.CreatedAt.UTC().Format(time.RFC3339Nano),
+			UpdatedAt:      message.UpdatedAt.UTC().Format(time.RFC3339Nano),
+		},
+	})
+}
+
+func watchMessageKind(message api.Message) string {
+	kind := strings.TrimSpace(message.Kind)
+	if kind == "" {
+		return "text"
+	}
+	return kind
 }
 
 type sseStream struct {

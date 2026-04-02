@@ -3,8 +3,11 @@ use std::process::Stdio;
 use std::time::Duration;
 
 use anyhow::{Context, Result, anyhow, bail};
+use serde::Deserialize;
 use serde_json::Value;
-use tokio::process::Command;
+use tokio::io::{AsyncBufReadExt, BufReader};
+use tokio::process::{Child, ChildStderr, ChildStdout, Command};
+use tokio::sync::mpsc;
 
 #[derive(Debug, Clone)]
 pub(crate) struct AgentMessageClient {
@@ -71,13 +74,25 @@ impl AgentMessageClient {
         parse_sent_message_id(&output)
     }
 
-    pub(crate) async fn read_messages(&self, username: &str, limit: usize) -> Result<Vec<Message>> {
-        let limit_string = limit.to_string();
-        let output = self
-            .run(["read", username, "-n", &limit_string])
-            .await
-            .context("run `agent-message read`")?;
-        parse_read_output(&output)
+    pub(crate) async fn watch_messages(&self, username: &str) -> Result<MessageWatch> {
+        let mut command = Command::new(&self.binary);
+        command
+            .args(["watch", username, "--json"])
+            .stdin(Stdio::null())
+            .stdout(Stdio::piped())
+            .stderr(Stdio::piped())
+            .kill_on_drop(true);
+
+        let mut child = command
+            .spawn()
+            .with_context(|| format!("spawn `{}`", self.binary.display()))?;
+        let stdout = child.stdout.take().context("capture agent-message watch stdout")?;
+        let stderr = child.stderr.take().context("capture agent-message watch stderr")?;
+        let (messages_tx, messages_rx) = mpsc::unbounded_channel();
+        spawn_watch_stdout_pump(stdout, messages_tx);
+        spawn_watch_stderr_pump(stderr);
+
+        Ok(MessageWatch { child, messages_rx })
     }
 
     async fn run<const N: usize>(&self, args: [&str; N]) -> Result<String> {
@@ -117,6 +132,28 @@ pub(crate) struct Message {
     pub(crate) text: String,
 }
 
+pub(crate) struct MessageWatch {
+    child: Child,
+    messages_rx: mpsc::UnboundedReceiver<Message>,
+}
+
+impl MessageWatch {
+    pub(crate) async fn next_message(&mut self) -> Result<Message> {
+        self.messages_rx
+            .recv()
+            .await
+            .ok_or_else(|| anyhow!("agent-message watch stream ended"))
+    }
+
+    pub(crate) async fn shutdown(&mut self) -> Result<()> {
+        if let Err(error) = self.child.start_kill() {
+            eprintln!("[agent-message] failed to signal watch shutdown: {error}");
+        }
+        let _ = self.child.wait().await;
+        Ok(())
+    }
+}
+
 fn parse_sent_message_id(output: &str) -> Result<String> {
     let trimmed = output.trim();
     let Some(rest) = trimmed.strip_prefix("sent ") else {
@@ -129,57 +166,24 @@ fn parse_sent_message_id(output: &str) -> Result<String> {
     Ok(id.to_string())
 }
 
-fn parse_read_output(output: &str) -> Result<Vec<Message>> {
-    let mut messages = Vec::new();
-    let mut current: Option<Message> = None;
-
-    for raw_line in output.lines() {
-        let line = raw_line.trim_end();
-        if line.trim().is_empty() {
-            continue;
-        }
-
-        if line.starts_with('[') {
-            if let Some(message) = current.take() {
-                messages.push(message);
-            }
-            current = Some(parse_read_line(line)?);
-            continue;
-        }
-
-        let Some(message) = current.as_mut() else {
-            bail!("unexpected read line: {line}");
-        };
-        message.text.push('\n');
-        message.text.push_str(line);
+fn parse_watch_event(line: &str) -> Result<Option<Message>> {
+    let trimmed = line.trim();
+    if trimmed.is_empty() {
+        return Ok(None);
     }
 
-    if let Some(message) = current {
-        messages.push(message);
+    let event: WatchJSONEvent =
+        serde_json::from_str(trimmed).context("decode agent-message watch JSON line")?;
+    if event.event_type.trim() != "message.new" {
+        return Ok(None);
     }
 
-    Ok(messages)
-}
-
-fn parse_read_line(line: &str) -> Result<Message> {
-    let Some(after_index) = line.split_once("] ").map(|(_, rest)| rest) else {
-        bail!("unexpected read line: {line}");
-    };
-    let Some((message_id, rest)) = after_index.split_once(' ') else {
-        bail!("unexpected read line missing message id: {line}");
-    };
-    let Some((sender, text)) = rest.split_once(": ") else {
-        bail!("unexpected read line missing sender/text separator: {line}");
-    };
-    if message_id.trim().is_empty() || sender.trim().is_empty() {
-        bail!("unexpected read line with empty fields: {line}");
-    }
-
-    Ok(Message {
-        id: message_id.trim().to_string(),
-        sender_username: sender.trim().to_string(),
-        text: text.to_string(),
-    })
+    let message = event.message;
+    Ok(Some(Message {
+        id: message.id.trim().to_string(),
+        sender_username: message.sender.username.trim().to_string(),
+        text: watch_message_text(&message),
+    }))
 }
 
 impl AgentMessageClient {
@@ -195,13 +199,109 @@ impl AgentMessageClient {
     }
 }
 
+#[derive(Debug, Deserialize)]
+struct WatchJSONEvent {
+    #[serde(rename = "type")]
+    event_type: String,
+    message: WatchJSONMessage,
+}
+
+#[derive(Debug, Deserialize)]
+struct WatchJSONMessage {
+    id: String,
+    sender: WatchJSONSender,
+    content: Option<String>,
+    kind: String,
+    attachment_url: Option<String>,
+    deleted: bool,
+}
+
+#[derive(Debug, Deserialize)]
+struct WatchJSONSender {
+    username: String,
+}
+
+fn watch_message_text(message: &WatchJSONMessage) -> String {
+    if message.deleted {
+        return "deleted message".to_string();
+    }
+    if message.kind.trim() == "json_render" {
+        return "[json-render]".to_string();
+    }
+    if let Some(content) = &message.content {
+        let content = content.trim();
+        if !content.is_empty() {
+            return content.to_string();
+        }
+    }
+    if let Some(attachment_url) = &message.attachment_url {
+        let attachment_url = attachment_url.trim();
+        if !attachment_url.is_empty() {
+            return attachment_url.to_string();
+        }
+    }
+    String::new()
+}
+
+fn spawn_watch_stdout_pump(
+    stdout: ChildStdout,
+    messages_tx: mpsc::UnboundedSender<Message>,
+) {
+    tokio::spawn(async move {
+        let mut lines = BufReader::new(stdout).lines();
+        loop {
+            let next = lines.next_line().await;
+            let line = match next {
+                Ok(Some(line)) => line,
+                Ok(None) => break,
+                Err(error) => {
+                    eprintln!("[agent-message] failed to read watch stdout: {error}");
+                    break;
+                }
+            };
+
+            match parse_watch_event(&line) {
+                Ok(Some(message)) => {
+                    if messages_tx.send(message).is_err() {
+                        break;
+                    }
+                }
+                Ok(None) => {}
+                Err(error) => {
+                    eprintln!("[agent-message] invalid watch event: {error:#}");
+                }
+            }
+        }
+    });
+}
+
+fn spawn_watch_stderr_pump(stderr: ChildStderr) {
+    tokio::spawn(async move {
+        let mut lines = BufReader::new(stderr).lines();
+        loop {
+            match lines.next_line().await {
+                Ok(Some(line)) => eprintln!("[agent-message] {line}"),
+                Ok(None) => break,
+                Err(error) => {
+                    eprintln!("[agent-message] failed to read watch stderr: {error}");
+                    break;
+                }
+            }
+        }
+    });
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
 
     #[test]
-    fn parses_read_line() {
-        let parsed = parse_read_line("[1] m-123 jay: hello world").expect("parse line");
+    fn parses_watch_text_message() {
+        let parsed = parse_watch_event(
+            r#"{"type":"message.new","conversation_id":"c-1","message":{"id":"m-123","conversation_id":"c-1","sender":{"id":"u-1","username":"jay"},"content":"hello world","kind":"text","edited":false,"deleted":false,"created_at":"2026-01-01T00:00:00Z","updated_at":"2026-01-01T00:00:00Z"}}"#,
+        )
+        .expect("parse watch event")
+        .expect("message event");
         assert_eq!(
             parsed,
             Message {
@@ -221,21 +321,15 @@ mod tests {
     }
 
     #[test]
-    fn parses_multiline_read_output() {
-        let output = "\
-[1] m-123 jay: first line
-chat_id: abc123
-pin: 654321
+    fn parses_watch_json_render_message() {
+        let parsed = parse_watch_event(
+            r#"{"type":"message.new","conversation_id":"c-1","message":{"id":"m-124","conversation_id":"c-1","sender":{"id":"u-1","username":"jay"},"kind":"json_render","deleted":false,"created_at":"2026-01-01T00:00:00Z","updated_at":"2026-01-01T00:00:00Z"}}"#,
+        )
+        .expect("parse watch event")
+        .expect("message event");
 
-[2] m-124 jay: second message";
-
-        let messages = parse_read_output(output).expect("parse output");
-
-        assert_eq!(messages.len(), 2);
-        assert_eq!(messages[0].id, "m-123");
-        assert_eq!(messages[0].sender_username, "jay");
-        assert_eq!(messages[0].text, "first line\nchat_id: abc123\npin: 654321");
-        assert_eq!(messages[1].id, "m-124");
-        assert_eq!(messages[1].text, "second message");
+        assert_eq!(parsed.id, "m-124");
+        assert_eq!(parsed.sender_username, "jay");
+        assert_eq!(parsed.text, "[json-render]");
     }
 }

@@ -103,7 +103,7 @@ function inferAttachmentType(file: File): 'image' | 'file' {
 
 function PlusIcon() {
   return (
-    <svg aria-hidden="true" fill="none" height="18" viewBox="0 0 22 22" width="18">
+    <svg aria-hidden="true" fill="none" height="14" viewBox="0 0 22 22" width="14">
       <path
         d="M11 4.75v12.5M4.75 11h12.5"
         stroke="currentColor"
@@ -116,7 +116,7 @@ function PlusIcon() {
 
 function SendIcon() {
   return (
-    <svg aria-hidden="true" fill="none" height="20" viewBox="0 0 26 26" width="20">
+    <svg aria-hidden="true" fill="none" height="16" viewBox="0 0 26 26" width="16">
       <path
         d="M5.8 13.2 19.9 6.6c.77-.36 1.54.4 1.18 1.18l-6.6 14.1c-.39.83-1.61.73-1.86-.16l-1.4-5.02a1.2 1.2 0 0 0-.84-.84l-5.02-1.4c-.89-.25-.99-1.47-.16-1.86Z"
         fill="currentColor"

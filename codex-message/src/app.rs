@@ -54,6 +54,12 @@ impl Runtime {
         let pin = new_pin();
         let to_username = config.to_username.clone();
         let agent_client = AgentMessageClient::new(std::path::PathBuf::from("agent-message"));
+        let server_url = agent_client
+            .server_url()
+            .await
+            .context("read agent-message server_url")?;
+
+        println!("agent-message server_url: {server_url}");
 
         register_agent_account(&agent_client, &username, &pin).await?;
         println!(
@@ -483,7 +489,11 @@ async fn register_agent_account(
     client
         .register(username, pin)
         .await
-        .context("register agent-message account")
+        .context("register agent-message account")?;
+    client
+        .login(username, pin)
+        .await
+        .context("refresh agent-message session after register")
 }
 
 async fn start_thread(codex: &CodexAppServer, config: &Config) -> Result<String> {

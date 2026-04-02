@@ -35,6 +35,7 @@ For self-hosted local use, `agent-message start` creates and uses a local SQLite
 Managed cloud deployments should run the server with `DB_DRIVER=postgres` and `POSTGRES_DSN`.
 After `agent-message start`, open `http://127.0.0.1:45788` in your browser.
 The bundled CLI uses `https://am.namjaeyoun.com` by default unless you override `server_url` for self-hosting.
+Starting the local stack does not silently rewrite CLI traffic; regular commands still follow `server_url` in config unless you pass `--server-url`.
 The bundled CLI continues to work from the same command:
 
 ```bash

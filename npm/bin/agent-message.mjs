@@ -463,8 +463,7 @@ function ensureTunnelTargetMatchesDefaults(options) {
 
 function delegateToBundledCli(args) {
   const cliBinary = resolveBinaryPath('agent-message-cli')
-  const delegatedArgs = buildDelegatedCliArgs(args)
-  const result = spawnSync(cliBinary, delegatedArgs, {
+  const result = spawnSync(cliBinary, args, {
     stdio: 'inherit',
     env: process.env,
   })
@@ -479,49 +478,6 @@ function delegateToBundledCli(args) {
   }
 
   process.exit(result.status ?? 1)
-}
-
-function buildDelegatedCliArgs(args) {
-  if (shouldSkipLocalServerOverride(args) || hasExplicitServerURL(args)) {
-    return args
-  }
-
-  const localServerURL = readLocalServerURL()
-  if (!localServerURL) {
-    return args
-  }
-
-  return ['--server-url', localServerURL, ...args]
-}
-
-function shouldSkipLocalServerOverride(args) {
-  const [command] = args
-  return command === undefined || command === 'config' || command === 'profile'
-}
-
-function hasExplicitServerURL(args) {
-  return args.some((arg) => arg === '--server-url' || arg.startsWith('--server-url='))
-}
-
-function readLocalServerURL() {
-  const paths = runtimePaths(join(os.homedir(), '.agent-message'))
-  const serverPid = readPidfile(paths.serverPidfile)
-  if (serverPid === null || !isPidAlive(serverPid)) {
-    return null
-  }
-
-  try {
-    const raw = readFileSync(paths.stackMetadataPath, 'utf8')
-    const metadata = JSON.parse(raw)
-    const apiHost = typeof metadata.apiHost === 'string' ? metadata.apiHost.trim() : ''
-    const apiPort = metadata.apiPort
-    if (!apiHost || !Number.isInteger(apiPort) || apiPort <= 0 || apiPort > 65535) {
-      return null
-    }
-    return `http://${apiHost}:${apiPort}`
-  } catch {
-    return null
-  }
 }
 
 function writeStackMetadata(path, options) {

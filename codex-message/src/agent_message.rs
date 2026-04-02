@@ -16,6 +16,18 @@ impl AgentMessageClient {
         Self { binary }
     }
 
+    pub(crate) async fn server_url(&self) -> Result<String> {
+        let output = self
+            .run(["config", "get", "server_url"])
+            .await
+            .context("run `agent-message config get server_url`")?;
+        let server_url = output.trim();
+        if server_url.is_empty() {
+            bail!("agent-message config get server_url returned an empty value");
+        }
+        Ok(server_url.to_string())
+    }
+
     pub(crate) async fn register(&self, username: &str, pin: &str) -> Result<()> {
         let output = self
             .run(["register", username, pin])
@@ -23,6 +35,17 @@ impl AgentMessageClient {
             .context("run `agent-message register`")?;
         if !output.contains(&format!("registered {username}")) {
             bail!("unexpected register output: {output}");
+        }
+        Ok(())
+    }
+
+    pub(crate) async fn login(&self, username: &str, pin: &str) -> Result<()> {
+        let output = self
+            .run(["login", username, pin])
+            .await
+            .context("run `agent-message login`")?;
+        if !output.contains(&format!("logged in as {username}")) {
+            bail!("unexpected login output: {output}");
         }
         Ok(())
     }

@@ -26,6 +26,9 @@ func runRegister(rt *Runtime, username, pin string) error {
 	if err := ensureRuntime(rt); err != nil {
 		return err
 	}
+	if err := rt.Client.SetServerURL(rt.Config.ServerURL); err != nil {
+		return fmt.Errorf("set register server_url: %w", err)
+	}
 
 	resp, err := rt.Client.Register(context.Background(), username, pin)
 	if err != nil {
@@ -54,6 +57,9 @@ func newLoginCommand(rt *Runtime) *cobra.Command {
 func runLogin(rt *Runtime, username, pin string) error {
 	if err := ensureRuntime(rt); err != nil {
 		return err
+	}
+	if err := rt.Client.SetServerURL(rt.Config.ServerURL); err != nil {
+		return fmt.Errorf("set login server_url: %w", err)
 	}
 
 	resp, err := rt.Client.Login(context.Background(), username, pin)
@@ -120,7 +126,7 @@ func runLogout(rt *Runtime) error {
 
 	cfg := rt.Config
 	cfg.Token = ""
-	cfg.ServerURL = rt.Client.ServerURL()
+	cfg.ActiveProfileServerURL = rt.Client.ServerURL()
 	cfg.ReadSessions = make(map[string]config.ReadSession)
 	cfg.LastReadConversationID = ""
 	if err := saveRuntimeConfig(rt, cfg); err != nil {
@@ -160,7 +166,7 @@ func activateAuthenticatedProfile(rt *Runtime, username, serverURL, token string
 	cfg := rt.Config
 	existingProfile := cfg.Profiles[profileName]
 	cfg.ActiveProfile = profileName
-	cfg.ServerURL = serverURL
+	cfg.ActiveProfileServerURL = serverURL
 	cfg.Token = strings.TrimSpace(token)
 	cfg.ReadSessions = cloneReadSessionsMap(existingProfile.ReadSessions)
 	cfg.LastReadConversationID = existingProfile.LastReadConversationID

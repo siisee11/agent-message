@@ -59,6 +59,12 @@ func TestRunRegisterStoresTokenInConfig(t *testing.T) {
 	if got, want := persisted.ActiveProfile, "alice"; got != want {
 		t.Fatalf("persisted active profile mismatch: got %q want %q", got, want)
 	}
+	if got, want := persisted.ServerURL, "http://example.test"; got != want {
+		t.Fatalf("persisted configured server_url mismatch: got %q want %q", got, want)
+	}
+	if got, want := persisted.ActiveProfileServerURL, "http://example.test"; got != want {
+		t.Fatalf("persisted active profile server_url mismatch: got %q want %q", got, want)
+	}
 	if got, want := persisted.Profiles["alice"].Token, "reg-token"; got != want {
 		t.Fatalf("persisted profile token mismatch: got %q want %q", got, want)
 	}
@@ -110,8 +116,92 @@ func TestRunLoginStoresTokenInConfig(t *testing.T) {
 	if got, want := persisted.ActiveProfile, "alice"; got != want {
 		t.Fatalf("persisted active profile mismatch: got %q want %q", got, want)
 	}
+	if got, want := persisted.ServerURL, "http://example.test"; got != want {
+		t.Fatalf("persisted configured server_url mismatch: got %q want %q", got, want)
+	}
+	if got, want := persisted.ActiveProfileServerURL, "http://example.test"; got != want {
+		t.Fatalf("persisted active profile server_url mismatch: got %q want %q", got, want)
+	}
 	if got, want := persisted.Profiles["alice"].Token, "login-token"; got != want {
 		t.Fatalf("persisted profile token mismatch: got %q want %q", got, want)
+	}
+}
+
+func TestRunRegisterUsesConfiguredServerURLInsteadOfActiveProfileServerURL(t *testing.T) {
+	t.Parallel()
+
+	rt, _, _ := newTestRuntime(t, "https://am.namjaeyoun.com", "", func(req *http.Request, body []byte) (*http.Response, error) {
+		if got, want := req.URL.Scheme, "https"; got != want {
+			t.Fatalf("scheme mismatch: got %q want %q", got, want)
+		}
+		if got, want := req.URL.Host, "am.namjaeyoun.com"; got != want {
+			t.Fatalf("host mismatch: got %q want %q", got, want)
+		}
+		var payload map[string]string
+		if err := json.Unmarshal(body, &payload); err != nil {
+			t.Fatalf("decode register payload: %v", err)
+		}
+		if got, want := payload["username"], "alice"; got != want {
+			t.Fatalf("username mismatch: got %q want %q", got, want)
+		}
+		return jsonResponse(http.StatusCreated, `{"token":"reg-token","user":{"id":"u1","username":"alice","created_at":"2026-01-01T00:00:00Z"}}`), nil
+	})
+	rt.Config.ActiveProfile = "local-alice"
+	rt.Config.ActiveProfileServerURL = "http://127.0.0.1:45180"
+	rt.Config.Profiles = map[string]config.Profile{
+		"local-alice": {
+			Username:  "local-alice",
+			ServerURL: "http://127.0.0.1:45180",
+			Token:     "local-token",
+		},
+	}
+	var err error
+	rt.Client, err = api.NewClient("http://127.0.0.1:45180", "")
+	if err != nil {
+		t.Fatalf("create local api client: %v", err)
+	}
+	rt.Client.SetHTTPClient(&http.Client{Transport: roundTripFunc(func(req *http.Request) (*http.Response, error) {
+		var body []byte
+		if req.Body != nil {
+			var err error
+			body, err = io.ReadAll(req.Body)
+			if err != nil {
+				t.Fatalf("read request body: %v", err)
+			}
+			_ = req.Body.Close()
+		}
+		if got, want := req.URL.Scheme, "https"; got != want {
+			t.Fatalf("scheme mismatch: got %q want %q", got, want)
+		}
+		if got, want := req.URL.Host, "am.namjaeyoun.com"; got != want {
+			t.Fatalf("host mismatch: got %q want %q", got, want)
+		}
+		var payload map[string]string
+		if err := json.Unmarshal(body, &payload); err != nil {
+			t.Fatalf("decode register payload: %v", err)
+		}
+		if got, want := payload["username"], "alice"; got != want {
+			t.Fatalf("username mismatch: got %q want %q", got, want)
+		}
+		return jsonResponse(http.StatusCreated, `{"token":"reg-token","user":{"id":"u1","username":"alice","created_at":"2026-01-01T00:00:00Z"}}`), nil
+	})})
+
+	if err := runRegister(rt, "alice", "1234"); err != nil {
+		t.Fatalf("runRegister: %v", err)
+	}
+
+	persisted, err := rt.ConfigStore.Load()
+	if err != nil {
+		t.Fatalf("load persisted config: %v", err)
+	}
+	if got, want := persisted.ServerURL, "https://am.namjaeyoun.com"; got != want {
+		t.Fatalf("configured server_url mismatch: got %q want %q", got, want)
+	}
+	if got, want := persisted.ActiveProfileServerURL, "https://am.namjaeyoun.com"; got != want {
+		t.Fatalf("active profile server_url mismatch: got %q want %q", got, want)
+	}
+	if got, want := persisted.Profiles["alice"].ServerURL, "https://am.namjaeyoun.com"; got != want {
+		t.Fatalf("registered profile server_url mismatch: got %q want %q", got, want)
 	}
 }
 

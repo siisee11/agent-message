@@ -44,11 +44,8 @@ func NewRootCommand() *cobra.Command {
 				return fmt.Errorf("load config: %w", err)
 			}
 
-			if strings.TrimSpace(serverURLOverride) != "" {
-				cfg.ServerURL = serverURLOverride
-			}
-
-			client, err := api.NewClient(cfg.ServerURL, cfg.Token)
+			serverURL := resolvedClientServerURL(cfg, command, serverURLOverride)
+			client, err := api.NewClient(serverURL, cfg.Token)
 			if err != nil {
 				return fmt.Errorf("initialize API client: %w", err)
 			}
@@ -82,4 +79,26 @@ func NewRootCommand() *cobra.Command {
 	)
 
 	return cmd
+}
+
+func resolvedClientServerURL(cfg config.Config, command *cobra.Command, serverURLOverride string) string {
+	if strings.TrimSpace(serverURLOverride) != "" {
+		return strings.TrimSpace(serverURLOverride)
+	}
+	if commandUsesConfiguredServerURL(command) {
+		return cfg.ServerURL
+	}
+	return cfg.ActiveServerURL()
+}
+
+func commandUsesConfiguredServerURL(command *cobra.Command) bool {
+	if command == nil {
+		return false
+	}
+	switch strings.TrimSpace(command.Name()) {
+	case "register", "login":
+		return true
+	default:
+		return false
+	}
 }

@@ -105,7 +105,7 @@ func runProfileSwitch(rt *Runtime, rawName string) error {
 
 	cfg := rt.Config
 	cfg.ActiveProfile = name
-	cfg.ServerURL = profile.ServerURL
+	cfg.ActiveProfileServerURL = profile.ServerURL
 	cfg.Token = profile.Token
 	cfg.ReadSessions = cloneReadSessionsMap(profile.ReadSessions)
 	cfg.LastReadConversationID = profile.LastReadConversationID

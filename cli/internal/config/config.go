@@ -41,6 +41,7 @@ type Config struct {
 	Profiles               map[string]Profile     `json:"profiles,omitempty"`
 	LastReadConversationID string                 `json:"last_read_conversation_id,omitempty"`
 	ReadSessions           map[string]ReadSession `json:"read_sessions,omitempty"`
+	ActiveProfileServerURL string                 `json:"-"`
 }
 
 // Store provides disk persistence for Config.
@@ -124,9 +125,10 @@ func (s *Store) Save(cfg Config) error {
 
 func defaultConfig() Config {
 	return Config{
-		ServerURL:    defaultServerURL,
-		Profiles:     make(map[string]Profile),
-		ReadSessions: make(map[string]ReadSession),
+		ServerURL:              defaultServerURL,
+		Profiles:               make(map[string]Profile),
+		ReadSessions:           make(map[string]ReadSession),
+		ActiveProfileServerURL: "",
 	}
 }
 
@@ -140,9 +142,16 @@ func (c *Config) prepareForSave() error {
 		c.Profiles = make(map[string]Profile)
 	}
 	if c.ActiveProfile != "" {
+		profileServerURL, err := normalizeServerURL(c.ActiveProfileServerURL)
+		if err != nil {
+			return err
+		}
+		if strings.TrimSpace(c.ActiveProfileServerURL) == "" {
+			profileServerURL = c.ServerURL
+		}
 		c.Profiles[c.ActiveProfile] = Profile{
 			Username:               c.ActiveProfile,
-			ServerURL:              c.ServerURL,
+			ServerURL:              profileServerURL,
 			Token:                  c.Token,
 			LastReadConversationID: c.LastReadConversationID,
 			ReadSessions:           cloneReadSessions(c.ReadSessions),
@@ -187,20 +196,34 @@ func (c *Config) normalizeLoaded() error {
 	c.Profiles = normalizedProfiles
 
 	if c.ActiveProfile == "" {
+		c.ActiveProfileServerURL = ""
 		return nil
 	}
 
 	profile, ok := c.Profiles[c.ActiveProfile]
 	if !ok {
 		c.ActiveProfile = ""
+		c.ActiveProfileServerURL = ""
 		return nil
 	}
 
-	c.ServerURL = profile.ServerURL
+	c.ActiveProfileServerURL = profile.ServerURL
 	c.Token = profile.Token
 	c.ReadSessions = cloneReadSessions(profile.ReadSessions)
 	c.LastReadConversationID = normalizeLastReadConversationID(profile.LastReadConversationID, c.ReadSessions)
 	return nil
+}
+
+func (c Config) ActiveServerURL() string {
+	if strings.TrimSpace(c.ActiveProfileServerURL) != "" {
+		return c.ActiveProfileServerURL
+	}
+	if strings.TrimSpace(c.ActiveProfile) != "" {
+		if profile, ok := c.Profiles[c.ActiveProfile]; ok && strings.TrimSpace(profile.ServerURL) != "" {
+			return profile.ServerURL
+		}
+	}
+	return c.ServerURL
 }
 
 func normalizeProfile(name string, profile Profile) (Profile, error) {

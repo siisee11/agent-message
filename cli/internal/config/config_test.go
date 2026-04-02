@@ -119,6 +119,9 @@ func TestSaveLoadRoundTripWithActiveProfile(t *testing.T) {
 	if got, want := cfg.ServerURL, "https://chat.example.test/api"; got != want {
 		t.Fatalf("server_url mismatch: got %q want %q", got, want)
 	}
+	if got, want := cfg.ActiveProfileServerURL, "https://chat.example.test/api"; got != want {
+		t.Fatalf("active profile server_url mismatch: got %q want %q", got, want)
+	}
 	if got, want := cfg.Token, "active-token"; got != want {
 		t.Fatalf("token mismatch: got %q want %q", got, want)
 	}
@@ -127,5 +130,43 @@ func TestSaveLoadRoundTripWithActiveProfile(t *testing.T) {
 	}
 	if got, want := cfg.Profiles["bob"].ServerURL, "http://localhost:9090"; got != want {
 		t.Fatalf("inactive profile server_url mismatch: got %q want %q", got, want)
+	}
+}
+
+func TestLoadPreservesConfiguredServerURLSeparatelyFromActiveProfileServerURL(t *testing.T) {
+	t.Parallel()
+
+	store := NewStore(filepath.Join(t.TempDir(), "config"))
+	input := Config{
+		ServerURL:              " https://am.namjaeyoun.com/ ",
+		Token:                  " local-token ",
+		ActiveProfile:          "alice",
+		ActiveProfileServerURL: " http://127.0.0.1:45180/ ",
+		Profiles: map[string]Profile{
+			"alice": {
+				Username:  "alice",
+				ServerURL: "http://127.0.0.1:45180/",
+				Token:     "local-token",
+			},
+		},
+	}
+
+	if err := store.Save(input); err != nil {
+		t.Fatalf("save config: %v", err)
+	}
+
+	cfg, err := store.Load()
+	if err != nil {
+		t.Fatalf("load config: %v", err)
+	}
+
+	if got, want := cfg.ServerURL, "https://am.namjaeyoun.com"; got != want {
+		t.Fatalf("configured server_url mismatch: got %q want %q", got, want)
+	}
+	if got, want := cfg.ActiveProfileServerURL, "http://127.0.0.1:45180"; got != want {
+		t.Fatalf("active profile server_url mismatch: got %q want %q", got, want)
+	}
+	if got, want := cfg.ActiveServerURL(), "http://127.0.0.1:45180"; got != want {
+		t.Fatalf("active server resolution mismatch: got %q want %q", got, want)
 	}
 }

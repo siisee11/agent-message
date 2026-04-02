@@ -52,8 +52,14 @@ func TestRunProfileSwitchActivatesStoredProfile(t *testing.T) {
 	if got, want := rt.Config.Token, "bob-token"; got != want {
 		t.Fatalf("token mismatch: got %q want %q", got, want)
 	}
-	if got, want := rt.Config.ServerURL, "https://chat.example.test/api"; got != want {
-		t.Fatalf("server url mismatch: got %q want %q", got, want)
+	if got, want := rt.Config.ServerURL, "http://example.test"; got != want {
+		t.Fatalf("configured server url mismatch: got %q want %q", got, want)
+	}
+	if got, want := rt.Config.ActiveProfileServerURL, "https://chat.example.test/api"; got != want {
+		t.Fatalf("active profile server url mismatch: got %q want %q", got, want)
+	}
+	if got, want := rt.Client.ServerURL(), "https://chat.example.test/api"; got != want {
+		t.Fatalf("client server url mismatch: got %q want %q", got, want)
 	}
 	if got, want := rt.Config.LastReadConversationID, "conv-b"; got != want {
 		t.Fatalf("last read conversation mismatch: got %q want %q", got, want)

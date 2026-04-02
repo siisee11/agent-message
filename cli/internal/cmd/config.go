@@ -164,7 +164,7 @@ func saveRuntimeConfig(rt *Runtime, cfg config.Config) error {
 		return fmt.Errorf("reload config: %w", err)
 	}
 
-	client, err := api.NewClient(loaded.ServerURL, loaded.Token)
+	client, err := api.NewClient(loaded.ActiveServerURL(), loaded.Token)
 	if err != nil {
 		return fmt.Errorf("initialize API client: %w", err)
 	}

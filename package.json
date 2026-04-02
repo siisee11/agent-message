@@ -4,10 +4,12 @@
   "description": "Agent Message CLI and local stack launcher for macOS",
   "type": "module",
   "bin": {
-    "agent-message": "./npm/bin/agent-message.mjs"
+    "agent-message": "./npm/bin/agent-message.mjs",
+    "codex-message": "./npm/bin/codex-message.mjs"
   },
   "files": [
     "README.md",
+    "codex-message",
     "npm/bin",
     "npm/runtime"
   ],

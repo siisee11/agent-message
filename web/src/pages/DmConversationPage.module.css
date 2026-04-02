@@ -400,8 +400,8 @@
 }
 
 .iconButton {
-  width: 2.04rem;
-  height: 2.04rem;
+  width: 2.55rem;
+  height: 2.55rem;
   border: 0;
   border-radius: 50%;
   display: inline-flex;
@@ -440,7 +440,7 @@
   display: flex;
   align-items: center;
   padding: 0.14rem 0.72rem;
-  border-radius: 999px;
+  border-radius: 1.4rem;
   border: 1px solid #c2d2f4;
   background: linear-gradient(180deg, #ffffff 0%, #f6f9ff 100%);
   box-shadow: 0 10px 24px -24px rgba(16, 33, 63, 0.4);
@@ -514,8 +514,8 @@
 
 .submitButton {
   border: 0;
-  width: 2.04rem;
-  height: 2.04rem;
+  width: 2.55rem;
+  height: 2.55rem;
   border-radius: 50%;
   background: linear-gradient(180deg, #2454d6 0%, #163b9e 100%);
   color: #ffffff;

@@ -183,6 +183,7 @@ export function DmConversationPage() {
   const shouldStickToBottomRef = useRef(true)
   const fileInputRef = useRef<HTMLInputElement | null>(null)
   const actionMenuRef = useRef<HTMLDivElement | null>(null)
+  const composerInputRef = useRef<HTMLTextAreaElement | null>(null)
 
   const [composerText, setComposerText] = useState('')
   const [selectedFile, setSelectedFile] = useState<File | null>(null)
@@ -375,6 +376,15 @@ export function DmConversationPage() {
     void messagePagesQuery.fetchNextPage()
   }, [conversationId, hasOlderMessages, messagePagesQuery])
 
+  const resizeComposerInput = useCallback((element: HTMLTextAreaElement | null): void => {
+    if (!element) {
+      return
+    }
+
+    element.style.height = '0px'
+    element.style.height = `${element.scrollHeight}px`
+  }, [])
+
   useLayoutEffect(() => {
     const timeline = timelineRef.current
     if (!timeline || !conversationId) {
@@ -399,6 +409,10 @@ export function DmConversationPage() {
       initialScrollConversationRef.current = conversationId
     }
   }, [conversationId, messagePagesQuery.isFetchingNextPage, messagesAscending.length])
+
+  useLayoutEffect(() => {
+    resizeComposerInput(composerInputRef.current)
+  }, [composerText, resizeComposerInput])
 
   useEffect(() => {
     shouldStickToBottomRef.current = true
@@ -619,6 +633,11 @@ export function DmConversationPage() {
       content: composerText,
       attachment: selectedFile,
     })
+  }
+
+  function handleComposerChange(event: React.ChangeEvent<HTMLTextAreaElement>): void {
+    resizeComposerInput(event.target)
+    setComposerText(event.target.value)
   }
 
   const handleApprovalAction = useCallback(
@@ -876,8 +895,9 @@ export function DmConversationPage() {
                 <textarea
                   className={styles.composerInput}
                   disabled={disableComposerActions}
-                  onChange={(event) => setComposerText(event.target.value)}
+                  onChange={handleComposerChange}
                   placeholder={editingTarget ? 'Edit message...' : 'Message'}
+                  ref={composerInputRef}
                   rows={1}
                   value={composerText}
                 />

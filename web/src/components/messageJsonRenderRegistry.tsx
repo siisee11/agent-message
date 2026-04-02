@@ -1,6 +1,7 @@
 import { defineRegistry } from '@json-render/react'
 import { shadcnComponents } from '@json-render/shadcn'
 import { MessageApprovalCard } from './MessageApprovalCard'
+import { MessageMarkdown } from './MessageMarkdown'
 import { messageJsonRenderCatalog } from './messageJsonRenderCatalog'
 
 export const { registry: messageJsonRenderRegistry } = defineRegistry(messageJsonRenderCatalog, {
@@ -13,6 +14,7 @@ export const { registry: messageJsonRenderRegistry } = defineRegistry(messageJso
     Grid: shadcnComponents.Grid,
     Heading: shadcnComponents.Heading,
     Image: shadcnComponents.Image,
+    Markdown: MessageMarkdown,
     Progress: shadcnComponents.Progress,
     Separator: shadcnComponents.Separator,
     Skeleton: shadcnComponents.Skeleton,

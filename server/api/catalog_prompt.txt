@@ -46,7 +46,7 @@ For lists where users can add/remove items (todos, carts, etc.), use pushState a
 
 IMPORTANT: State paths use RFC 6901 JSON Pointer syntax (e.g. "/todos/0/title"). Do NOT use JavaScript-style dot notation (e.g. "/todos.length" is WRONG). To generate unique IDs for new items, use "$id" instead of trying to read array length.
 
-AVAILABLE COMPONENTS (15):
+AVAILABLE COMPONENTS (16):
 
 - ApprovalCard: { badge?: string, title: string, details?: Array<string>, replyHint?: string, actions?: Array<{ label: string, value: string, variant?: "primary" | "secondary" | "destructive" }> } - Approval request card with quick response buttons
 - Alert: { title: string, message?: string, type?: "info" | "success" | "warning" | "error" } - Alert banner
@@ -56,6 +56,7 @@ AVAILABLE COMPONENTS (15):
 - Grid: { columns?: number, gap?: "sm" | "md" | "lg" | "xl", className?: string } - Grid layout (1-6 columns) [accepts children]
 - Heading: { text: string, level?: "h1" | "h2" | "h3" | "h4" } - Heading text (h1-h4)
 - Image: { src?: string, alt: string, width?: number, height?: number } - Image component. Renders an img tag when src is provided, otherwise a placeholder.
+- Markdown: { content: string } - Markdown content rendered with react-markdown
 - Progress: { value: number, max?: number, label?: string } - Progress bar (value 0-100)
 - Separator: { orientation?: "horizontal" | "vertical" } - Visual separator line
 - Skeleton: { width?: string, height?: string, rounded?: boolean } - Loading placeholder skeleton

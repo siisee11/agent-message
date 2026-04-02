@@ -21,7 +21,7 @@ export const messageJsonRenderCatalog = defineCatalog(schema, {
             }),
           )
           .optional(),
-      }),
+        }),
     },
     Alert: shadcnComponentDefinitions.Alert,
     Avatar: shadcnComponentDefinitions.Avatar,
@@ -30,6 +30,12 @@ export const messageJsonRenderCatalog = defineCatalog(schema, {
     Grid: shadcnComponentDefinitions.Grid,
     Heading: shadcnComponentDefinitions.Heading,
     Image: shadcnComponentDefinitions.Image,
+    Markdown: {
+      description: 'Markdown content rendered with react-markdown',
+      props: z.object({
+        content: z.string(),
+      }),
+    },
     Progress: shadcnComponentDefinitions.Progress,
     Separator: shadcnComponentDefinitions.Separator,
     Skeleton: shadcnComponentDefinitions.Skeleton,

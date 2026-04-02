@@ -59,4 +59,26 @@ describe('MessageJsonRender', () => {
     expect(html).toContain('Deny')
     expect(html).toContain('Fallback reply: approve | session | deny | cancel')
   })
+
+  it('renders markdown content through the markdown component', () => {
+    const html = ReactDOMServer.renderToStaticMarkup(
+      <MessageJsonRender
+        spec={{
+          root: 'markdown-1',
+          elements: {
+            'markdown-1': {
+              type: 'Markdown',
+              props: {
+                content: '# Release Notes\n\n- Added `Markdown`\n- Supports [links](https://example.com)',
+              },
+            },
+          },
+        }}
+      />,
+    )
+
+    expect(html).toContain('<h1>Release Notes</h1>')
+    expect(html).toContain('<li>Added <code>Markdown</code></li>')
+    expect(html).toContain('<a href="https://example.com">links</a>')
+  })
 })

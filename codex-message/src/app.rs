@@ -3,6 +3,7 @@ use rand::Rng;
 use serde_json::Map;
 use serde_json::Value;
 use serde_json::json;
+use std::time::Duration;
 use uuid::Uuid;
 
 use crate::Config;
@@ -29,6 +30,7 @@ Operational requirements from the codex-message wrapper:
 }
 const READ_REACTION_EMOJI: &str = "👀";
 const COMPLETE_REACTION_EMOJI: &str = "✅";
+const WATCH_RETRY_DELAYS_SECS: [u64; 3] = [1, 2, 5];
 
 pub(crate) struct App {
     config: Config,
@@ -144,12 +146,20 @@ impl Runtime {
     }
 
     async fn next_target_message(&mut self) -> Result<Message> {
+        let mut watch_retry_attempt = 0usize;
         loop {
-            let message = self
-                .message_watch
-                .next_message()
-                .await
-                .context("read next event from agent-message watch stream")?;
+            let message = match self.message_watch.next_message().await {
+                Ok(message) => {
+                    watch_retry_attempt = 0;
+                    message
+                }
+                Err(error) => {
+                    self.reconnect_message_watch(watch_retry_attempt, &error)
+                        .await?;
+                    watch_retry_attempt = watch_retry_attempt.saturating_add(1);
+                    continue;
+                }
+            };
             if !message
                 .sender_username
                 .eq_ignore_ascii_case(&self.to_username)
@@ -171,6 +181,35 @@ impl Runtime {
             }
             return Ok(message);
         }
+    }
+
+    async fn reconnect_message_watch(
+        &mut self,
+        attempt: usize,
+        error: &anyhow::Error,
+    ) -> Result<()> {
+        let delay = watch_retry_delay(attempt);
+        eprintln!(
+            "warning: agent-message watch stream failed: {error:#}. retrying in {}s",
+            delay.as_secs()
+        );
+
+        self.message_watch
+            .shutdown()
+            .await
+            .context("shutdown stale agent-message watch stream")?;
+        tokio::time::sleep(delay).await;
+
+        self.message_watch = self
+            .agent_client
+            .watch_messages(&self.to_username)
+            .await
+            .context("restart agent-message watch stream")?;
+        eprintln!(
+            "agent-message watch stream reconnected for {}",
+            self.to_username
+        );
+        Ok(())
     }
 
     async fn run_turn(&mut self, request: &str) -> Result<TurnOutcome> {
@@ -885,9 +924,25 @@ fn new_pin() -> String {
     format!("{:06}", rng.random_range(0..=999_999))
 }
 
+fn watch_retry_delay(attempt: usize) -> Duration {
+    let seconds = WATCH_RETRY_DELAYS_SECS
+        .get(attempt)
+        .copied()
+        .unwrap_or(*WATCH_RETRY_DELAYS_SECS.last().unwrap_or(&5));
+    Duration::from_secs(seconds)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn watch_retry_delay_caps_at_last_value() {
+        assert_eq!(watch_retry_delay(0), Duration::from_secs(1));
+        assert_eq!(watch_retry_delay(1), Duration::from_secs(2));
+        assert_eq!(watch_retry_delay(2), Duration::from_secs(5));
+        assert_eq!(watch_retry_delay(10), Duration::from_secs(5));
+    }
 
     #[test]
     fn command_approval_reply_is_parsed() {

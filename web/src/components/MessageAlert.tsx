@@ -4,12 +4,12 @@ import styles from './MessageJsonRender.module.css'
 type AlertType = 'error' | 'info' | 'success' | 'warning'
 
 interface MessageAlertProps {
-  message?: string
-  title?: string
-  type?: AlertType
+  message?: string | null
+  title?: string | null
+  type?: AlertType | null
 }
 
-function resolveText(value: string | undefined): string | null {
+function resolveText(value: string | null | undefined): string | null {
   if (typeof value !== 'string') {
     return null
   }
@@ -18,7 +18,7 @@ function resolveText(value: string | undefined): string | null {
   return trimmed === '' ? null : trimmed
 }
 
-function resolveAlertClassName(type: AlertType | undefined): string {
+function resolveAlertClassName(type: AlertType | null | undefined): string {
   switch (type) {
     case 'success':
       return styles.alertSuccess

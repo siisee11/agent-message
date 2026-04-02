@@ -167,7 +167,7 @@
   border: 0;
   border-radius: 0;
   background: linear-gradient(180deg, rgba(236, 241, 248, 0.98) 0%, rgba(231, 237, 245, 0.98) 100%);
-  padding: 0.68rem 1rem 0.76rem;
+  padding: 0.68rem 1.18rem 0.76rem;
   box-shadow: none;
 }
 
@@ -176,7 +176,7 @@
   border: 0;
   border-radius: 0;
   background: #ffffff;
-  padding: 0.68rem 1rem 0.76rem;
+  padding: 0.68rem 1.18rem 0.76rem;
   box-shadow: none;
 }
 
@@ -238,7 +238,7 @@
 
 .messageText {
   margin: 0;
-  font-size: 0.84rem;
+  font-size: 0.82rem;
   color: #1c335d;
   white-space: pre-wrap;
   word-break: break-word;
@@ -246,14 +246,14 @@
 
 .messageTextAgent {
   margin-top: 0;
-  font-size: 0.92rem;
+  font-size: 0.88rem;
   line-height: 1.62;
   color: #22324c;
 }
 
 .messageTextOwn {
   margin-top: 0;
-  font-size: 0.92rem;
+  font-size: 0.88rem;
   line-height: 1.62;
   color: #22324c;
 }

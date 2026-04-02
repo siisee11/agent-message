@@ -86,8 +86,14 @@ impl AgentMessageClient {
         let mut child = command
             .spawn()
             .with_context(|| format!("spawn `{}`", self.binary.display()))?;
-        let stdout = child.stdout.take().context("capture agent-message watch stdout")?;
-        let stderr = child.stderr.take().context("capture agent-message watch stderr")?;
+        let stdout = child
+            .stdout
+            .take()
+            .context("capture agent-message watch stdout")?;
+        let stderr = child
+            .stderr
+            .take()
+            .context("capture agent-message watch stderr")?;
         let (messages_tx, messages_rx) = mpsc::unbounded_channel();
         spawn_watch_stdout_pump(stdout, messages_tx);
         spawn_watch_stderr_pump(stderr);
@@ -197,6 +203,17 @@ impl AgentMessageClient {
         }
         Ok(())
     }
+
+    pub(crate) async fn unreact_to_message(&self, message: &Message, emoji: &str) -> Result<()> {
+        let output = self
+            .run(["unreact", &message.id, emoji])
+            .await
+            .context("run `agent-message unreact`")?;
+        if !output.contains(&message.id) {
+            bail!("unexpected unreact output: {output}");
+        }
+        Ok(())
+    }
 }
 
 #[derive(Debug, Deserialize)]
@@ -243,10 +260,7 @@ fn watch_message_text(message: &WatchJSONMessage) -> String {
     String::new()
 }
 
-fn spawn_watch_stdout_pump(
-    stdout: ChildStdout,
-    messages_tx: mpsc::UnboundedSender<Message>,
-) {
+fn spawn_watch_stdout_pump(stdout: ChildStdout, messages_tx: mpsc::UnboundedSender<Message>) {
     tokio::spawn(async move {
         let mut lines = BufReader::new(stdout).lines();
         loop {

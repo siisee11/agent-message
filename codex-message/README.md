@@ -11,7 +11,7 @@ Behavior:
 3. Reuses one Codex app-server thread for the DM session.
 4. Polls `agent-message read <user>` for new plain-text requests, adds a `👀` reaction to each accepted inbound DM, and relays it into `turn/start`.
 5. For approval and input requests, sends readable `json_render` prompts back to Jay and waits for a text reply.
-6. Sends final Codex results back as `json_render` reports.
+6. Sends final Codex results back as `json_render` reports and, after a successful turn completion, replaces the inbound `👀` reaction with `✅`.
 
 Example:
 

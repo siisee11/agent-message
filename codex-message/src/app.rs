@@ -27,6 +27,7 @@ Operational requirements from the codex-message wrapper:
     )
 }
 const READ_REACTION_EMOJI: &str = "👀";
+const COMPLETE_REACTION_EMOJI: &str = "✅";
 
 pub(crate) struct App {
     config: Config,
@@ -128,6 +129,9 @@ impl Runtime {
                             if let Some(error_text) = outcome.error_text.as_deref() {
                                 eprintln!("codex turn error: {error_text}");
                             }
+                            if should_mark_message_complete(&outcome) {
+                                self.mark_message_complete(&message).await;
+                            }
                         }
                         Err(error) => {
                             eprintln!("codex request failed for {:?}: {error:#}", request.trim());
@@ -145,7 +149,10 @@ impl Runtime {
                 .next_message()
                 .await
                 .context("read next event from agent-message watch stream")?;
-            if !message.sender_username.eq_ignore_ascii_case(&self.to_username) {
+            if !message
+                .sender_username
+                .eq_ignore_ascii_case(&self.to_username)
+            {
                 continue;
             }
             if extract_request_text(&message).is_none() {
@@ -222,6 +229,29 @@ impl Runtime {
             status: turn_status,
             error_text: turn_error,
         })
+    }
+
+    async fn mark_message_complete(&self, message: &Message) {
+        if let Err(error) = self
+            .agent_client
+            .unreact_to_message(message, READ_REACTION_EMOJI)
+            .await
+        {
+            eprintln!(
+                "warning: failed to remove read reaction from {}: {error}",
+                message.id
+            );
+        }
+        if let Err(error) = self
+            .agent_client
+            .react_to_message(message, COMPLETE_REACTION_EMOJI)
+            .await
+        {
+            eprintln!(
+                "warning: failed to add complete reaction to {}: {error}",
+                message.id
+            );
+        }
     }
 
     async fn handle_server_request(
@@ -525,6 +555,10 @@ impl Runtime {
 struct TurnOutcome {
     status: String,
     error_text: Option<String>,
+}
+
+fn should_mark_message_complete(outcome: &TurnOutcome) -> bool {
+    outcome.status.eq_ignore_ascii_case("completed") && outcome.error_text.is_none()
 }
 
 async fn register_agent_account(
@@ -909,5 +943,21 @@ mod tests {
             }),
             None
         );
+    }
+
+    #[test]
+    fn marks_message_complete_only_for_successful_completed_turns() {
+        assert!(should_mark_message_complete(&TurnOutcome {
+            status: "completed".to_string(),
+            error_text: None,
+        }));
+        assert!(!should_mark_message_complete(&TurnOutcome {
+            status: "failed".to_string(),
+            error_text: Some("boom".to_string()),
+        }));
+        assert!(!should_mark_message_complete(&TurnOutcome {
+            status: "completed".to_string(),
+            error_text: Some("boom".to_string()),
+        }));
     }
 }

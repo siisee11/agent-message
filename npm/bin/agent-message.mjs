@@ -430,6 +430,7 @@ function buildDevLaunchSpec(paths) {
   if (!existsSync(join(sourceWebDir, 'node_modules'))) {
     runForeground('npm', ['ci'], { cwd: sourceWebDir })
   }
+  runForeground('node', ['./scripts/generate-message-json-render-catalog-prompt.mjs'], { cwd: packageRoot })
   runForeground('npm', ['run', 'build'], { cwd: sourceWebDir })
 
   const serverBinaryPath = join(paths.binDir, 'agent-message-server')

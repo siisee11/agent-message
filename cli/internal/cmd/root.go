@@ -61,6 +61,7 @@ func NewRootCommand() *cobra.Command {
 	cmd.PersistentFlags().StringVar(&serverURLOverride, "server-url", "", "Override server URL for this command")
 
 	cmd.AddCommand(
+		newCatalogCommand(rt),
 		newConfigCommand(rt),
 		newProfileCommand(rt),
 		newRegisterCommand(rt),

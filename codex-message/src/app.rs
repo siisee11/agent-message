@@ -11,13 +11,20 @@ use crate::agent_message::{AgentMessageClient, Message, MessageWatch};
 use crate::codex::{CodexAppServer, IncomingMessage};
 use crate::render::{ApprovalAction, approval_spec, report_spec};
 
-const REQUEST_SUFFIX: &str = r#"
+fn request_suffix(to_username: &str) -> String {
+    format!(
+        r#"
 
 Operational requirements from the codex-message wrapper:
-- The final result will be forwarded to the user through agent-message.
-- Prefer a visually readable report format suitable for an agent-message json-render response.
+- Send the final user-facing result yourself by invoking the `agent-message` CLI.
+- Deliver that result directly to the user `{to_username}`.
+- Prefer a visually readable `agent-message send {to_username} ... --kind json_render` payload when appropriate.
+- Do not rely on the wrapper to forward your final assistant message as the primary user-facing result.
+- After sending the direct result, keep your final assistant message minimal because the wrapper may still emit status metadata.
 - If you need approval or clarification, ask clearly and briefly so the wrapper can relay it.
-"#;
+"#
+    )
+}
 const READ_REACTION_EMOJI: &str = "👀";
 
 pub(crate) struct App {
@@ -37,7 +44,6 @@ impl App {
 
 struct Runtime {
     config: Config,
-    chat_id: String,
     to_username: String,
     agent_client: AgentMessageClient,
     message_watch: MessageWatch,
@@ -89,7 +95,6 @@ impl Runtime {
 
         Ok(Self {
             config,
-            chat_id,
             to_username,
             agent_client,
             message_watch,
@@ -114,39 +119,17 @@ impl Runtime {
 
                     match self.run_turn(&request).await {
                         Ok(outcome) => {
-                            let spec = report_spec(
-                                match outcome.status.as_str() {
-                                    "completed" => "Completed",
-                                    "interrupted" => "Interrupted",
-                                    _ => "Failed",
-                                },
-                                "Codex report",
-                                &[
-                                    format!("Chat ID: {}", self.chat_id),
-                                    format!("Request: {}", request.trim()),
-                                    format!("Status: {}", outcome.status),
-                                ],
-                                Some(&outcome.report_body()),
+                            eprintln!(
+                                "codex turn finished for request {:?} with status {}",
+                                request.trim(),
+                                outcome.status
                             );
-                            self.agent_client
-                                .send_json_render_message(&self.to_username, spec)
-                                .await
-                                .context("send turn report")?;
+                            if let Some(error_text) = outcome.error_text.as_deref() {
+                                eprintln!("codex turn error: {error_text}");
+                            }
                         }
                         Err(error) => {
-                            let spec = report_spec(
-                                "Error",
-                                "Codex request failed",
-                                &[
-                                    format!("Chat ID: {}", self.chat_id),
-                                    format!("Request: {}", request.trim()),
-                                ],
-                                Some(&error.to_string()),
-                            );
-                            self.agent_client
-                                .send_json_render_message(&self.to_username, spec)
-                                .await
-                                .context("send failure report")?;
+                            eprintln!("codex request failed for {:?}: {error:#}", request.trim());
                         }
                     }
                 }
@@ -182,7 +165,7 @@ impl Runtime {
     }
 
     async fn run_turn(&mut self, request: &str) -> Result<TurnOutcome> {
-        let composed_request = format!("{}\n{}", request.trim(), REQUEST_SUFFIX);
+        let composed_request = format!("{}\n{}", request.trim(), request_suffix(&self.to_username));
         let turn_params =
             build_turn_start_params(&self.config, &self.thread_id, &composed_request)?;
         let response = self
@@ -197,18 +180,10 @@ impl Runtime {
             .map(ToOwned::to_owned)
             .ok_or_else(|| anyhow!("turn/start response missing turn.id"))?;
 
-        let mut agent_text = String::new();
-
         let (turn_status, turn_error) = loop {
             match self.codex.next_event().await? {
                 IncomingMessage::Notification { method, params } => match method.as_str() {
-                    "item/agentMessage/delta" => {
-                        if params.get("turnId").and_then(Value::as_str) == Some(turn_id.as_str()) {
-                            if let Some(delta) = params.get("delta").and_then(Value::as_str) {
-                                agent_text.push_str(delta);
-                            }
-                        }
-                    }
+                    "item/agentMessage/delta" => {}
                     "turn/completed" => {
                         if params
                             .get("turn")
@@ -244,7 +219,6 @@ impl Runtime {
 
         Ok(TurnOutcome {
             status: turn_status,
-            agent_text: agent_text.trim().to_string(),
             error_text: turn_error,
         })
     }
@@ -549,19 +523,7 @@ impl Runtime {
 #[derive(Debug)]
 struct TurnOutcome {
     status: String,
-    agent_text: String,
     error_text: Option<String>,
-}
-
-impl TurnOutcome {
-    fn report_body(&self) -> String {
-        match (&self.agent_text.is_empty(), &self.error_text) {
-            (false, Some(error)) => format!("{}\n\nError: {}", self.agent_text, error),
-            (false, None) => self.agent_text.clone(),
-            (true, Some(error)) => error.clone(),
-            (true, None) => "Codex completed without an assistant message.".to_string(),
-        }
-    }
 }
 
 async fn register_agent_account(

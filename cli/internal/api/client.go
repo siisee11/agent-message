@@ -121,6 +121,12 @@ func (c *Client) Logout(ctx context.Context) error {
 	return c.doJSON(ctx, http.MethodDelete, "/api/auth/logout", nil, nil)
 }
 
+func (c *Client) GetCatalogPrompt(ctx context.Context) (CatalogPromptResponse, error) {
+	var out CatalogPromptResponse
+	err := c.doJSON(ctx, http.MethodGet, "/api/catalog/prompt", nil, &out)
+	return out, err
+}
+
 func (c *Client) Me(ctx context.Context) (UserProfile, error) {
 	var out UserProfile
 	err := c.doJSON(ctx, http.MethodGet, "/api/users/me", nil, &out)
@@ -436,6 +442,11 @@ type UserProfile struct {
 type AuthResponse struct {
 	Token string      `json:"token"`
 	User  UserProfile `json:"user"`
+}
+
+// CatalogPromptResponse matches GET /api/catalog/prompt.
+type CatalogPromptResponse struct {
+	Prompt string `json:"prompt"`
 }
 
 // Conversation matches the conversation model shape.

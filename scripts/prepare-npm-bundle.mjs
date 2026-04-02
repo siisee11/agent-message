@@ -44,6 +44,10 @@ if (!existsSync(join(rootDir, 'web', 'node_modules'))) {
   })
 }
 
+run('node', ['./scripts/generate-message-json-render-catalog-prompt.mjs'], {
+  cwd: rootDir,
+})
+
 run('npm', ['run', 'build'], {
   cwd: join(rootDir, 'web'),
 })

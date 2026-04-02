@@ -33,6 +33,7 @@ func NewRouter(deps Dependencies) http.Handler {
 	}
 
 	authHandler := newAuthHandler(deps.Store)
+	catalogHandler := newCatalogHandler()
 	usersHandler := newUsersHandler(deps.Store)
 	conversationsHandler := newConversationsHandler(deps.Store, hub)
 	messagesHandler := newMessagesHandler(deps.Store, hub)
@@ -45,6 +46,7 @@ func NewRouter(deps Dependencies) http.Handler {
 
 	mux.HandleFunc("/api/auth/register", authHandler.handleRegister)
 	mux.HandleFunc("/api/auth/login", authHandler.handleLogin)
+	mux.HandleFunc("/api/catalog/prompt", catalogHandler.handlePrompt)
 	mux.Handle("/api/auth/logout", authRequired(http.HandlerFunc(authHandler.handleLogout)))
 
 	mux.Handle("/api/users", authRequired(http.HandlerFunc(usersHandler.handleUsers)))

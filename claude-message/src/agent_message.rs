@@ -12,16 +12,24 @@ use tokio::sync::mpsc;
 #[derive(Debug, Clone)]
 pub(crate) struct AgentMessageClient {
     binary: PathBuf,
+    from_profile: Option<String>,
 }
 
 impl AgentMessageClient {
     pub(crate) fn new(binary: PathBuf) -> Self {
-        Self { binary }
+        Self {
+            binary,
+            from_profile: None,
+        }
+    }
+
+    pub(crate) fn set_from_profile(&mut self, profile: String) {
+        self.from_profile = Some(profile);
     }
 
     pub(crate) async fn server_url(&self) -> Result<String> {
         let output = self
-            .run(["config", "get", "server_url"])
+            .run(&["config", "get", "server_url"])
             .await
             .context("run `agent-message config get server_url`")?;
         let server_url = output.trim();
@@ -33,7 +41,7 @@ impl AgentMessageClient {
 
     pub(crate) async fn register(&self, username: &str, pin: &str) -> Result<()> {
         let output = self
-            .run(["register", username, pin])
+            .run(&["register", username, pin])
             .await
             .context("run `agent-message register`")?;
         if !output.contains(&format!("registered {username}")) {
@@ -44,7 +52,7 @@ impl AgentMessageClient {
 
     pub(crate) async fn login(&self, username: &str, pin: &str) -> Result<()> {
         let output = self
-            .run(["login", username, pin])
+            .run(&["login", username, pin])
             .await
             .context("run `agent-message login`")?;
         if !output.contains(&format!("logged in as {username}")) {
@@ -55,7 +63,7 @@ impl AgentMessageClient {
 
     pub(crate) async fn send_text_message(&self, username: &str, text: &str) -> Result<String> {
         let output = self
-            .run(["send", username, text])
+            .run(&["send", username, text])
             .await
             .context("run `agent-message send`")?;
         parse_sent_message_id(&output)
@@ -68,7 +76,7 @@ impl AgentMessageClient {
     ) -> Result<String> {
         let payload = serde_json::to_string(&spec).context("encode json_render spec")?;
         let output = self
-            .run(["send", username, &payload, "--kind", "json_render"])
+            .run(&["send", username, &payload, "--kind", "json_render"])
             .await
             .context("run `agent-message send --kind json_render`")?;
         parse_sent_message_id(&output)
@@ -76,6 +84,9 @@ impl AgentMessageClient {
 
     pub(crate) async fn watch_messages(&self, username: &str) -> Result<MessageWatch> {
         let mut command = Command::new(&self.binary);
+        if let Some(profile) = &self.from_profile {
+            command.args(["--from", profile]);
+        }
         command
             .args(["watch", username, "--json"])
             .stdin(Stdio::null())
@@ -103,7 +114,7 @@ impl AgentMessageClient {
 
     pub(crate) async fn react_to_message(&self, message: &Message, emoji: &str) -> Result<()> {
         let output = self
-            .run(["react", &message.id, emoji])
+            .run(&["react", &message.id, emoji])
             .await
             .context("run `agent-message react`")?;
         if !output.contains(&message.id) {
@@ -114,7 +125,7 @@ impl AgentMessageClient {
 
     pub(crate) async fn unreact_to_message(&self, message: &Message, emoji: &str) -> Result<()> {
         let output = self
-            .run(["unreact", &message.id, emoji])
+            .run(&["unreact", &message.id, emoji])
             .await
             .context("run `agent-message unreact`")?;
         if !output.contains(&message.id) {
@@ -123,8 +134,11 @@ impl AgentMessageClient {
         Ok(())
     }
 
-    async fn run<const N: usize>(&self, args: [&str; N]) -> Result<String> {
+    async fn run(&self, args: &[&str]) -> Result<String> {
         let mut command = Command::new(&self.binary);
+        if let Some(profile) = &self.from_profile {
+            command.args(["--from", profile]);
+        }
         command
             .args(args)
             .stdin(Stdio::null())

@@ -41,7 +41,7 @@ impl Runtime {
         let username = format!("agent-{chat_id}");
         let pin = new_pin();
         let to_username = config.to_username.clone();
-        let agent_client = AgentMessageClient::new(std::path::PathBuf::from("agent-message"));
+        let mut agent_client = AgentMessageClient::new(std::path::PathBuf::from("agent-message"));
         let server_url = agent_client
             .server_url()
             .await
@@ -50,6 +50,7 @@ impl Runtime {
         println!("agent-message server_url: {server_url}");
 
         register_agent_account(&agent_client, &username, &pin).await?;
+        agent_client.set_from_profile(username.clone());
         println!("registered agent profile: {username} (chat_id: {chat_id})");
 
         let message_watch = agent_client

@@ -33,6 +33,7 @@ func NewRootCommand() *cobra.Command {
 
 	var configPath string
 	var serverURLOverride string
+	var fromProfile string
 
 	cmd := &cobra.Command{
 		Use:   "agent-message",
@@ -42,6 +43,17 @@ func NewRootCommand() *cobra.Command {
 			cfg, err := store.Load()
 			if err != nil {
 				return fmt.Errorf("load config: %w", err)
+			}
+
+			if trimmedFrom := strings.TrimSpace(fromProfile); trimmedFrom != "" {
+				_, profile, profileErr := resolveStoredProfile(cfg, trimmedFrom)
+				if profileErr != nil {
+					return fmt.Errorf("--from profile: %w", profileErr)
+				}
+				cfg.Token = profile.Token
+				if strings.TrimSpace(profile.ServerURL) != "" {
+					cfg.ActiveProfileServerURL = profile.ServerURL
+				}
 			}
 
 			serverURL := resolvedClientServerURL(cfg, command, serverURLOverride)
@@ -59,6 +71,7 @@ func NewRootCommand() *cobra.Command {
 
 	cmd.PersistentFlags().StringVar(&configPath, "config", config.DefaultPath(), "Path to config file")
 	cmd.PersistentFlags().StringVar(&serverURLOverride, "server-url", "", "Override server URL for this command")
+	cmd.PersistentFlags().StringVar(&fromProfile, "from", "", "Use a specific profile for this command without switching the active profile")
 
 	cmd.AddCommand(
 		newCatalogCommand(rt),

@@ -6,3 +6,4 @@ agent-messenger
 agent-message
 npm/runtime/
 *.tgz
+ref/codex/

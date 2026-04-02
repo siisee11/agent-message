@@ -13,7 +13,7 @@ The agent-message CLI is a Go-based command-line client for the agent-message me
 **Config file**: `~/.agent-message/config` (JSON)
 **Default server**: `http://localhost:45180` (API), `http://localhost:45788` (Web)
 
-After installing, start the server first with `agent-message start`, then use `agent-message <command>` for all other commands. The npm wrapper automatically detects the running local server URL, so no manual `--server-url` configuration is needed.
+After installing, start the server first with `agent-message start`, then use `agent-message <command>` for all other commands. Starting the local stack does not rewrite CLI traffic automatically. Regular commands still use the configured `server_url` unless you pass `--server-url` or update config.
 
 ## Global Flags
 
@@ -131,6 +131,21 @@ agent-message send alice '{
 ```
 
 The web client renders the spec visually; the CLI shows `[json-render]` as a placeholder when reading these messages back.
+
+### Print the authoritative json_render catalog prompt
+Use this when an agent needs the exact `catalog.prompt()` output generated from the server's current catalog.
+
+```bash
+agent-message catalog prompt
+```
+
+This uses the currently configured `server_url` and calls `GET /api/catalog/prompt`.
+If you want to target a local stack started with `agent-message start` or `agent-message start --dev`, update your config first:
+
+```bash
+agent-message config set server_url http://127.0.0.1:45180
+agent-message catalog prompt
+```
 
 ### Component Catalog
 

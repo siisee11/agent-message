@@ -16,6 +16,7 @@ fn request_suffix(to_username: &str) -> String {
         r#"
 
 Operational requirements from the codex-message wrapper:
+- Before composing the final user-facing result, run `agent-message catalog prompt` and use that output as the authoritative json-render catalog guidance.
 - Send the final user-facing result yourself by invoking the `agent-message` CLI.
 - Deliver that result directly to the user `{to_username}`.
 - Prefer a visually readable `agent-message send {to_username} ... --kind json_render` payload when appropriate.

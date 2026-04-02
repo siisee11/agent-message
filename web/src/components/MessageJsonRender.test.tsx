@@ -60,6 +60,29 @@ describe('MessageJsonRender', () => {
     expect(html).toContain('Fallback reply: approve | session | deny | cancel')
   })
 
+  it('renders alerts with title and message', () => {
+    const html = ReactDOMServer.renderToStaticMarkup(
+      <MessageJsonRender
+        spec={{
+          root: 'alert-1',
+          elements: {
+            'alert-1': {
+              type: 'Alert',
+              props: {
+                title: 'Heads up',
+                message: 'This wrapper normalizes DM workflow before the final send.',
+                type: 'info',
+              },
+            },
+          },
+        }}
+      />,
+    )
+
+    expect(html).toContain('Heads up')
+    expect(html).toContain('This wrapper normalizes DM workflow before the final send.')
+  })
+
   it('renders markdown content through the markdown component', () => {
     const html = ReactDOMServer.renderToStaticMarkup(
       <MessageJsonRender

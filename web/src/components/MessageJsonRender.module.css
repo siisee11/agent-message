@@ -250,6 +250,87 @@
   color: #a43737;
 }
 
+.alertCard {
+  display: grid;
+  gap: 0.42rem;
+  width: 100%;
+  min-width: 0;
+  padding: 0.95rem 1rem;
+  border: 1px solid rgba(103, 128, 170, 0.24);
+  border-radius: 1rem;
+  box-sizing: border-box;
+  background:
+    linear-gradient(180deg, rgba(252, 253, 255, 0.98), rgba(243, 247, 255, 0.98)),
+    #ffffff;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.7);
+}
+
+.alertTitle {
+  margin: 0;
+  font-size: 0.94rem;
+  font-weight: 700;
+  line-height: 1.35;
+  color: #16233d;
+}
+
+.alertMessage {
+  margin: 0;
+  color: #4a5f87;
+}
+
+.alertInfo {
+  border-color: rgba(83, 111, 163, 0.24);
+}
+
+.alertInfo .alertTitle {
+  color: #183465;
+}
+
+.alertSuccess {
+  border-color: rgba(60, 129, 90, 0.24);
+  background:
+    linear-gradient(180deg, rgba(251, 255, 252, 0.98), rgba(241, 249, 244, 0.98)),
+    #ffffff;
+}
+
+.alertSuccess .alertTitle {
+  color: #1d6940;
+}
+
+.alertSuccess .alertMessage {
+  color: #3d6b4d;
+}
+
+.alertWarning {
+  border-color: rgba(188, 138, 41, 0.26);
+  background:
+    linear-gradient(180deg, rgba(255, 253, 248, 0.98), rgba(252, 247, 236, 0.98)),
+    #ffffff;
+}
+
+.alertWarning .alertTitle {
+  color: #8a5612;
+}
+
+.alertWarning .alertMessage {
+  color: #7b633a;
+}
+
+.alertError {
+  border-color: rgba(193, 66, 66, 0.24);
+  background:
+    linear-gradient(180deg, rgba(255, 252, 252, 0.98), rgba(253, 244, 244, 0.98)),
+    #ffffff;
+}
+
+.alertError .alertTitle {
+  color: #a43737;
+}
+
+.alertError .alertMessage {
+  color: #81505b;
+}
+
 .graphCard {
   display: grid;
   gap: 0.8rem;

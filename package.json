@@ -5,10 +5,12 @@
   "type": "module",
   "bin": {
     "agent-message": "./npm/bin/agent-message.mjs",
-    "codex-message": "./npm/bin/codex-message.mjs"
+    "codex-message": "./npm/bin/codex-message.mjs",
+    "claude-message": "./npm/bin/claude-message.mjs"
   },
   "files": [
     "README.md",
+    "claude-message",
     "codex-message",
     "npm/bin",
     "npm/runtime"

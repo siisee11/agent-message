@@ -256,6 +256,43 @@ Install the Agent Message CLI skill to give Claude Code full knowledge of this p
 npx skills add https://github.com/siisee11/agent-message --skill agent-message-cli
 ```
 
+## claude-message
+
+`claude-message` is a companion wrapper for Claude Code, similar to `codex-message`, but it runs Claude through `claude -p --output-format json` and relays results over `agent-message`.
+
+Behavior:
+- Starts a fresh `agent-{chatId}` account with a random numeric PIN.
+- Sends the `--to` user a startup message with the generated credentials.
+- Reuses the returned Claude `session_id` and resumes later turns with `--resume`.
+- Watches the DM thread for plain-text prompts, adds `👀` when a request is picked up, and posts the Claude result back as `json_render`.
+- Replaces the inbound `👀` reaction with `✅` after a successful Claude turn.
+
+Example:
+
+```bash
+claude-message --to jay --model sonnet --permission-mode accept-edits
+```
+
+Build from source:
+
+```bash
+make claude-message-build
+./claude-message/target/debug/claude-message --to jay --model sonnet
+```
+
+Useful flags:
+- `--to jay`
+- `--cwd /path/to/worktree`
+- `--model sonnet`
+- `--permission-mode accept-edits`
+- `--allowed-tools Read,Edit`
+- `--bare`
+
+Notes:
+- `claude-message` depends on a working local `claude` install and authentication.
+- `claude-message` always runs Claude with `--dangerously-skip-permissions`.
+- `--permission-mode` and `--allowed-tools` can still be used to shape tool behavior, but the wrapper no longer waits on Claude permission prompts.
+
 ## CLI Quickstart
 
 Run from `cli/`. By default the CLI talks to `https://am.namjaeyoun.com`. For self-hosting, pass `--server-url` or set `server_url` in config.

@@ -231,6 +231,38 @@ export function DmConversationPage() {
   const hasOlderMessages = Boolean(messagePagesQuery.hasNextPage)
   const isSubmitting = messagePagesQuery.isFetchingNextPage
 
+  const handleMessageCreated = useCallback(
+    async (createdMessage: Message, options?: { resetComposer?: boolean }) => {
+      if (!conversationId) {
+        return
+      }
+
+      setComposerError(null)
+      if (options?.resetComposer ?? false) {
+        setEditingTarget(null)
+        setComposerText('')
+        setSelectedFile(null)
+        if (fileInputRef.current) {
+          fileInputRef.current.value = ''
+        }
+      }
+
+      const createdDetails: MessageDetails = {
+        message: createdMessage,
+        sender: user ?? fallbackSender(createdMessage),
+      }
+
+      queryClient.setQueryData<InfiniteData<MessageDetails[]>>(['messages', conversationId], (current) =>
+        prependMessageToPages(current, createdDetails),
+      )
+      await queryClient.invalidateQueries({ queryKey: ['conversations'] })
+
+      shouldStickToBottomRef.current = true
+      scrollTimelineToBottom(timelineRef.current)
+    },
+    [conversationId, queryClient, user],
+  )
+
   const sendMessageMutation = useMutation({
     mutationFn: async (input: { content: string; attachment: File | null }) => {
       if (!conversationId) {
@@ -252,33 +284,25 @@ export function DmConversationPage() {
       })
     },
     onSuccess: async (createdMessage) => {
-      if (!conversationId) {
-        return
-      }
-
-      setComposerError(null)
-      setEditingTarget(null)
-      setComposerText('')
-      setSelectedFile(null)
-      if (fileInputRef.current) {
-        fileInputRef.current.value = ''
-      }
-
-      const createdDetails: MessageDetails = {
-        message: createdMessage,
-        sender: user ?? fallbackSender(createdMessage),
-      }
-
-      queryClient.setQueryData<InfiniteData<MessageDetails[]>>(['messages', conversationId], (current) =>
-        prependMessageToPages(current, createdDetails),
-      )
-      await queryClient.invalidateQueries({ queryKey: ['conversations'] })
-
-      shouldStickToBottomRef.current = true
-      scrollTimelineToBottom(timelineRef.current)
+      await handleMessageCreated(createdMessage, { resetComposer: true })
     },
     onError: (error: unknown) => {
       setComposerError(resolveErrorMessage(error, 'Failed to send the message.'))
+    },
+  })
+
+  const approvalResponseMutation = useMutation({
+    mutationFn: async (value: string) => {
+      if (!conversationId) {
+        throw new Error('Conversation id is missing.')
+      }
+
+      return apiClient.sendMessage(conversationId, {
+        content: value.trim(),
+      })
+    },
+    onSuccess: async (createdMessage) => {
+      await handleMessageCreated(createdMessage)
     },
   })
 
@@ -597,6 +621,13 @@ export function DmConversationPage() {
     })
   }
 
+  const handleApprovalAction = useCallback(
+    async (value: string) => {
+      await approvalResponseMutation.mutateAsync(value)
+    },
+    [approvalResponseMutation],
+  )
+
   if (!conversationId) {
     return (
       <section className={styles.page}>
@@ -613,7 +644,11 @@ export function DmConversationPage() {
     : null
   const hasComposerContent = composerText.trim() !== '' || Boolean(selectedFile)
   const disableComposerActions =
-    sendMessageMutation.isPending || editMessageMutation.isPending || deleteMessageMutation.isPending || isSubmitting
+    sendMessageMutation.isPending ||
+    approvalResponseMutation.isPending ||
+    editMessageMutation.isPending ||
+    deleteMessageMutation.isPending ||
+    isSubmitting
   const headerTitle = conversationQuery.isLoading
     ? 'Loading conversation...'
     : conversationQuery.isError
@@ -721,7 +756,11 @@ export function DmConversationPage() {
                           ) : null}
 
                           {renderContent.variant === 'json_render' ? (
-                            <MessageJsonRender spec={renderContent.jsonRenderSpec} />
+                            <MessageJsonRender
+                              approvalDisabled={approvalResponseMutation.isPending || sendMessageMutation.isPending}
+                              onApprovalAction={handleApprovalAction}
+                              spec={renderContent.jsonRenderSpec}
+                            />
                           ) : null}
 
                           {!details.message.deleted &&

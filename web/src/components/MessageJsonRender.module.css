@@ -5,6 +5,8 @@
   min-width: 0;
   overflow-wrap: anywhere;
   word-break: break-word;
+  font-size: 0.84rem;
+  line-height: 1.58;
 }
 
 .root :global([data-slot='card']),
@@ -17,13 +19,167 @@
 .root :global([data-slot='card-title']),
 .root :global([data-slot='card-description']),
 .root :global(p),
-.root :global(code) {
+.root :global(code),
+.root :global(th),
+.root :global(td),
+.root :global(label),
+.root :global(button),
+.root :global(input),
+.root :global(textarea) {
   overflow-wrap: anywhere;
   word-break: break-word;
 }
 
+.root :global([data-slot='card-title']),
+.root :global(h1) {
+  font-size: 1rem;
+  line-height: 1.4;
+}
+
+.root :global(h2) {
+  font-size: 0.94rem;
+  line-height: 1.4;
+}
+
+.root :global(h3),
+.root :global(h4) {
+  font-size: 0.9rem;
+  line-height: 1.42;
+}
+
+.root :global([data-slot='card-description']),
+.root :global([data-slot='card-content']),
+.root :global(p),
+.root :global(code),
+.root :global(th),
+.root :global(td),
+.root :global(label),
+.root :global(button),
+.root :global(input),
+.root :global(textarea) {
+  font-size: 0.84rem;
+}
+
 .fallback {
   margin: 0;
-  font-size: 0.84rem;
+  font-size: 0.78rem;
   color: #4f6286;
+}
+
+.approvalCard {
+  display: grid;
+  gap: 0.72rem;
+  padding: 0.9rem 0.95rem;
+  border: 1px solid rgba(103, 128, 170, 0.28);
+  border-radius: 0.95rem;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.96), rgba(244, 248, 255, 0.98)),
+    #ffffff;
+  box-shadow: 0 10px 24px rgba(49, 76, 124, 0.08);
+}
+
+.approvalBadge {
+  margin: 0;
+  font-size: 0.71rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #2450a6;
+}
+
+.approvalTitle {
+  margin: 0;
+  font-size: 0.98rem;
+  font-weight: 700;
+  line-height: 1.35;
+  color: #12233f;
+}
+
+.approvalDetails {
+  margin: 0;
+  padding-left: 1rem;
+  display: grid;
+  gap: 0.34rem;
+  color: #2f456b;
+}
+
+.approvalDetails li {
+  margin: 0;
+}
+
+.approvalHint,
+.approvalStatus,
+.approvalError {
+  margin: 0;
+  font-size: 0.78rem;
+  line-height: 1.45;
+}
+
+.approvalHint {
+  color: #5a6f95;
+}
+
+.approvalStatus {
+  color: #1f6a45;
+  font-weight: 600;
+}
+
+.approvalError {
+  color: #a43737;
+  font-weight: 600;
+}
+
+.approvalActions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.55rem;
+}
+
+.approvalAction {
+  appearance: none;
+  border: 1px solid transparent;
+  border-radius: 999px;
+  padding: 0.52rem 0.9rem;
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+  transition:
+    transform 120ms ease,
+    box-shadow 120ms ease,
+    opacity 120ms ease,
+    background-color 120ms ease,
+    color 120ms ease,
+    border-color 120ms ease;
+}
+
+.approvalAction:hover:not(:disabled) {
+  transform: translateY(-1px);
+}
+
+.approvalAction:focus-visible {
+  outline: 2px solid rgba(36, 80, 166, 0.26);
+  outline-offset: 2px;
+}
+
+.approvalAction:disabled {
+  cursor: default;
+  opacity: 0.64;
+}
+
+.approvalActionPrimary {
+  background: #1f5eff;
+  color: #ffffff;
+  box-shadow: 0 8px 18px rgba(31, 94, 255, 0.22);
+}
+
+.approvalActionSecondary {
+  background: #eef3ff;
+  border-color: rgba(31, 94, 255, 0.18);
+  color: #23448d;
+}
+
+.approvalActionDestructive {
+  background: #fff1f1;
+  border-color: rgba(193, 66, 66, 0.22);
+  color: #a43737;
 }

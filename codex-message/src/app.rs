@@ -12,7 +12,7 @@ use crate::Config;
 use crate::SandboxArg;
 use crate::agent_message::{AgentMessageClient, Message};
 use crate::codex::{CodexAppServer, IncomingMessage};
-use crate::render::{approval_spec, report_spec};
+use crate::render::{ApprovalAction, approval_spec, report_spec};
 
 const REQUEST_SUFFIX: &str = r#"
 
@@ -270,6 +270,28 @@ impl Runtime {
                     "Command approval requested",
                     &details,
                     "approve | session | deny | cancel",
+                    &[
+                        ApprovalAction {
+                            label: "Approve",
+                            value: "approve",
+                            variant: "primary",
+                        },
+                        ApprovalAction {
+                            label: "This session",
+                            value: "session",
+                            variant: "secondary",
+                        },
+                        ApprovalAction {
+                            label: "Deny",
+                            value: "deny",
+                            variant: "destructive",
+                        },
+                        ApprovalAction {
+                            label: "Cancel",
+                            value: "cancel",
+                            variant: "secondary",
+                        },
+                    ],
                 );
                 self.agent_client
                     .send_json_render_message(&self.to_username, spec)
@@ -305,6 +327,28 @@ impl Runtime {
                     "File change approval requested",
                     &details,
                     "approve | session | deny | cancel",
+                    &[
+                        ApprovalAction {
+                            label: "Approve",
+                            value: "approve",
+                            variant: "primary",
+                        },
+                        ApprovalAction {
+                            label: "This session",
+                            value: "session",
+                            variant: "secondary",
+                        },
+                        ApprovalAction {
+                            label: "Deny",
+                            value: "deny",
+                            variant: "destructive",
+                        },
+                        ApprovalAction {
+                            label: "Cancel",
+                            value: "cancel",
+                            variant: "secondary",
+                        },
+                    ],
                 );
                 self.agent_client
                     .send_json_render_message(&self.to_username, spec)
@@ -344,6 +388,23 @@ impl Runtime {
                     "Additional permissions requested",
                     &details,
                     "allow | allow session | deny",
+                    &[
+                        ApprovalAction {
+                            label: "Allow",
+                            value: "allow",
+                            variant: "primary",
+                        },
+                        ApprovalAction {
+                            label: "Allow session",
+                            value: "allow session",
+                            variant: "secondary",
+                        },
+                        ApprovalAction {
+                            label: "Deny",
+                            value: "deny",
+                            variant: "destructive",
+                        },
+                    ],
                 );
                 self.agent_client
                     .send_json_render_message(&self.to_username, spec)
@@ -380,11 +441,16 @@ impl Runtime {
                     .cloned()
                     .unwrap_or_default();
                 let details = summarize_tool_questions(&questions);
-                let spec = approval_spec(
+                let mut prompt_lines = details.clone();
+                prompt_lines.push(
+                    "Reply: JSON object keyed by question id, or plain text if there is only one question"
+                        .to_string(),
+                );
+                let spec = report_spec(
                     "Input Needed",
                     "Codex requested user input",
-                    &details,
-                    "JSON object keyed by question id, or plain text if there is only one question",
+                    &prompt_lines,
+                    None,
                 );
                 self.agent_client
                     .send_json_render_message(&self.to_username, spec)
@@ -420,6 +486,23 @@ impl Runtime {
                     "An MCP server requested interaction",
                     &details,
                     "accept | decline | cancel, optionally followed by JSON content",
+                    &[
+                        ApprovalAction {
+                            label: "Accept",
+                            value: "accept",
+                            variant: "primary",
+                        },
+                        ApprovalAction {
+                            label: "Decline",
+                            value: "decline",
+                            variant: "destructive",
+                        },
+                        ApprovalAction {
+                            label: "Cancel",
+                            value: "cancel",
+                            variant: "secondary",
+                        },
+                    ],
                 );
                 self.agent_client
                     .send_json_render_message(&self.to_username, spec)

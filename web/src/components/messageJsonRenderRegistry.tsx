@@ -1,9 +1,11 @@
 import { defineRegistry } from '@json-render/react'
 import { shadcnComponents } from '@json-render/shadcn'
+import { MessageApprovalCard } from './MessageApprovalCard'
 import { messageJsonRenderCatalog } from './messageJsonRenderCatalog'
 
 export const { registry: messageJsonRenderRegistry } = defineRegistry(messageJsonRenderCatalog, {
   components: {
+    ApprovalCard: MessageApprovalCard,
     Alert: shadcnComponents.Alert,
     Avatar: shadcnComponents.Avatar,
     Badge: shadcnComponents.Badge,

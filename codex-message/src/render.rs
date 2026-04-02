@@ -1,5 +1,11 @@
 use serde_json::{Map, Value, json};
 
+pub(crate) struct ApprovalAction<'a> {
+    pub(crate) label: &'a str,
+    pub(crate) value: &'a str,
+    pub(crate) variant: &'a str,
+}
+
 pub(crate) fn report_spec(badge: &str, title: &str, lines: &[String], body: Option<&str>) -> Value {
     let mut elements = Map::new();
     let mut children = Vec::new();
@@ -42,10 +48,34 @@ pub(crate) fn approval_spec(
     title: &str,
     details: &[String],
     reply_hint: &str,
+    actions: &[ApprovalAction<'_>],
 ) -> Value {
-    let mut lines = details.to_vec();
-    lines.push(format!("Reply: {reply_hint}"));
-    report_spec(badge, title, &lines, None)
+    let action_values: Vec<Value> = actions
+        .iter()
+        .map(|action| {
+            json!({
+                "label": action.label,
+                "value": action.value,
+                "variant": action.variant,
+            })
+        })
+        .collect();
+
+    json!({
+        "root": "approval",
+        "elements": {
+            "approval": {
+                "type": "ApprovalCard",
+                "props": {
+                    "badge": badge,
+                    "title": title,
+                    "details": details,
+                    "replyHint": reply_hint,
+                    "actions": action_values,
+                },
+            },
+        },
+    })
 }
 
 fn push_badge(
@@ -120,6 +150,35 @@ mod tests {
         assert_eq!(
             spec["elements"]["body-1"]["props"]["text"],
             "Second paragraph"
+        );
+    }
+
+    #[test]
+    fn approval_spec_has_expected_shape() {
+        let spec = approval_spec(
+            "Approval Needed",
+            "Command approval requested",
+            &["Command: npm test".to_string()],
+            "approve | session | deny | cancel",
+            &[
+                ApprovalAction {
+                    label: "Approve",
+                    value: "approve",
+                    variant: "primary",
+                },
+                ApprovalAction {
+                    label: "Deny",
+                    value: "deny",
+                    variant: "destructive",
+                },
+            ],
+        );
+
+        assert_eq!(spec["root"], "approval");
+        assert_eq!(spec["elements"]["approval"]["type"], "ApprovalCard");
+        assert_eq!(
+            spec["elements"]["approval"]["props"]["actions"][0]["value"],
+            "approve"
         );
     }
 }

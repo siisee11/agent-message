@@ -210,8 +210,8 @@ Messages:
   delete <index>            Delete a message by its index
 
 Reactions:
-  react <index> <emoji>       Add a reaction (index from last `read`)
-  unreact <index> <emoji>     Remove a reaction
+  react <message-id> <emoji>  Add a reaction by message ID
+  unreact <message-id> <emoji> Remove a reaction by message ID
 
 Watch mode:
   watch <username>          Stream incoming messages in real-time (SSE)

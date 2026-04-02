@@ -21,6 +21,7 @@ Operational requirements from the codex-message wrapper:
 - Prefer a visually readable report format suitable for an agent-message json-render response.
 - If you need approval or clarification, ask clearly and briefly so the wrapper can relay it.
 "#;
+const READ_REACTION_EMOJI: &str = "👀";
 
 pub(crate) struct App {
     config: Config,
@@ -62,9 +63,7 @@ impl Runtime {
         println!("agent-message server_url: {server_url}");
 
         register_agent_account(&agent_client, &username, &pin).await?;
-        println!(
-            "registered agent profile: {username} (chat_id: {chat_id})"
-        );
+        println!("registered agent profile: {username} (chat_id: {chat_id})");
 
         let startup_text = format!(
             "codex-message session started\nchat_id: {chat_id}\nusername: {username}\npin: {pin}\n\nReply in this DM to run Codex."
@@ -73,9 +72,7 @@ impl Runtime {
             .send_text_message(&to_username, &startup_text)
             .await
             .context("send startup message")?;
-        println!(
-            "startup message sent to {to_username}: {startup_message_id}"
-        );
+        println!("startup message sent to {to_username}: {startup_message_id}");
 
         let codex = CodexAppServer::start(&config.codex_bin, &config.cwd)
             .await
@@ -173,6 +170,16 @@ impl Runtime {
                 }
                 if extract_request_text(&message).is_none() {
                     continue;
+                }
+                if let Err(error) = self
+                    .agent_client
+                    .react_to_message(&message, READ_REACTION_EMOJI)
+                    .await
+                {
+                    eprintln!(
+                        "warning: failed to add read reaction to {}: {error}",
+                        message.id
+                    );
                 }
                 return Ok(message);
             }

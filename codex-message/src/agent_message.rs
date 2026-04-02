@@ -182,6 +182,19 @@ fn parse_read_line(line: &str) -> Result<Message> {
     })
 }
 
+impl AgentMessageClient {
+    pub(crate) async fn react_to_message(&self, message: &Message, emoji: &str) -> Result<()> {
+        let output = self
+            .run(["react", &message.id, emoji])
+            .await
+            .context("run `agent-message react`")?;
+        if !output.contains(&message.id) {
+            bail!("unexpected react output: {output}");
+        }
+        Ok(())
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

@@ -78,7 +78,7 @@ func TestRunDeleteMessageByIndex(t *testing.T) {
 	}
 }
 
-func TestRunReactByIndex(t *testing.T) {
+func TestRunReactByMessageID(t *testing.T) {
 	t.Parallel()
 
 	rt, stdout, _ := newTestRuntime(t, "http://example.test", "tok-react", func(req *http.Request, body []byte) (*http.Response, error) {
@@ -100,9 +100,7 @@ func TestRunReactByIndex(t *testing.T) {
 			"reaction":{"id":"r1","message_id":"m1","user_id":"u1","emoji":"👍","created_at":"2026-01-01T00:00:00Z"}
 		}`), nil
 	})
-	seedLastReadSession(t, rt, "c-read", "bob", map[int]string{1: "m1"})
-
-	if err := runReact(rt, "1", "👍"); err != nil {
+	if err := runReact(rt, "m1", "👍"); err != nil {
 		t.Fatalf("runReact: %v", err)
 	}
 	if got, want := strings.TrimSpace(stdout.String()), "reaction added m1 👍"; got != want {
@@ -110,7 +108,7 @@ func TestRunReactByIndex(t *testing.T) {
 	}
 }
 
-func TestRunUnreactByIndex(t *testing.T) {
+func TestRunUnreactByMessageID(t *testing.T) {
 	t.Parallel()
 
 	rt, stdout, _ := newTestRuntime(t, "http://example.test", "tok-unreact", func(req *http.Request, _ []byte) (*http.Response, error) {
@@ -128,13 +126,45 @@ func TestRunUnreactByIndex(t *testing.T) {
 			"created_at":"2026-01-01T00:00:00Z"
 		}`), nil
 	})
-	seedLastReadSession(t, rt, "c-read", "bob", map[int]string{1: "m1"})
-
-	if err := runUnreact(rt, "1", "👍"); err != nil {
+	if err := runUnreact(rt, "m1", "👍"); err != nil {
 		t.Fatalf("runUnreact: %v", err)
 	}
 	if got, want := strings.TrimSpace(stdout.String()), "reaction removed m1 👍"; got != want {
 		t.Fatalf("stdout mismatch: got %q want %q", got, want)
+	}
+}
+
+func TestRunReactRequiresMessageID(t *testing.T) {
+	t.Parallel()
+
+	rt, _, _ := newTestRuntime(t, "http://example.test", "tok-react", func(req *http.Request, _ []byte) (*http.Response, error) {
+		t.Fatalf("unexpected request: %s %s", req.Method, req.URL.Path)
+		return nil, nil
+	})
+
+	err := runReact(rt, "   ", "👍")
+	if err == nil {
+		t.Fatalf("expected error")
+	}
+	if got := err.Error(); !strings.Contains(got, "message ID is required") {
+		t.Fatalf("unexpected error: %q", got)
+	}
+}
+
+func TestRunUnreactRequiresMessageID(t *testing.T) {
+	t.Parallel()
+
+	rt, _, _ := newTestRuntime(t, "http://example.test", "tok-unreact", func(req *http.Request, _ []byte) (*http.Response, error) {
+		t.Fatalf("unexpected request: %s %s", req.Method, req.URL.Path)
+		return nil, nil
+	})
+
+	err := runUnreact(rt, "   ", "👍")
+	if err == nil {
+		t.Fatalf("expected error")
+	}
+	if got := err.Error(); !strings.Contains(got, "message ID is required") {
+		t.Fatalf("unexpected error: %q", got)
 	}
 }
 

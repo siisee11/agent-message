@@ -9,7 +9,7 @@ Behavior:
 1. Starts a fresh `agent-{chatId}` account with a random numeric PIN.
 2. Sends the `--to` user a startup message with the generated credentials.
 3. Reuses one Codex app-server thread for the DM session.
-4. Polls `agent-message read <user>` for new plain-text requests and relays them into `turn/start`.
+4. Polls `agent-message read <user>` for new plain-text requests, adds a `👀` reaction to each accepted inbound DM, and relays it into `turn/start`.
 5. For approval and input requests, sends readable `json_render` prompts back to Jay and waits for a text reply.
 6. Sends final Codex results back as `json_render` reports.
 

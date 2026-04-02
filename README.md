@@ -284,8 +284,8 @@ go run . edit 1 "edited text"
 go run . delete 1
 
 # Reactions
-go run . react 1 👍
-go run . unreact 1 👍
+go run . react <message-id> 👍
+go run . unreact <message-id> 👍
 
 # Realtime watch
 go run . watch bob

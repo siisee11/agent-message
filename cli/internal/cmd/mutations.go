@@ -85,8 +85,8 @@ func runDeleteMessage(rt *Runtime, indexArg string) error {
 
 func newReactCommand(rt *Runtime) *cobra.Command {
 	return &cobra.Command{
-		Use:   "react <index> <emoji>",
-		Short: "React to a message by index from last read",
+		Use:   "react <message-id> <emoji>",
+		Short: "React to a message by message ID",
 		Args:  cobra.ExactArgs(2),
 		RunE: func(_ *cobra.Command, args []string) error {
 			return runReact(rt, args[0], args[1])
@@ -94,7 +94,7 @@ func newReactCommand(rt *Runtime) *cobra.Command {
 	}
 }
 
-func runReact(rt *Runtime, indexArg string, emoji string) error {
+func runReact(rt *Runtime, messageIDArg string, emoji string) error {
 	if err := ensureRuntime(rt); err != nil {
 		return err
 	}
@@ -107,9 +107,9 @@ func runReact(rt *Runtime, indexArg string, emoji string) error {
 		return errors.New("emoji is required")
 	}
 
-	messageID, _, err := resolveMessageIDFromLastRead(rt, indexArg)
-	if err != nil {
-		return err
+	messageID := strings.TrimSpace(messageIDArg)
+	if messageID == "" {
+		return errors.New("message ID is required")
 	}
 
 	result, err := rt.Client.AddReaction(context.Background(), messageID, trimmedEmoji)
@@ -127,8 +127,8 @@ func runReact(rt *Runtime, indexArg string, emoji string) error {
 
 func newUnreactCommand(rt *Runtime) *cobra.Command {
 	return &cobra.Command{
-		Use:   "unreact <index> <emoji>",
-		Short: "Remove a reaction from a message by index from last read",
+		Use:   "unreact <message-id> <emoji>",
+		Short: "Remove a reaction from a message by message ID",
 		Args:  cobra.ExactArgs(2),
 		RunE: func(_ *cobra.Command, args []string) error {
 			return runUnreact(rt, args[0], args[1])
@@ -136,7 +136,7 @@ func newUnreactCommand(rt *Runtime) *cobra.Command {
 	}
 }
 
-func runUnreact(rt *Runtime, indexArg string, emoji string) error {
+func runUnreact(rt *Runtime, messageIDArg string, emoji string) error {
 	if err := ensureRuntime(rt); err != nil {
 		return err
 	}
@@ -149,9 +149,9 @@ func runUnreact(rt *Runtime, indexArg string, emoji string) error {
 		return errors.New("emoji is required")
 	}
 
-	messageID, _, err := resolveMessageIDFromLastRead(rt, indexArg)
-	if err != nil {
-		return err
+	messageID := strings.TrimSpace(messageIDArg)
+	if messageID == "" {
+		return errors.New("message ID is required")
 	}
 
 	reaction, err := rt.Client.RemoveReaction(context.Background(), messageID, trimmedEmoji)

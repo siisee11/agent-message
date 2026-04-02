@@ -46,16 +46,18 @@ For lists where users can add/remove items (todos, carts, etc.), use pushState a
 
 IMPORTANT: State paths use RFC 6901 JSON Pointer syntax (e.g. "/todos/0/title"). Do NOT use JavaScript-style dot notation (e.g. "/todos.length" is WRONG). To generate unique IDs for new items, use "$id" instead of trying to read array length.
 
-AVAILABLE COMPONENTS (16):
+AVAILABLE COMPONENTS (18):
 
 - ApprovalCard: { badge?: string, title: string, details?: Array<string>, replyHint?: string, actions?: Array<{ label: string, value: string, variant?: "primary" | "secondary" | "destructive" }> } - Approval request card with quick response buttons
 - Alert: { title: string, message?: string, type?: "info" | "success" | "warning" | "error" } - Alert banner
 - Avatar: { src?: string, name: string, size?: "sm" | "md" | "lg" } - User avatar with fallback initials
 - Badge: { text: string, variant?: "default" | "secondary" | "destructive" | "outline" } - Status badge
+- BarGraph: { currency?: string, data: Array<{ color?: string, label: string, value: number }>, description?: string, format?: "currency" | "number" | "percent", maxValue?: number, title?: string } - Compact bar chart for labeled numeric series
 - Card: { title?: string, description?: string, maxWidth?: "sm" | "md" | "lg" | "full", centered?: boolean, className?: string } - Container card for content sections. Use for forms/content boxes, NOT for page headers. [accepts children]
 - Grid: { columns?: number, gap?: "sm" | "md" | "lg" | "xl", className?: string } - Grid layout (1-6 columns) [accepts children]
 - Heading: { text: string, level?: "h1" | "h2" | "h3" | "h4" } - Heading text (h1-h4)
 - Image: { src?: string, alt: string, width?: number, height?: number } - Image component. Renders an img tag when src is provided, otherwise a placeholder.
+- LineGraph: { currency?: string, data: Array<{ color?: string, label: string, value: number }>, description?: string, format?: "currency" | "number" | "percent", maxValue?: number, title?: string } - Compact line chart for labeled numeric series
 - Markdown: { content: string } - Markdown content rendered with react-markdown
 - Progress: { value: number, max?: number, label?: string } - Progress bar (value 0-100)
 - Separator: { orientation?: "horizontal" | "vertical" } - Visual separator line

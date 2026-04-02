@@ -81,4 +81,64 @@ describe('MessageJsonRender', () => {
     expect(html).toContain('<li>Added <code>Markdown</code></li>')
     expect(html).toContain('<a href="https://example.com">links</a>')
   })
+
+  it('renders custom bar graphs', () => {
+    const html = ReactDOMServer.renderToStaticMarkup(
+      <MessageJsonRender
+        spec={{
+          root: 'bar-graph-1',
+          elements: {
+            'bar-graph-1': {
+              type: 'BarGraph',
+              props: {
+                title: 'Weekly volume',
+                format: 'number',
+                data: [
+                  { label: 'Mon', value: 12 },
+                  { label: 'Tue', value: 18 },
+                  { label: 'Wed', value: 9 },
+                ],
+              },
+            },
+          },
+        }}
+      />,
+    )
+
+    expect(html).toContain('Weekly volume')
+    expect(html).toContain('Mon')
+    expect(html).toContain('Tue')
+    expect(html).toContain('18')
+  })
+
+  it('renders custom line graphs', () => {
+    const html = ReactDOMServer.renderToStaticMarkup(
+      <MessageJsonRender
+        spec={{
+          root: 'line-graph-1',
+          elements: {
+            'line-graph-1': {
+              type: 'LineGraph',
+              props: {
+                title: 'MRR trend',
+                format: 'currency',
+                currency: 'USD',
+                data: [
+                  { label: 'Jan', value: 1200 },
+                  { label: 'Feb', value: 1550 },
+                  { label: 'Mar', value: 1675 },
+                ],
+              },
+            },
+          },
+        }}
+      />,
+    )
+
+    expect(html).toContain('MRR trend')
+    expect(html).toContain('Jan')
+    expect(html).toContain('Mar')
+    expect(html).toContain('$1,675')
+    expect(html).toContain('<svg')
+  })
 })

@@ -95,6 +95,7 @@
   grid-template-rows: minmax(0, 1fr) auto;
   gap: 0;
   overflow: hidden;
+  background: #ffffff;
 }
 
 .timelineViewport {
@@ -105,14 +106,14 @@
   -webkit-overflow-scrolling: touch;
   border: 0;
   border-radius: 0;
-  background: transparent;
+  background: #ffffff;
   padding: 0;
   box-shadow: none;
 }
 
 .timelineContent {
   min-height: 100%;
-  padding: 0.8rem 1rem 1rem;
+  padding: 0.8rem 0 1rem;
 }
 
 .timelinePullStatus {
@@ -165,8 +166,8 @@
   width: 100%;
   border: 0;
   border-radius: 0;
-  background: linear-gradient(180deg, rgba(236, 243, 255, 0.96) 0%, rgba(229, 238, 255, 0.96) 100%);
-  padding: 0.78rem 0.88rem 0.82rem;
+  background: linear-gradient(180deg, rgba(236, 241, 248, 0.98) 0%, rgba(231, 237, 245, 0.98) 100%);
+  padding: 0.68rem 1rem 0.76rem;
   box-shadow: none;
 }
 
@@ -174,8 +175,8 @@
   width: 100%;
   border: 0;
   border-radius: 0;
-  background: transparent;
-  padding: 0.2rem 0.08rem 0.28rem;
+  background: #ffffff;
+  padding: 0.2rem 1rem 0.28rem;
   box-shadow: none;
 }
 
@@ -193,7 +194,9 @@
 }
 
 .timelineMetaOwn {
-  margin-bottom: 0.46rem;
+  margin-bottom: 0.5rem;
+  padding-bottom: 0.3rem;
+  border-bottom: 1px solid rgba(210, 221, 242, 0.72);
 }
 
 .timelineMetaRight {
@@ -250,9 +253,9 @@
 
 .messageTextOwn {
   margin-top: 0;
-  font-size: 0.98rem;
-  line-height: 1.58;
-  color: #17315d;
+  font-size: 1.06rem;
+  line-height: 1.72;
+  color: #22324c;
 }
 
 .messageTextDeleted {

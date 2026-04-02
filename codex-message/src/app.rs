@@ -20,6 +20,7 @@ Operational requirements from the codex-message wrapper:
 - Send the final user-facing result yourself by invoking the `agent-message` CLI.
 - Deliver that result directly to the user `{to_username}`.
 - Prefer a visually readable `agent-message send {to_username} ... --kind json_render` payload when appropriate.
+- For final result messages, avoid wrapping the entire payload in a `Card` unless a card is clearly necessary; prefer a direct content-first layout such as `Stack`.
 - Do not rely on the wrapper to forward your final assistant message as the primary user-facing result.
 - After sending the direct result, keep your final assistant message minimal because the wrapper may still emit status metadata.
 - If you need approval or clarification, ask clearly and briefly so the wrapper can relay it.
@@ -959,5 +960,12 @@ mod tests {
             status: "completed".to_string(),
             error_text: Some("boom".to_string()),
         }));
+    }
+
+    #[test]
+    fn request_suffix_discourages_wrapping_final_results_in_card() {
+        let suffix = request_suffix("jay");
+        assert!(suffix.contains("avoid wrapping the entire payload in a `Card`"));
+        assert!(suffix.contains("prefer a direct content-first layout such as `Stack`"));
     }
 }

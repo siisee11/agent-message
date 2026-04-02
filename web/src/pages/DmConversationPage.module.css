@@ -370,6 +370,11 @@
   display: grid;
   gap: 0.5rem;
   backdrop-filter: blur(12px);
+  transition: padding-bottom 160ms ease;
+}
+
+.composerFormKeyboardOpen {
+  padding-bottom: 0.16rem;
 }
 
 .editingBanner {
@@ -463,9 +468,10 @@
   min-height: 0;
   max-height: 6.6rem;
   line-height: 1.35;
-  font-size: 0.72rem;
+  font-size: 1rem;
   font-weight: 500;
   overflow-y: auto;
+  -webkit-text-size-adjust: 100%;
 }
 
 .composerInput::placeholder {

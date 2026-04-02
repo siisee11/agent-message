@@ -190,6 +190,7 @@ export function DmConversationPage() {
   const [composerError, setComposerError] = useState<string | null>(null)
   const [editingTarget, setEditingTarget] = useState<EditTarget | null>(null)
   const [actionMenu, setActionMenu] = useState<ActionMenuState | null>(null)
+  const [isComposerFocused, setIsComposerFocused] = useState(false)
   const [unreadCount, setUnreadCount] = useState(0)
   const prevMessageCountRef = useRef(0)
 
@@ -840,7 +841,10 @@ export function DmConversationPage() {
             </div>
           </div>
 
-          <form className={styles.composerForm} onSubmit={handleComposerSubmit}>
+          <form
+            className={`${styles.composerForm}${isComposerFocused ? ` ${styles.composerFormKeyboardOpen}` : ''}`}
+            onSubmit={handleComposerSubmit}
+          >
             {unreadCount > 0 ? (
               <button className={styles.unreadBanner} onClick={handleScrollToBottom} type="button">
                 {unreadCount === 1 ? '1 unread message' : `${unreadCount} unread messages`}
@@ -896,6 +900,8 @@ export function DmConversationPage() {
                   className={styles.composerInput}
                   disabled={disableComposerActions}
                   onChange={handleComposerChange}
+                  onBlur={() => setIsComposerFocused(false)}
+                  onFocus={() => setIsComposerFocused(true)}
                   placeholder={editingTarget ? 'Edit message...' : 'Message'}
                   ref={composerInputRef}
                   rows={1}

@@ -101,6 +101,31 @@ function inferAttachmentType(file: File): 'image' | 'file' {
   return file.type.startsWith('image/') ? 'image' : 'file'
 }
 
+function PlusIcon() {
+  return (
+    <svg aria-hidden="true" fill="none" height="22" viewBox="0 0 22 22" width="22">
+      <path
+        d="M11 4.75v12.5M4.75 11h12.5"
+        stroke="currentColor"
+        strokeLinecap="round"
+        strokeWidth="2.2"
+      />
+    </svg>
+  )
+}
+
+function SendIcon() {
+  return (
+    <svg aria-hidden="true" fill="none" height="26" viewBox="0 0 26 26" width="26">
+      <path
+        d="M5.8 13.2 19.9 6.6c.77-.36 1.54.4 1.18 1.18l-6.6 14.1c-.39.83-1.61.73-1.86-.16l-1.4-5.02a1.2 1.2 0 0 0-.84-.84l-5.02-1.4c-.89-.25-.99-1.47-.16-1.86Z"
+        fill="currentColor"
+      />
+      <path d="m11.2 14.8 4.8-4.8" stroke="#ffffff" strokeLinecap="round" strokeWidth="1.8" />
+    </svg>
+  )
+}
+
 function scrollTimelineToBottom(timeline: HTMLDivElement | null): void {
   if (!timeline) {
     return
@@ -529,6 +554,14 @@ export function DmConversationPage() {
     }
   }
 
+  function handleOpenFilePicker(): void {
+    if (disableComposerActions || editingTarget) {
+      return
+    }
+
+    fileInputRef.current?.click()
+  }
+
   function handleComposerSubmit(event: React.FormEvent<HTMLFormElement>): void {
     event.preventDefault()
     setComposerError(null)
@@ -632,16 +665,24 @@ export function DmConversationPage() {
                   {messagesAscending.map((details: MessageDetails) => {
                     const renderContent = resolveMessageRenderContent(details.message)
                     const reactionGroups = groupReactionsByEmoji(messageReactions[details.message.id], user?.id)
+                    const isOwnMessage = details.message.sender_id === user?.id
+                    const isAgentMessage = !isOwnMessage
+                    const messageSurfaceClassName = isOwnMessage
+                      ? styles.messageBubbleOwnFull
+                      : styles.messageBubbleAgent
+                    const timelineMetaClassName = isOwnMessage ? styles.timelineMetaOwn : styles.timelineMetaAgent
+                    const messageTextClassName = isOwnMessage ? styles.messageTextOwn : styles.messageTextAgent
+
                     return (
                       <li
                         className={`${styles.timelineItem} ${
-                          details.message.sender_id === user?.id ? styles.timelineItemOwn : styles.timelineItemOther
-                        }`}
+                          isOwnMessage ? styles.timelineItemOwn : styles.timelineItemOther
+                        } ${styles.timelineItemFullWidth}${isAgentMessage ? ` ${styles.timelineItemAgent}` : ''}`}
                         key={details.message.id}
                         onContextMenu={(event) => handleOpenContextMenu(event, details)}
                       >
-                        <div className={styles.messageBubble}>
-                          <div className={styles.timelineMeta}>
+                        <div className={`${styles.messageBubble} ${messageSurfaceClassName}`}>
+                          <div className={`${styles.timelineMeta} ${timelineMetaClassName}`}>
                             <span className={styles.sender}>{details.sender.username}</span>
                             <span className={styles.timelineMetaRight}>
                               <span className={styles.timestamp}>{formatMessageTimestamp(details.message)}</span>
@@ -664,13 +705,19 @@ export function DmConversationPage() {
                           </div>
 
                           {renderContent.variant === 'deleted' ? (
-                            <p className={`${styles.messageText} ${styles.messageTextDeleted}`}>
+                            <p
+                              className={`${styles.messageText} ${styles.messageTextDeleted}${
+                                messageTextClassName ? ` ${messageTextClassName}` : ''
+                              }`}
+                            >
                               {MESSAGE_PREVIEW_DELETED}
                             </p>
                           ) : null}
 
                           {renderContent.variant === 'text' && renderContent.textContent ? (
-                            <p className={styles.messageText}>{renderContent.textContent}</p>
+                            <p className={`${styles.messageText} ${messageTextClassName}`}>
+                              {renderContent.textContent}
+                            </p>
                           ) : null}
 
                           {renderContent.variant === 'json_render' ? (
@@ -750,55 +797,77 @@ export function DmConversationPage() {
               </div>
             ) : null}
 
-            <textarea
-              className={styles.composerInput}
-              disabled={disableComposerActions}
-              onChange={(event) => setComposerText(event.target.value)}
-              placeholder={editingTarget ? 'Edit message...' : 'Type a message...'}
-              rows={2}
-              value={composerText}
-            />
+            {selectedFile ? (
+              <div className={styles.attachmentChip}>
+                <span className={styles.attachmentName}>{selectedFile.name}</span>
+                <button
+                  className={styles.attachmentRemove}
+                  disabled={disableComposerActions}
+                  onClick={clearSelectedAttachment}
+                  type="button"
+                >
+                  Remove
+                </button>
+              </div>
+            ) : null}
 
-            <div className={styles.composerControls}>
-              <label
-                className={`${styles.attachLabel}${editingTarget ? ` ${styles.attachLabelDisabled}` : ''}`}
-              >
-                <input
-                  className={styles.attachInput}
-                  disabled={disableComposerActions || Boolean(editingTarget)}
-                  onChange={handleSelectAttachment}
-                  ref={fileInputRef}
-                  type="file"
-                />
-                Attach file
-              </label>
-
-              {selectedFile ? (
-                <div className={styles.attachmentChip}>
-                  <span className={styles.attachmentName}>{selectedFile.name}</span>
-                  <button
-                    className={styles.attachmentRemove}
-                    disabled={disableComposerActions}
-                    onClick={clearSelectedAttachment}
-                    type="button"
-                  >
-                    Remove
-                  </button>
-                </div>
-              ) : null}
+            <div className={styles.composerDock}>
+              <input
+                className={styles.attachInput}
+                disabled={disableComposerActions || Boolean(editingTarget)}
+                onChange={handleSelectAttachment}
+                ref={fileInputRef}
+                type="file"
+              />
 
               <button
+                aria-label="Attach file"
+                className={`${styles.iconButton} ${styles.attachButton}${
+                  editingTarget ? ` ${styles.attachButtonDisabled}` : ''
+                }`}
+                disabled={disableComposerActions || Boolean(editingTarget)}
+                onClick={handleOpenFilePicker}
+                title={editingTarget ? 'Attachments are unavailable while editing.' : 'Attach file'}
+                type="button"
+              >
+                <PlusIcon />
+              </button>
+
+              <div className={styles.composerField}>
+                <textarea
+                  className={styles.composerInput}
+                  disabled={disableComposerActions}
+                  onChange={(event) => setComposerText(event.target.value)}
+                  placeholder={editingTarget ? 'Edit message...' : 'Message'}
+                  rows={1}
+                  value={composerText}
+                />
+              </div>
+
+              <button
+                aria-label={
+                  editMessageMutation.isPending
+                    ? 'Saving message'
+                    : sendMessageMutation.isPending
+                      ? 'Sending message'
+                      : editingTarget
+                        ? 'Save edit'
+                        : 'Send message'
+                }
                 className={styles.submitButton}
                 disabled={disableComposerActions || !hasComposerContent}
+                title={
+                  editingTarget
+                    ? editMessageMutation.isPending
+                      ? 'Saving...'
+                      : 'Save edit'
+                    : sendMessageMutation.isPending
+                      ? 'Sending...'
+                      : 'Send message'
+                }
                 type="submit"
               >
-                {editMessageMutation.isPending
-                  ? 'Saving...'
-                  : sendMessageMutation.isPending
-                    ? 'Sending...'
-                    : editingTarget
-                      ? 'Save edit'
-                      : 'Send'}
+                <SendIcon />
               </button>
             </div>
 

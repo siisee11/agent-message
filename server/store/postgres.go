@@ -85,10 +85,10 @@ func rebindPostgresPlaceholders(query string) string {
 
 func (s *PostgresStore) CreateUser(ctx context.Context, params models.CreateUserParams) (models.User, error) {
 	const query = `
-		INSERT INTO users (id, username, pin_hash, created_at)
+		INSERT INTO users (id, username, password_hash, created_at)
 		VALUES (?, ?, ?, ?)
 	`
-	_, err := s.execContext(ctx, query, params.ID, params.Username, params.PINHash, formatTime(params.CreatedAt))
+	_, err := s.execContext(ctx, query, params.ID, params.Username, params.PasswordHash, formatTime(params.CreatedAt))
 	if err != nil {
 		return models.User{}, fmt.Errorf("insert user: %w", err)
 	}
@@ -97,7 +97,7 @@ func (s *PostgresStore) CreateUser(ctx context.Context, params models.CreateUser
 
 func (s *PostgresStore) GetUserByUsername(ctx context.Context, username string) (models.User, error) {
 	const query = `
-		SELECT id, username, pin_hash, created_at
+		SELECT id, username, password_hash, created_at
 		FROM users
 		WHERE username = ?
 	`
@@ -107,7 +107,7 @@ func (s *PostgresStore) GetUserByUsername(ctx context.Context, username string) 
 
 func (s *PostgresStore) GetUserByID(ctx context.Context, userID string) (models.User, error) {
 	const query = `
-		SELECT id, username, pin_hash, created_at
+		SELECT id, username, password_hash, created_at
 		FROM users
 		WHERE id = ?
 	`
@@ -176,7 +176,7 @@ func (s *PostgresStore) DeleteSessionByToken(ctx context.Context, token string) 
 
 func (s *PostgresStore) GetUserBySessionToken(ctx context.Context, token string) (models.User, error) {
 	const query = `
-		SELECT u.id, u.username, u.pin_hash, u.created_at
+		SELECT u.id, u.username, u.password_hash, u.created_at
 		FROM users u
 		INNER JOIN sessions s ON s.user_id = u.id
 		WHERE s.token = ?
@@ -264,7 +264,7 @@ func (s *PostgresStore) SearchUsersByUsername(ctx context.Context, params models
 
 	like := strings.TrimSpace(params.Query) + "%"
 	const query = `
-		SELECT id, username, pin_hash, created_at
+		SELECT id, username, password_hash, created_at
 		FROM users
 		WHERE username ILIKE ?
 		ORDER BY username ASC
@@ -281,7 +281,7 @@ func (s *PostgresStore) SearchUsersByUsername(ctx context.Context, params models
 	for rows.Next() {
 		var user models.User
 		var createdAtText string
-		if err := rows.Scan(&user.ID, &user.Username, &user.PINHash, &createdAtText); err != nil {
+		if err := rows.Scan(&user.ID, &user.Username, &user.PasswordHash, &createdAtText); err != nil {
 			return nil, fmt.Errorf("scan searched user: %w", err)
 		}
 		createdAt, err := parseStoredTime(createdAtText)
@@ -915,7 +915,7 @@ func (s *PostgresStore) getUserByQuery(ctx context.Context, query string, arg st
 
 	var user models.User
 	var createdAtText string
-	if err := row.Scan(&user.ID, &user.Username, &user.PINHash, &createdAtText); err != nil {
+	if err := row.Scan(&user.ID, &user.Username, &user.PasswordHash, &createdAtText); err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			return models.User{}, ErrNotFound
 		}

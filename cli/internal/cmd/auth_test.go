@@ -28,14 +28,14 @@ func TestRunRegisterStoresTokenInConfig(t *testing.T) {
 		if err := json.Unmarshal(body, &payload); err != nil {
 			t.Fatalf("decode register payload: %v", err)
 		}
-		if payload["username"] != "alice" || payload["pin"] != "1234" {
+		if payload["username"] != "alice" || payload["password"] != "secret123" {
 			t.Fatalf("unexpected register payload: %+v", payload)
 		}
 
 		return jsonResponse(http.StatusCreated, `{"token":"reg-token","user":{"id":"u1","username":"alice","created_at":"2026-01-01T00:00:00Z"}}`), nil
 	})
 
-	if err := runRegister(rt, "alice", "1234"); err != nil {
+	if err := runRegister(rt, "alice", "secret123"); err != nil {
 		t.Fatalf("runRegister: %v", err)
 	}
 
@@ -85,14 +85,14 @@ func TestRunLoginStoresTokenInConfig(t *testing.T) {
 		if err := json.Unmarshal(body, &payload); err != nil {
 			t.Fatalf("decode login payload: %v", err)
 		}
-		if payload["username"] != "alice" || payload["pin"] != "1234" {
+		if payload["username"] != "alice" || payload["password"] != "secret123" {
 			t.Fatalf("unexpected login payload: %+v", payload)
 		}
 
 		return jsonResponse(http.StatusOK, `{"token":"login-token","user":{"id":"u1","username":"alice","created_at":"2026-01-01T00:00:00Z"}}`), nil
 	})
 
-	if err := runLogin(rt, "alice", "1234"); err != nil {
+	if err := runLogin(rt, "alice", "secret123"); err != nil {
 		t.Fatalf("runLogin: %v", err)
 	}
 
@@ -154,7 +154,7 @@ func TestRunLoginRestoresStoredMasterForProfile(t *testing.T) {
 		t.Fatalf("seed profiles: %v", err)
 	}
 
-	if err := runLogin(rt, "alice", "1234"); err != nil {
+	if err := runLogin(rt, "alice", "secret123"); err != nil {
 		t.Fatalf("runLogin: %v", err)
 	}
 	if got, want := rt.Config.Master, "jay"; got != want {

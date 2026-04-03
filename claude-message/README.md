@@ -5,7 +5,7 @@ as its transport layer.
 
 Behavior:
 
-1. Starts a fresh `agent-{chatId}` account with a random numeric PIN.
+1. Starts a fresh `agent-{chatId}` account with a generated password.
 2. Sends the `--to` user a startup message with the generated credentials.
 3. Reuses the Claude `session_id` for the DM session and resumes later turns.
 4. Watches `agent-message` DMs for plain-text requests, adds a `👀` reaction to

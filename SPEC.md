@@ -41,7 +41,7 @@ A lightweight Telegram-inspired messenger with a server, web client, and CLI cli
 
 ## Authentication
 
-- **Username + PIN login**: Users register and log in with a unique username and a 4–6 digit numeric PIN.
+- **Username + password login**: Users register and log in with a unique username and password.
 - On login/register, the server issues an **opaque session token** with no expiry (invalidated only on logout).
 - Token is passed as `Authorization: Bearer <token>` on all API requests and as a query param for the SSE stream connection.
 
@@ -53,7 +53,7 @@ A lightweight Telegram-inspired messenger with a server, web client, and CLI cli
 ```
 id          string (uuid)
 username    string (unique)
-pin_hash    string        # bcrypt hash of 4–6 digit PIN
+password_hash string      # bcrypt hash of the password
 created_at  timestamp
 ```
 
@@ -96,8 +96,8 @@ created_at timestamp
 
 | Method | Path | Description |
 |--------|------|-------------|
-| POST | `/api/auth/register` | Register with username + PIN → returns token |
-| POST | `/api/auth/login` | Login with username + PIN → returns token |
+| POST | `/api/auth/register` | Register with username + password → returns token |
+| POST | `/api/auth/login` | Login with username + password → returns token |
 | DELETE | `/api/auth/logout` | Invalidate session token |
 
 ### Users
@@ -190,8 +190,8 @@ created_at timestamp
 Usage: agent-message <command> [flags]
 
 Auth:
-  login <username> <pin>    Log in (stores token in ~/.agent-message/config)
-  register <username> <pin> Register new account
+  login <username> <password>    Log in (stores token in ~/.agent-message/config)
+  register <username> <password> Register new account
   logout                    Clear stored token
 
 Conversations:

@@ -39,7 +39,7 @@ impl Runtime {
     async fn bootstrap(config: Config) -> Result<Self> {
         let chat_id = new_chat_id();
         let username = format!("agent-{chat_id}");
-        let pin = new_pin();
+        let password = new_password();
         let to_username = config.to_username.clone();
         let mut agent_client = AgentMessageClient::new(std::path::PathBuf::from("agent-message"));
         let server_url = agent_client
@@ -49,7 +49,7 @@ impl Runtime {
 
         println!("agent-message server_url: {server_url}");
 
-        register_agent_account(&agent_client, &username, &pin).await?;
+        register_agent_account(&agent_client, &username, &password).await?;
         agent_client.set_from_profile(username.clone());
         println!("registered agent profile: {username} (chat_id: {chat_id})");
 
@@ -60,7 +60,7 @@ impl Runtime {
         println!("agent-message watch stream ready for {to_username}");
 
         let startup_text = format!(
-            "claude-message session started\nchat_id: {chat_id}\nusername: {username}\npin: {pin}\n\nReply in this DM to run Claude Code."
+            "claude-message session started\nchat_id: {chat_id}\nusername: {username}\npassword: {password}\n\nReply in this DM to run Claude Code."
         );
         let startup_message_id = agent_client
             .send_text_message(&to_username, &startup_text)
@@ -266,14 +266,14 @@ fn spec_for_turn(response: &ClaudeRunResult) -> serde_json::Value {
 async fn register_agent_account(
     client: &AgentMessageClient,
     username: &str,
-    pin: &str,
+    password: &str,
 ) -> Result<()> {
     client
-        .register(username, pin)
+        .register(username, password)
         .await
         .context("register agent-message account")?;
     client
-        .login(username, pin)
+        .login(username, password)
         .await
         .context("refresh agent-message session after register")
 }
@@ -293,7 +293,7 @@ fn new_chat_id() -> String {
     Uuid::new_v4().simple().to_string()[..12].to_string()
 }
 
-fn new_pin() -> String {
+fn new_password() -> String {
     let mut rng = rand::rng();
     format!("{:06}", rng.random_range(0..=999_999))
 }

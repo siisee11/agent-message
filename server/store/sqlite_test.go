@@ -48,10 +48,10 @@ func TestSQLiteStoreUserAndSessionAuthFlow(t *testing.T) {
 	now := time.Now().UTC().Truncate(time.Microsecond)
 
 	user, err := s.CreateUser(ctx, models.CreateUserParams{
-		ID:        "user-1",
-		Username:  "alice",
-		PINHash:   "bcrypt-hash",
-		CreatedAt: now,
+		ID:           "user-1",
+		Username:     "alice",
+		PasswordHash: "bcrypt-hash",
+		CreatedAt:    now,
 	})
 	if err != nil {
 		t.Fatalf("CreateUser() error = %v", err)
@@ -115,28 +115,28 @@ func TestSQLiteStorePhase2CoreOperations(t *testing.T) {
 	base := time.Now().UTC().Truncate(time.Microsecond)
 
 	alice := mustCreateUser(t, ctx, s, models.CreateUserParams{
-		ID:        "user-alice",
-		Username:  "alice",
-		PINHash:   "hash",
-		CreatedAt: base,
+		ID:           "user-alice",
+		Username:     "alice",
+		PasswordHash: "hash",
+		CreatedAt:    base,
 	})
 	bob := mustCreateUser(t, ctx, s, models.CreateUserParams{
-		ID:        "user-bob",
-		Username:  "bob",
-		PINHash:   "hash",
-		CreatedAt: base.Add(time.Second),
+		ID:           "user-bob",
+		Username:     "bob",
+		PasswordHash: "hash",
+		CreatedAt:    base.Add(time.Second),
 	})
 	charlie := mustCreateUser(t, ctx, s, models.CreateUserParams{
-		ID:        "user-charlie",
-		Username:  "charlie",
-		PINHash:   "hash",
-		CreatedAt: base.Add(2 * time.Second),
+		ID:           "user-charlie",
+		Username:     "charlie",
+		PasswordHash: "hash",
+		CreatedAt:    base.Add(2 * time.Second),
 	})
 	_ = mustCreateUser(t, ctx, s, models.CreateUserParams{
-		ID:        "user-alex",
-		Username:  "alex",
-		PINHash:   "hash",
-		CreatedAt: base.Add(3 * time.Second),
+		ID:           "user-alex",
+		Username:     "alex",
+		PasswordHash: "hash",
+		CreatedAt:    base.Add(3 * time.Second),
 	})
 
 	searchResults, err := s.SearchUsersByUsername(ctx, models.SearchUsersParams{
@@ -405,22 +405,22 @@ func TestSQLiteStoreReactionPersistence(t *testing.T) {
 	base := time.Now().UTC().Truncate(time.Microsecond)
 
 	alice := mustCreateUser(t, ctx, s, models.CreateUserParams{
-		ID:        "user-alice",
-		Username:  "alice",
-		PINHash:   "hash",
-		CreatedAt: base,
+		ID:           "user-alice",
+		Username:     "alice",
+		PasswordHash: "hash",
+		CreatedAt:    base,
 	})
 	bob := mustCreateUser(t, ctx, s, models.CreateUserParams{
-		ID:        "user-bob",
-		Username:  "bob",
-		PINHash:   "hash",
-		CreatedAt: base.Add(time.Second),
+		ID:           "user-bob",
+		Username:     "bob",
+		PasswordHash: "hash",
+		CreatedAt:    base.Add(time.Second),
 	})
 	charlie := mustCreateUser(t, ctx, s, models.CreateUserParams{
-		ID:        "user-charlie",
-		Username:  "charlie",
-		PINHash:   "hash",
-		CreatedAt: base.Add(2 * time.Second),
+		ID:           "user-charlie",
+		Username:     "charlie",
+		PasswordHash: "hash",
+		CreatedAt:    base.Add(2 * time.Second),
 	})
 
 	conversationAB, err := s.GetOrCreateDirectConversation(ctx, models.GetOrCreateDirectConversationParams{

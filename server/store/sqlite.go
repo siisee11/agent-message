@@ -46,10 +46,10 @@ func (s *SQLiteStore) Close() error {
 
 func (s *SQLiteStore) CreateUser(ctx context.Context, params models.CreateUserParams) (models.User, error) {
 	const query = `
-		INSERT INTO users (id, username, pin_hash, created_at)
+		INSERT INTO users (id, username, password_hash, created_at)
 		VALUES (?, ?, ?, ?)
 	`
-	_, err := s.db.ExecContext(ctx, query, params.ID, params.Username, params.PINHash, formatTime(params.CreatedAt))
+	_, err := s.db.ExecContext(ctx, query, params.ID, params.Username, params.PasswordHash, formatTime(params.CreatedAt))
 	if err != nil {
 		return models.User{}, fmt.Errorf("insert user: %w", err)
 	}
@@ -58,7 +58,7 @@ func (s *SQLiteStore) CreateUser(ctx context.Context, params models.CreateUserPa
 
 func (s *SQLiteStore) GetUserByUsername(ctx context.Context, username string) (models.User, error) {
 	const query = `
-		SELECT id, username, pin_hash, created_at
+		SELECT id, username, password_hash, created_at
 		FROM users
 		WHERE username = ?
 	`
@@ -68,7 +68,7 @@ func (s *SQLiteStore) GetUserByUsername(ctx context.Context, username string) (m
 
 func (s *SQLiteStore) GetUserByID(ctx context.Context, userID string) (models.User, error) {
 	const query = `
-		SELECT id, username, pin_hash, created_at
+		SELECT id, username, password_hash, created_at
 		FROM users
 		WHERE id = ?
 	`
@@ -137,7 +137,7 @@ func (s *SQLiteStore) DeleteSessionByToken(ctx context.Context, token string) er
 
 func (s *SQLiteStore) GetUserBySessionToken(ctx context.Context, token string) (models.User, error) {
 	const query = `
-		SELECT u.id, u.username, u.pin_hash, u.created_at
+		SELECT u.id, u.username, u.password_hash, u.created_at
 		FROM users u
 		INNER JOIN sessions s ON s.user_id = u.id
 		WHERE s.token = ?
@@ -225,7 +225,7 @@ func (s *SQLiteStore) SearchUsersByUsername(ctx context.Context, params models.S
 
 	like := strings.TrimSpace(params.Query) + "%"
 	const query = `
-		SELECT id, username, pin_hash, created_at
+		SELECT id, username, password_hash, created_at
 		FROM users
 		WHERE username LIKE ? COLLATE NOCASE
 		ORDER BY username ASC
@@ -242,7 +242,7 @@ func (s *SQLiteStore) SearchUsersByUsername(ctx context.Context, params models.S
 	for rows.Next() {
 		var user models.User
 		var createdAtText string
-		if err := rows.Scan(&user.ID, &user.Username, &user.PINHash, &createdAtText); err != nil {
+		if err := rows.Scan(&user.ID, &user.Username, &user.PasswordHash, &createdAtText); err != nil {
 			return nil, fmt.Errorf("scan searched user: %w", err)
 		}
 		createdAt, err := parseStoredTime(createdAtText)
@@ -875,7 +875,7 @@ func (s *SQLiteStore) getUserByQuery(ctx context.Context, query string, arg stri
 
 	var user models.User
 	var createdAtText string
-	if err := row.Scan(&user.ID, &user.Username, &user.PINHash, &createdAtText); err != nil {
+	if err := row.Scan(&user.ID, &user.Username, &user.PasswordHash, &createdAtText); err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			return models.User{}, ErrNotFound
 		}

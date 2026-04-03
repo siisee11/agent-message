@@ -39,9 +39,9 @@ impl AgentMessageClient {
         Ok(server_url.to_string())
     }
 
-    pub(crate) async fn register(&self, username: &str, pin: &str) -> Result<()> {
+    pub(crate) async fn register(&self, username: &str, password: &str) -> Result<()> {
         let output = self
-            .run(&["register", username, pin])
+            .run(&["register", username, password])
             .await
             .context("run `agent-message register`")?;
         if !output.contains(&format!("registered {username}")) {
@@ -50,9 +50,9 @@ impl AgentMessageClient {
         Ok(())
     }
 
-    pub(crate) async fn login(&self, username: &str, pin: &str) -> Result<()> {
+    pub(crate) async fn login(&self, username: &str, password: &str) -> Result<()> {
         let output = self
-            .run(&["login", username, pin])
+            .run(&["login", username, password])
             .await
             .context("run `agent-message login`")?;
         if !output.contains(&format!("logged in as {username}")) {

@@ -226,10 +226,10 @@ func TestConversationsEndpoints(t *testing.T) {
 	}
 }
 
-func registerAndLoginUser(t *testing.T, router http.Handler, username, pin string) models.AuthResponse {
+func registerAndLoginUser(t *testing.T, router http.Handler, username, password string) models.AuthResponse {
 	t.Helper()
 
-	body := `{"username":"` + username + `","pin":"` + pin + `"}`
+	body := `{"username":"` + username + `","password":"` + password + `"}`
 	req := httptest.NewRequest(http.MethodPost, "/api/auth/register", bytes.NewBufferString(body))
 	req.Header.Set("Content-Type", "application/json")
 	resp := httptest.NewRecorder()

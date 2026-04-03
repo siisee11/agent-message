@@ -128,6 +128,13 @@ var postgresMigrations = []migration{
 			CREATE INDEX idx_push_subscriptions_user_id ON push_subscriptions(user_id);
 		`,
 	},
+	{
+		version: 10,
+		name:    "rename_users_pin_hash_to_password_hash",
+		sql: `
+			ALTER TABLE users RENAME COLUMN pin_hash TO password_hash;
+		`,
+	},
 }
 
 func (s *PostgresStore) migrate(ctx context.Context) error {

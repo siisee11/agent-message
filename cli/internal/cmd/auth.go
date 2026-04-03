@@ -13,7 +13,7 @@ import (
 
 func newRegisterCommand(rt *Runtime) *cobra.Command {
 	return &cobra.Command{
-		Use:   "register <username> <pin>",
+		Use:   "register <username> <password>",
 		Short: "Register a new account",
 		Args:  cobra.ExactArgs(2),
 		RunE: func(_ *cobra.Command, args []string) error {
@@ -22,7 +22,7 @@ func newRegisterCommand(rt *Runtime) *cobra.Command {
 	}
 }
 
-func runRegister(rt *Runtime, username, pin string) error {
+func runRegister(rt *Runtime, username, password string) error {
 	if err := ensureRuntime(rt); err != nil {
 		return err
 	}
@@ -30,7 +30,7 @@ func runRegister(rt *Runtime, username, pin string) error {
 		return fmt.Errorf("set register server_url: %w", err)
 	}
 
-	resp, err := rt.Client.Register(context.Background(), username, pin)
+	resp, err := rt.Client.Register(context.Background(), username, password)
 	if err != nil {
 		return err
 	}
@@ -45,8 +45,8 @@ func runRegister(rt *Runtime, username, pin string) error {
 
 func newLoginCommand(rt *Runtime) *cobra.Command {
 	return &cobra.Command{
-		Use:   "login <username> <pin>",
-		Short: "Log in with username and PIN",
+		Use:   "login <username> <password>",
+		Short: "Log in with username and password",
 		Args:  cobra.ExactArgs(2),
 		RunE: func(_ *cobra.Command, args []string) error {
 			return runLogin(rt, args[0], args[1])
@@ -54,7 +54,7 @@ func newLoginCommand(rt *Runtime) *cobra.Command {
 	}
 }
 
-func runLogin(rt *Runtime, username, pin string) error {
+func runLogin(rt *Runtime, username, password string) error {
 	if err := ensureRuntime(rt); err != nil {
 		return err
 	}
@@ -62,7 +62,7 @@ func runLogin(rt *Runtime, username, pin string) error {
 		return fmt.Errorf("set login server_url: %w", err)
 	}
 
-	resp, err := rt.Client.Login(context.Background(), username, pin)
+	resp, err := rt.Client.Login(context.Background(), username, password)
 	if err != nil {
 		return err
 	}

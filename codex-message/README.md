@@ -6,7 +6,7 @@ the `agent-message` binary as its transport layer and reuses the default
 
 Behavior:
 
-1. Starts a fresh `agent-{chatId}` account with a random numeric PIN.
+1. Starts a fresh `agent-{chatId}` account with a generated password.
 2. Sends the `--to` user a startup message with the generated credentials.
 3. Reuses one Codex app-server thread for the DM session.
 4. Polls `agent-message read <user>` for new plain-text requests, adds a `👀` reaction to each accepted inbound DM, and relays it into `turn/start`.

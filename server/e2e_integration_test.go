@@ -22,8 +22,8 @@ func TestServerStackE2EHappyPath(t *testing.T) {
 	testServer := newE2EServer(t)
 	defer testServer.Close()
 
-	alice := mustRegisterViaAPI(t, testServer.URL, "alice", "1234")
-	bob := mustRegisterViaAPI(t, testServer.URL, "bob", "5678")
+	alice := mustRegisterViaAPI(t, testServer.URL, "alice", "secret123")
+	bob := mustRegisterViaAPI(t, testServer.URL, "bob", "secret456")
 
 	conversation := mustStartConversationViaAPI(t, testServer.URL, alice.Token, "bob")
 	message := mustSendMessageViaAPI(t, testServer.URL, alice.Token, conversation.Conversation.ID, "hello bob from e2e")
@@ -63,7 +63,7 @@ func TestServerStackE2EValidationErrors(t *testing.T) {
 	t.Run("register rejects invalid username", func(t *testing.T) {
 		status, body := doJSONRequest(t, http.MethodPost, testServer.URL+"/api/auth/register", "", map[string]string{
 			"username": "ab",
-			"pin":      "1234",
+			"password": "1234",
 		})
 		if status != http.StatusBadRequest {
 			t.Fatalf("expected %d, got %d", http.StatusBadRequest, status)
@@ -71,19 +71,19 @@ func TestServerStackE2EValidationErrors(t *testing.T) {
 		assertErrorEnvelope(t, body, models.ErrUsernameLength.Error())
 	})
 
-	t.Run("register rejects invalid pin", func(t *testing.T) {
+	t.Run("register rejects invalid password", func(t *testing.T) {
 		status, body := doJSONRequest(t, http.MethodPost, testServer.URL+"/api/auth/register", "", map[string]string{
 			"username": "charlie",
-			"pin":      "12x4",
+			"password": "123",
 		})
 		if status != http.StatusBadRequest {
 			t.Fatalf("expected %d, got %d", http.StatusBadRequest, status)
 		}
-		assertErrorEnvelope(t, body, models.ErrPINInvalid.Error())
+		assertErrorEnvelope(t, body, models.ErrPasswordLength.Error())
 	})
 
-	alice := mustRegisterViaAPI(t, testServer.URL, "alice", "1234")
-	bob := mustRegisterViaAPI(t, testServer.URL, "bob", "5678")
+	alice := mustRegisterViaAPI(t, testServer.URL, "alice", "secret123")
+	bob := mustRegisterViaAPI(t, testServer.URL, "bob", "secret456")
 	conversation := mustStartConversationViaAPI(t, testServer.URL, alice.Token, "bob")
 
 	t.Run("user search rejects invalid query", func(t *testing.T) {
@@ -133,12 +133,12 @@ func newE2EServer(t *testing.T) *httptest.Server {
 	return httptest.NewServer(router)
 }
 
-func mustRegisterViaAPI(t *testing.T, baseURL, username, pin string) models.AuthResponse {
+func mustRegisterViaAPI(t *testing.T, baseURL, username, password string) models.AuthResponse {
 	t.Helper()
 
 	status, body := doJSONRequest(t, http.MethodPost, baseURL+"/api/auth/register", "", map[string]string{
 		"username": username,
-		"pin":      pin,
+		"password": password,
 	})
 	if status != http.StatusCreated {
 		t.Fatalf("register %q expected %d, got %d body=%s", username, http.StatusCreated, status, body)

@@ -15,6 +15,8 @@ Agent Message is a direct-message stack with three clients:
 - Web app (`web/`)
 - CLI (`cli/`)
 
+The public deployment is available at `https://am.namjaeyoun.com`.
+
 ## Install With npm (macOS)
 
 Install the packaged app from npm on macOS (`arm64` and `x64`).
@@ -34,13 +36,13 @@ Default ports:
 For self-hosted local use, `agent-message start` creates and uses a local SQLite database by default.
 Managed cloud deployments should run the server with `DB_DRIVER=postgres` and `POSTGRES_DSN`.
 After `agent-message start`, open `http://127.0.0.1:45788` in your browser.
-The bundled CLI uses `https://am.namjaeyoun.com` by default unless you override `server_url` for self-hosting.
+The bundled CLI uses `https://am.namjaeyoun.com` by default unless you override `server_url` for self-hosting, which matches the public deployment web app.
 Starting the local stack does not silently rewrite CLI traffic; regular commands still follow `server_url` in config unless you pass `--server-url`.
 The bundled CLI continues to work from the same command:
 
 ```bash
-agent-message register alice 1234
-agent-message login alice 1234
+agent-message register alice secret123
+agent-message login alice secret123
 agent-message config set master jay
 agent-message ls
 agent-message open bob
@@ -263,7 +265,7 @@ npx skills add https://github.com/siisee11/agent-message --skill agent-message-c
 `claude-message` is a companion wrapper for Claude Code, similar to `codex-message`, but it runs Claude through `claude -p --output-format json` and relays results over `agent-message`.
 
 Behavior:
-- Starts a fresh `agent-{chatId}` account with a random numeric PIN.
+- Starts a fresh `agent-{chatId}` account with a generated password.
 - Sends the `--to` user a startup message with the generated credentials.
 - Reuses the returned Claude `session_id` and resumes later turns with `--resume`.
 - Watches the DM thread for plain-text prompts, adds `👀` when a request is picked up, and posts the Claude result back as `json_render`.
@@ -301,8 +303,8 @@ Run from `cli/`. By default the CLI talks to `https://am.namjaeyoun.com`. For se
 
 ```bash
 cd cli
-go run . register alice 1234
-go run . login alice 1234
+go run . register alice secret123
+go run . login alice secret123
 go run . profile list
 go run . profile switch alice
 ```
@@ -338,7 +340,7 @@ To set a default recipient for agent reports, run `go run . config set master ja
 ## Validation and Constraints (Phase 7)
 
 - Username identity fields: `3-32` chars, allowed `[A-Za-z0-9._-]`
-- PIN: `4-6` numeric digits
+- Password: `4-72` characters
 - Uploads:
   - max file size: `20 MB`
   - unsupported file types are rejected

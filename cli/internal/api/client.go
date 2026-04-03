@@ -99,20 +99,20 @@ func (c *Client) SetHTTPClient(httpClient *http.Client) {
 	c.httpClient = httpClient
 }
 
-func (c *Client) Register(ctx context.Context, username, pin string) (AuthResponse, error) {
+func (c *Client) Register(ctx context.Context, username, password string) (AuthResponse, error) {
 	var out AuthResponse
 	err := c.doJSON(ctx, http.MethodPost, "/api/auth/register", map[string]string{
 		"username": username,
-		"pin":      pin,
+		"password": password,
 	}, &out)
 	return out, err
 }
 
-func (c *Client) Login(ctx context.Context, username, pin string) (AuthResponse, error) {
+func (c *Client) Login(ctx context.Context, username, password string) (AuthResponse, error) {
 	var out AuthResponse
 	err := c.doJSON(ctx, http.MethodPost, "/api/auth/login", map[string]string{
 		"username": username,
-		"pin":      pin,
+		"password": password,
 	}, &out)
 	return out, err
 }

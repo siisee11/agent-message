@@ -17,12 +17,12 @@ export interface AuthResponse {
 
 export interface RegisterRequest {
   username: string
-  pin: string
+  password: string
 }
 
 export interface LoginRequest {
   username: string
-  pin: string
+  password: string
 }
 
 export interface Conversation {

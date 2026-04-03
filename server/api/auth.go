@@ -23,7 +23,7 @@ type authHandler struct {
 	store    store.Store
 	nowFn    func() time.Time
 	tokenFn  func() (string, error)
-	bcryptFn func(pin string) (string, error)
+	bcryptFn func(password string) (string, error)
 }
 
 func newAuthHandler(s store.Store) *authHandler {
@@ -31,7 +31,7 @@ func newAuthHandler(s store.Store) *authHandler {
 		store:    s,
 		nowFn:    time.Now,
 		tokenFn:  generateSessionToken,
-		bcryptFn: hashPIN,
+		bcryptFn: hashPassword,
 	}
 }
 
@@ -59,7 +59,11 @@ func (h *authHandler) handleRegister(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	pinHash, err := h.bcryptFn(req.PIN)
+	password := req.Password
+	if password == "" {
+		password = req.LegacyPIN
+	}
+	passwordHash, err := h.bcryptFn(password)
 	if err != nil {
 		writeError(w, http.StatusInternalServerError, "failed to register user")
 		return
@@ -67,10 +71,10 @@ func (h *authHandler) handleRegister(w http.ResponseWriter, r *http.Request) {
 
 	now := h.nowFn().UTC()
 	user, err := h.store.CreateUser(r.Context(), models.CreateUserParams{
-		ID:        uuid.NewString(),
-		Username:  req.Username,
-		PINHash:   pinHash,
-		CreatedAt: now,
+		ID:           uuid.NewString(),
+		Username:     req.Username,
+		PasswordHash: passwordHash,
+		CreatedAt:    now,
 	})
 	if err != nil {
 		writeError(w, http.StatusInternalServerError, "failed to register user")
@@ -115,7 +119,11 @@ func (h *authHandler) handleLogin(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if err := bcrypt.CompareHashAndPassword([]byte(user.PINHash), []byte(req.PIN)); err != nil {
+	password := req.Password
+	if password == "" {
+		password = req.LegacyPIN
+	}
+	if err := bcrypt.CompareHashAndPassword([]byte(user.PasswordHash), []byte(password)); err != nil {
 		writeError(w, http.StatusUnauthorized, "invalid credentials")
 		return
 	}
@@ -202,8 +210,8 @@ func generateSessionToken() (string, error) {
 	return base64.RawURLEncoding.EncodeToString(raw), nil
 }
 
-func hashPIN(pin string) (string, error) {
-	hash, err := bcrypt.GenerateFromPassword([]byte(pin), bcrypt.DefaultCost)
+func hashPassword(password string) (string, error) {
+	hash, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
 	if err != nil {
 		return "", err
 	}

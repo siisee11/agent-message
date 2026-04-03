@@ -29,7 +29,7 @@ func TestCORSMiddlewarePreflight(t *testing.T) {
 func TestBearerAuthMiddlewareProtectsLogout(t *testing.T) {
 	router, _ := newTestRouter(t)
 
-	registerBody := `{"username":"bob","pin":"1234"}`
+	registerBody := `{"username":"bob","password":"secret123"}`
 	registerReq := httptest.NewRequest(http.MethodPost, "/api/auth/register", bytes.NewBufferString(registerBody))
 	registerReq.Header.Set("Content-Type", "application/json")
 	registerResp := httptest.NewRecorder()

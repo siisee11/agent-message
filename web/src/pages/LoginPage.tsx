@@ -15,7 +15,7 @@ export function LoginPage() {
   const location = useLocation()
   const { status, loginWithAutoRegister } = useAuth()
   const [username, setUsername] = useState('')
-  const [pin, setPin] = useState('')
+  const [password, setPassword] = useState('')
   const [errorMessage, setErrorMessage] = useState<string | null>(null)
   const [successMessage, setSuccessMessage] = useState<string | null>(null)
   const [isSubmitting, setIsSubmitting] = useState(false)
@@ -42,7 +42,7 @@ export function LoginPage() {
     setIsSubmitting(true)
 
     try {
-      const result = await loginWithAutoRegister({ username, pin })
+      const result = await loginWithAutoRegister({ username, password })
       if (result.mode === 'register') {
         setSuccessMessage('Account created and signed in.')
       }
@@ -64,7 +64,7 @@ export function LoginPage() {
   return (
     <section className={styles.wrapper}>
       <h2 className={styles.title}>Sign in</h2>
-      <p className={styles.subtitle}>Enter your username and 4-6 digit PIN.</p>
+      <p className={styles.subtitle}>Enter your username and password.</p>
       <form className={styles.form} onSubmit={handleSubmit}>
         <label className={styles.field}>
           <span className={styles.label}>Username</span>
@@ -80,20 +80,17 @@ export function LoginPage() {
         </label>
 
         <label className={styles.field}>
-          <span className={styles.label}>PIN</span>
+          <span className={styles.label}>Password</span>
           <input
             autoComplete="current-password"
             className={styles.input}
             disabled={isSubmitting || isLoadingAuth}
-            inputMode="numeric"
-            maxLength={6}
             minLength={4}
-            onChange={(event) => setPin(event.target.value)}
-            pattern="[0-9]{4,6}"
-            placeholder="1234"
+            onChange={(event) => setPassword(event.target.value)}
+            placeholder="password"
             required
             type="password"
-            value={pin}
+            value={password}
           />
         </label>
 
@@ -108,4 +105,3 @@ export function LoginPage() {
     </section>
   )
 }
-

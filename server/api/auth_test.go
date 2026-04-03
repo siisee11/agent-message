@@ -20,7 +20,7 @@ func TestAuthRegisterLoginLogoutFlow(t *testing.T) {
 	ctx := context.Background()
 	router, sqliteStore := newTestRouter(t)
 
-	registerBody := `{"username":"alice","pin":"1234"}`
+	registerBody := `{"username":"alice","password":"secret123"}`
 	registerReq := httptest.NewRequest(http.MethodPost, "/api/auth/register", bytes.NewBufferString(registerBody))
 	registerReq.Header.Set("Content-Type", "application/json")
 	registerResp := httptest.NewRecorder()
@@ -45,14 +45,14 @@ func TestAuthRegisterLoginLogoutFlow(t *testing.T) {
 	if err != nil {
 		t.Fatalf("GetUserByUsername() error = %v", err)
 	}
-	if storedUser.PINHash == "1234" {
-		t.Fatalf("expected stored pin hash to be hashed")
+	if storedUser.PasswordHash == "secret123" {
+		t.Fatalf("expected stored password hash to be hashed")
 	}
-	if err := bcrypt.CompareHashAndPassword([]byte(storedUser.PINHash), []byte("1234")); err != nil {
-		t.Fatalf("expected stored hash to match pin: %v", err)
+	if err := bcrypt.CompareHashAndPassword([]byte(storedUser.PasswordHash), []byte("secret123")); err != nil {
+		t.Fatalf("expected stored hash to match password: %v", err)
 	}
 
-	invalidLoginBody := `{"username":"alice","pin":"9999"}`
+	invalidLoginBody := `{"username":"alice","password":"wrongpass"}`
 	invalidLoginReq := httptest.NewRequest(http.MethodPost, "/api/auth/login", bytes.NewBufferString(invalidLoginBody))
 	invalidLoginReq.Header.Set("Content-Type", "application/json")
 	invalidLoginResp := httptest.NewRecorder()
@@ -61,7 +61,7 @@ func TestAuthRegisterLoginLogoutFlow(t *testing.T) {
 		t.Fatalf("expected invalid login status %d, got %d", http.StatusUnauthorized, invalidLoginResp.Code)
 	}
 
-	loginBody := `{"username":"alice","pin":"1234"}`
+	loginBody := `{"username":"alice","password":"secret123"}`
 	loginReq := httptest.NewRequest(http.MethodPost, "/api/auth/login", bytes.NewBufferString(loginBody))
 	loginReq.Header.Set("Content-Type", "application/json")
 	loginResp := httptest.NewRecorder()
@@ -105,7 +105,7 @@ func TestAuthRegisterLoginLogoutFlow(t *testing.T) {
 func TestAuthRegisterDuplicateUsername(t *testing.T) {
 	router, _ := newTestRouter(t)
 
-	body := `{"username":"alice","pin":"1234"}`
+	body := `{"username":"alice","password":"secret123"}`
 	for i := 0; i < 2; i++ {
 		req := httptest.NewRequest(http.MethodPost, "/api/auth/register", bytes.NewBufferString(body))
 		req.Header.Set("Content-Type", "application/json")
@@ -124,7 +124,7 @@ func TestAuthRegisterDuplicateUsername(t *testing.T) {
 func TestAuthRegisterValidation(t *testing.T) {
 	router, _ := newTestRouter(t)
 
-	req := httptest.NewRequest(http.MethodPost, "/api/auth/register", bytes.NewBufferString(`{"username":"alice","pin":"12"}`))
+	req := httptest.NewRequest(http.MethodPost, "/api/auth/register", bytes.NewBufferString(`{"username":"alice","password":"123"}`))
 	req.Header.Set("Content-Type", "application/json")
 	resp := httptest.NewRecorder()
 	router.ServeHTTP(resp, req)
@@ -133,7 +133,7 @@ func TestAuthRegisterValidation(t *testing.T) {
 		t.Fatalf("expected status %d, got %d", http.StatusBadRequest, resp.Code)
 	}
 
-	req = httptest.NewRequest(http.MethodPost, "/api/auth/register", bytes.NewBufferString(`{"username":"ab","pin":"1234"}`))
+	req = httptest.NewRequest(http.MethodPost, "/api/auth/register", bytes.NewBufferString(`{"username":"ab","password":"1234"}`))
 	req.Header.Set("Content-Type", "application/json")
 	resp = httptest.NewRecorder()
 	router.ServeHTTP(resp, req)
@@ -141,7 +141,7 @@ func TestAuthRegisterValidation(t *testing.T) {
 		t.Fatalf("expected status %d, got %d", http.StatusBadRequest, resp.Code)
 	}
 
-	req = httptest.NewRequest(http.MethodPost, "/api/auth/register", bytes.NewBufferString(`{"username":"alice smith","pin":"1234"}`))
+	req = httptest.NewRequest(http.MethodPost, "/api/auth/register", bytes.NewBufferString(`{"username":"alice smith","password":"1234"}`))
 	req.Header.Set("Content-Type", "application/json")
 	resp = httptest.NewRecorder()
 	router.ServeHTTP(resp, req)

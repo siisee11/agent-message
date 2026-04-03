@@ -1,6 +1,9 @@
 package models
 
-import "testing"
+import (
+	"strings"
+	"testing"
+)
 
 func TestRegisterRequestValidate(t *testing.T) {
 	tests := []struct {
@@ -12,21 +15,21 @@ func TestRegisterRequestValidate(t *testing.T) {
 			name: "valid",
 			req: RegisterRequest{
 				Username: "alice",
-				PIN:      "1234",
+				Password: "1234",
 			},
 		},
 		{
 			name: "valid username with symbols",
 			req: RegisterRequest{
 				Username: "alice.smith-1",
-				PIN:      "123456",
+				Password: "abc12345",
 			},
 		},
 		{
 			name: "empty username",
 			req: RegisterRequest{
 				Username: "   ",
-				PIN:      "1234",
+				Password: "1234",
 			},
 			wantErr: true,
 		},
@@ -34,7 +37,7 @@ func TestRegisterRequestValidate(t *testing.T) {
 			name: "username too short",
 			req: RegisterRequest{
 				Username: "ab",
-				PIN:      "1234",
+				Password: "1234",
 			},
 			wantErr: true,
 		},
@@ -42,33 +45,39 @@ func TestRegisterRequestValidate(t *testing.T) {
 			name: "username has spaces",
 			req: RegisterRequest{
 				Username: "alice smith",
-				PIN:      "1234",
+				Password: "1234",
 			},
 			wantErr: true,
 		},
 		{
-			name: "pin too short",
+			name: "password too short",
 			req: RegisterRequest{
 				Username: "alice",
-				PIN:      "123",
+				Password: "123",
 			},
 			wantErr: true,
 		},
 		{
-			name: "pin non numeric",
+			name: "password may be non numeric",
 			req: RegisterRequest{
 				Username: "alice",
-				PIN:      "12a4",
+				Password: "12a4",
+			},
+		},
+		{
+			name: "password too long",
+			req: RegisterRequest{
+				Username: "alice",
+				Password: strings.Repeat("a", 73),
 			},
 			wantErr: true,
 		},
 		{
-			name: "pin too long",
+			name: "legacy pin field still validates",
 			req: RegisterRequest{
-				Username: "alice",
-				PIN:      "1234567",
+				Username:  "alice",
+				LegacyPIN: "1234",
 			},
-			wantErr: true,
 		},
 	}
 

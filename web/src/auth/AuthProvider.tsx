@@ -17,7 +17,7 @@ type AuthStatus = 'loading' | 'authenticated' | 'unauthenticated'
 
 export interface LoginCredentials {
   username: string
-  pin: string
+  password: string
 }
 
 export interface LoginResult {
@@ -112,7 +112,7 @@ export function AuthProvider({ children }: PropsWithChildren) {
     async (credentials: LoginCredentials): Promise<LoginResult> => {
       const payload = {
         username: credentials.username.trim(),
-        pin: credentials.pin.trim(),
+        password: credentials.password,
       }
 
       try {

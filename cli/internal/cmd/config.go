@@ -12,7 +12,10 @@ import (
 	"github.com/spf13/cobra"
 )
 
-const configKeyServerURL = "server_url"
+const (
+	configKeyMaster    = "master"
+	configKeyServerURL = "server_url"
+)
 
 func newConfigCommand(rt *Runtime) *cobra.Command {
 	cmd := &cobra.Command{
@@ -109,6 +112,9 @@ func runConfigGet(rt *Runtime, key string) error {
 	case configKeyServerURL:
 		_, _ = fmt.Fprintln(rt.Stdout, rt.Config.ServerURL)
 		return nil
+	case configKeyMaster:
+		_, _ = fmt.Fprintln(rt.Stdout, rt.Config.Master)
+		return nil
 	default:
 		return unsupportedConfigKeyError(normalizedKey)
 	}
@@ -129,6 +135,14 @@ func runConfigSet(rt *Runtime, key string, value string) error {
 		}
 		_, _ = fmt.Fprintln(rt.Stdout, rt.Config.ServerURL)
 		return nil
+	case configKeyMaster:
+		cfg := rt.Config
+		cfg.Master = value
+		if err := saveRuntimeConfig(rt, cfg); err != nil {
+			return err
+		}
+		_, _ = fmt.Fprintln(rt.Stdout, rt.Config.Master)
+		return nil
 	default:
 		return unsupportedConfigKeyError(normalizedKey)
 	}
@@ -148,6 +162,14 @@ func runConfigUnset(rt *Runtime, key string) error {
 			return err
 		}
 		_, _ = fmt.Fprintln(rt.Stdout, rt.Config.ServerURL)
+		return nil
+	case configKeyMaster:
+		cfg := rt.Config
+		cfg.Master = ""
+		if err := saveRuntimeConfig(rt, cfg); err != nil {
+			return err
+		}
+		_, _ = fmt.Fprintln(rt.Stdout, rt.Config.Master)
 		return nil
 	default:
 		return unsupportedConfigKeyError(normalizedKey)
@@ -182,5 +204,5 @@ func unsupportedConfigKeyError(key string) error {
 	if key == "" {
 		return errors.New("config key is required")
 	}
-	return fmt.Errorf("unsupported config key %q; supported keys: %s", key, configKeyServerURL)
+	return fmt.Errorf("unsupported config key %q; supported keys: %s, %s", key, configKeyMaster, configKeyServerURL)
 }

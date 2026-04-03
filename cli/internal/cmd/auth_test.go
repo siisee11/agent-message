@@ -127,6 +127,41 @@ func TestRunLoginStoresTokenInConfig(t *testing.T) {
 	}
 }
 
+func TestRunLoginRestoresStoredMasterForProfile(t *testing.T) {
+	t.Parallel()
+
+	rt, _, _ := newTestRuntime(t, "http://example.test", "", func(req *http.Request, body []byte) (*http.Response, error) {
+		if req.URL.Path != "/api/auth/login" {
+			t.Fatalf("unexpected path: %s", req.URL.Path)
+		}
+		var payload map[string]string
+		if err := json.Unmarshal(body, &payload); err != nil {
+			t.Fatalf("decode login payload: %v", err)
+		}
+		if got, want := payload["username"], "alice"; got != want {
+			t.Fatalf("username mismatch: got %q want %q", got, want)
+		}
+		return jsonResponse(http.StatusOK, `{"token":"login-token","user":{"id":"u1","username":"alice","created_at":"2026-01-01T00:00:00Z"}}`), nil
+	})
+	rt.Config.Profiles = map[string]config.Profile{
+		"alice": {
+			Username:  "alice",
+			ServerURL: "http://example.test",
+			Master:    "jay",
+		},
+	}
+	if err := rt.ConfigStore.Save(rt.Config); err != nil {
+		t.Fatalf("seed profiles: %v", err)
+	}
+
+	if err := runLogin(rt, "alice", "1234"); err != nil {
+		t.Fatalf("runLogin: %v", err)
+	}
+	if got, want := rt.Config.Master, "jay"; got != want {
+		t.Fatalf("master mismatch: got %q want %q", got, want)
+	}
+}
+
 func TestRunRegisterUsesConfiguredServerURLInsteadOfActiveProfileServerURL(t *testing.T) {
 	t.Parallel()
 

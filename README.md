@@ -41,9 +41,11 @@ The bundled CLI continues to work from the same command:
 ```bash
 agent-message register alice 1234
 agent-message login alice 1234
+agent-message config set master jay
 agent-message ls
 agent-message open bob
 agent-message send bob "hello"
+agent-message send "status update for master"
 ```
 
 Port conventions:
@@ -331,6 +333,7 @@ go run . watch bob
 CLI config is stored at `~/.agent-message/config` by default.
 Each successful `login` or `register` also saves a named profile, and `go run . profile switch <username>` swaps the active account locally.
 For a self-hosted server, set `server_url` once with `go run . config set server_url http://localhost:8080` or use `--server-url` per command.
+To set a default recipient for agent reports, run `go run . config set master jay`; after that, `go run . send "done"` sends to `jay`, and `go run . send --to bob "done"` overrides it for one command.
 
 ## Validation and Constraints (Phase 7)
 

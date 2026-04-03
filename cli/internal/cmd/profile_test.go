@@ -17,6 +17,7 @@ func TestRunProfileSwitchActivatesStoredProfile(t *testing.T) {
 			Username:  "alice",
 			ServerURL: "http://example.test",
 			Token:     "alice-token",
+			Master:    "jay",
 			ReadSessions: map[string]config.ReadSession{
 				"conv-a": {
 					ConversationID: "conv-a",
@@ -29,6 +30,7 @@ func TestRunProfileSwitchActivatesStoredProfile(t *testing.T) {
 			Username:  "bob",
 			ServerURL: "https://chat.example.test/api",
 			Token:     "bob-token",
+			Master:    "boss",
 			ReadSessions: map[string]config.ReadSession{
 				"conv-b": {
 					ConversationID: "conv-b",
@@ -51,6 +53,9 @@ func TestRunProfileSwitchActivatesStoredProfile(t *testing.T) {
 	}
 	if got, want := rt.Config.Token, "bob-token"; got != want {
 		t.Fatalf("token mismatch: got %q want %q", got, want)
+	}
+	if got, want := rt.Config.Master, "boss"; got != want {
+		t.Fatalf("master mismatch: got %q want %q", got, want)
 	}
 	if got, want := rt.Config.ServerURL, "http://example.test"; got != want {
 		t.Fatalf("configured server url mismatch: got %q want %q", got, want)

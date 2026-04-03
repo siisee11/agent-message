@@ -21,6 +21,7 @@ type Profile struct {
 	Username               string                 `json:"username"`
 	ServerURL              string                 `json:"server_url"`
 	Token                  string                 `json:"token,omitempty"`
+	Master                 string                 `json:"master,omitempty"`
 	LastReadConversationID string                 `json:"last_read_conversation_id,omitempty"`
 	ReadSessions           map[string]ReadSession `json:"read_sessions,omitempty"`
 }
@@ -37,6 +38,7 @@ type ReadSession struct {
 type Config struct {
 	ServerURL              string                 `json:"server_url"`
 	Token                  string                 `json:"token,omitempty"`
+	Master                 string                 `json:"master,omitempty"`
 	ActiveProfile          string                 `json:"active_profile,omitempty"`
 	Profiles               map[string]Profile     `json:"profiles,omitempty"`
 	LastReadConversationID string                 `json:"last_read_conversation_id,omitempty"`
@@ -153,6 +155,7 @@ func (c *Config) prepareForSave() error {
 			Username:               c.ActiveProfile,
 			ServerURL:              profileServerURL,
 			Token:                  c.Token,
+			Master:                 strings.TrimSpace(c.Master),
 			LastReadConversationID: c.LastReadConversationID,
 			ReadSessions:           cloneReadSessions(c.ReadSessions),
 		}
@@ -172,6 +175,7 @@ func (c *Config) normalizeLoaded() error {
 	}
 	c.ServerURL = normalizedServerURL
 	c.Token = strings.TrimSpace(c.Token)
+	c.Master = strings.TrimSpace(c.Master)
 	c.ActiveProfile = strings.TrimSpace(c.ActiveProfile)
 	c.LastReadConversationID = strings.TrimSpace(c.LastReadConversationID)
 	c.ReadSessions = normalizeReadSessions(c.ReadSessions)
@@ -209,6 +213,7 @@ func (c *Config) normalizeLoaded() error {
 
 	c.ActiveProfileServerURL = profile.ServerURL
 	c.Token = profile.Token
+	c.Master = profile.Master
 	c.ReadSessions = cloneReadSessions(profile.ReadSessions)
 	c.LastReadConversationID = normalizeLastReadConversationID(profile.LastReadConversationID, c.ReadSessions)
 	return nil
@@ -238,6 +243,7 @@ func normalizeProfile(name string, profile Profile) (Profile, error) {
 	}
 	profile.ServerURL = serverURL
 	profile.Token = strings.TrimSpace(profile.Token)
+	profile.Master = strings.TrimSpace(profile.Master)
 	profile.ReadSessions = normalizeReadSessions(profile.ReadSessions)
 	profile.LastReadConversationID = normalizeLastReadConversationID(profile.LastReadConversationID, profile.ReadSessions)
 	return profile, nil

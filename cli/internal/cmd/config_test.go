@@ -35,6 +35,20 @@ func TestRunConfigGetPrintsSingleValue(t *testing.T) {
 	}
 }
 
+func TestRunConfigGetPrintsMaster(t *testing.T) {
+	t.Parallel()
+
+	rt, stdout, _ := newTestRuntime(t, "http://example.test", "", nil)
+	rt.Config.Master = "jay"
+
+	if err := runConfigGet(rt, "master"); err != nil {
+		t.Fatalf("runConfigGet(master): %v", err)
+	}
+	if got, want := strings.TrimSpace(stdout.String()), "jay"; got != want {
+		t.Fatalf("stdout mismatch: got %q want %q", got, want)
+	}
+}
+
 func TestRunConfigGetPrintsJSON(t *testing.T) {
 	t.Parallel()
 
@@ -83,6 +97,30 @@ func TestRunConfigSetPersistsServerURL(t *testing.T) {
 	}
 }
 
+func TestRunConfigSetPersistsMaster(t *testing.T) {
+	t.Parallel()
+
+	rt, stdout, _ := newTestRuntime(t, "http://example.test", "tok-config", nil)
+
+	if err := runConfigSet(rt, "master", " jay "); err != nil {
+		t.Fatalf("runConfigSet(master): %v", err)
+	}
+	if got, want := strings.TrimSpace(stdout.String()), "jay"; got != want {
+		t.Fatalf("stdout mismatch: got %q want %q", got, want)
+	}
+	if got, want := rt.Config.Master, "jay"; got != want {
+		t.Fatalf("runtime master mismatch: got %q want %q", got, want)
+	}
+
+	persisted, err := rt.ConfigStore.Load()
+	if err != nil {
+		t.Fatalf("load persisted config: %v", err)
+	}
+	if got, want := persisted.Master, "jay"; got != want {
+		t.Fatalf("persisted master mismatch: got %q want %q", got, want)
+	}
+}
+
 func TestRunConfigUnsetResetsServerURLToDefault(t *testing.T) {
 	t.Parallel()
 
@@ -99,6 +137,26 @@ func TestRunConfigUnsetResetsServerURLToDefault(t *testing.T) {
 	}
 }
 
+func TestRunConfigUnsetClearsMaster(t *testing.T) {
+	t.Parallel()
+
+	rt, stdout, _ := newTestRuntime(t, "https://chat.example.test/api", "tok-config", nil)
+	rt.Config.Master = "jay"
+	if err := rt.ConfigStore.Save(rt.Config); err != nil {
+		t.Fatalf("seed master config: %v", err)
+	}
+
+	if err := runConfigUnset(rt, "master"); err != nil {
+		t.Fatalf("runConfigUnset(master): %v", err)
+	}
+	if got := strings.TrimSpace(stdout.String()); got != "" {
+		t.Fatalf("stdout mismatch: got %q want empty", got)
+	}
+	if got := rt.Config.Master; got != "" {
+		t.Fatalf("runtime master mismatch: got %q want empty", got)
+	}
+}
+
 func TestRunConfigSetRejectsUnsupportedKey(t *testing.T) {
 	t.Parallel()
 
@@ -108,7 +166,7 @@ func TestRunConfigSetRejectsUnsupportedKey(t *testing.T) {
 	if err == nil {
 		t.Fatalf("expected error")
 	}
-	if got := err.Error(); !strings.Contains(got, "supported keys: server_url") {
+	if got := err.Error(); !strings.Contains(got, "supported keys: master, server_url") {
 		t.Fatalf("unexpected error: %q", got)
 	}
 }

@@ -20,6 +20,9 @@ func TestLoadMissingConfigUsesDefaults(t *testing.T) {
 	if cfg.Token != "" {
 		t.Fatalf("expected empty token, got %q", cfg.Token)
 	}
+	if cfg.Master != "" {
+		t.Fatalf("expected empty master, got %q", cfg.Master)
+	}
 	if cfg.Profiles == nil {
 		t.Fatalf("expected profiles map to be initialized")
 	}
@@ -35,6 +38,7 @@ func TestSaveLoadRoundTripNormalizesServerURL(t *testing.T) {
 	input := Config{
 		ServerURL:              " https://example.com/api/ ",
 		Token:                  "  abc123  ",
+		Master:                 "  jay  ",
 		LastReadConversationID: " conv-1 ",
 		ReadSessions: map[string]ReadSession{
 			" conv-1 ": {
@@ -60,6 +64,9 @@ func TestSaveLoadRoundTripNormalizesServerURL(t *testing.T) {
 	if got, want := cfg.Token, "abc123"; got != want {
 		t.Fatalf("token mismatch: got %q want %q", got, want)
 	}
+	if got, want := cfg.Master, "jay"; got != want {
+		t.Fatalf("master mismatch: got %q want %q", got, want)
+	}
 	if got, ok := cfg.ReadSessions["conv-1"]; !ok || got.IndexToMessage[1] != "msg-1" {
 		t.Fatalf("expected read session mapping to survive round trip")
 	}
@@ -75,12 +82,14 @@ func TestSaveLoadRoundTripWithActiveProfile(t *testing.T) {
 	input := Config{
 		ServerURL:     " https://chat.example.test/api/ ",
 		Token:         " active-token ",
+		Master:        "  jay  ",
 		ActiveProfile: "alice",
 		Profiles: map[string]Profile{
 			"alice": {
 				Username:  "alice",
 				ServerURL: DefaultServerURL(),
 				Token:     "stale-token",
+				Master:    "stale-master",
 				ReadSessions: map[string]ReadSession{
 					" conv-1 ": {
 						ConversationID: "conv-1",
@@ -125,6 +134,9 @@ func TestSaveLoadRoundTripWithActiveProfile(t *testing.T) {
 	if got, want := cfg.Token, "active-token"; got != want {
 		t.Fatalf("token mismatch: got %q want %q", got, want)
 	}
+	if got, want := cfg.Master, "jay"; got != want {
+		t.Fatalf("master mismatch: got %q want %q", got, want)
+	}
 	if got, want := cfg.ReadSessions["conv-1"].IndexToMessage[1], "msg-1"; got != want {
 		t.Fatalf("active read session mismatch: got %q want %q", got, want)
 	}
@@ -140,6 +152,7 @@ func TestLoadPreservesConfiguredServerURLSeparatelyFromActiveProfileServerURL(t 
 	input := Config{
 		ServerURL:              " https://am.namjaeyoun.com/ ",
 		Token:                  " local-token ",
+		Master:                 " jay ",
 		ActiveProfile:          "alice",
 		ActiveProfileServerURL: " http://127.0.0.1:45180/ ",
 		Profiles: map[string]Profile{
@@ -147,6 +160,7 @@ func TestLoadPreservesConfiguredServerURLSeparatelyFromActiveProfileServerURL(t 
 				Username:  "alice",
 				ServerURL: "http://127.0.0.1:45180/",
 				Token:     "local-token",
+				Master:    "jay",
 			},
 		},
 	}
@@ -165,6 +179,9 @@ func TestLoadPreservesConfiguredServerURLSeparatelyFromActiveProfileServerURL(t 
 	}
 	if got, want := cfg.ActiveProfileServerURL, "http://127.0.0.1:45180"; got != want {
 		t.Fatalf("active profile server_url mismatch: got %q want %q", got, want)
+	}
+	if got, want := cfg.Master, "jay"; got != want {
+		t.Fatalf("master mismatch: got %q want %q", got, want)
 	}
 	if got, want := cfg.ActiveServerURL(), "http://127.0.0.1:45180"; got != want {
 		t.Fatalf("active server resolution mismatch: got %q want %q", got, want)

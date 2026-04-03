@@ -12,6 +12,7 @@ import (
 	"testing"
 
 	"agent-message/cli/internal/api"
+	"agent-message/cli/internal/config"
 )
 
 func TestRunSendMessageResolvesConversationAndSends(t *testing.T) {
@@ -68,6 +69,114 @@ func TestRunSendMessageResolvesConversationAndSends(t *testing.T) {
 		t.Fatalf("expected both open and send calls, seenOpen=%v seenSend=%v", seenOpen, seenSend)
 	}
 	if got, want := strings.TrimSpace(stdout.String()), "sent m-send"; got != want {
+		t.Fatalf("stdout mismatch: got %q want %q", got, want)
+	}
+}
+
+func TestSendCommandUsesConfiguredMasterWhenUsernameIsOmitted(t *testing.T) {
+	t.Parallel()
+
+	rt, stdout, _ := newTestRuntime(t, "http://example.test", "tok-send", func(req *http.Request, body []byte) (*http.Response, error) {
+		switch {
+		case req.Method == http.MethodPost && req.URL.Path == "/api/conversations":
+			var payload map[string]string
+			if err := json.Unmarshal(body, &payload); err != nil {
+				t.Fatalf("decode open payload: %v", err)
+			}
+			if got, want := payload["username"], "jay"; got != want {
+				t.Fatalf("open username mismatch: got %q want %q", got, want)
+			}
+			return jsonResponse(http.StatusOK, `{
+				"conversation":{"id":"c-send","participant_a":"u1","participant_b":"u2","created_at":"2026-01-01T00:00:00Z"},
+				"participant_a":{"id":"u1","username":"alice","created_at":"2026-01-01T00:00:00Z"},
+				"participant_b":{"id":"u2","username":"jay","created_at":"2026-01-01T00:00:00Z"}
+			}`), nil
+		case req.Method == http.MethodPost && req.URL.Path == "/api/conversations/c-send/messages":
+			var payload map[string]string
+			if err := json.Unmarshal(body, &payload); err != nil {
+				t.Fatalf("decode send payload: %v", err)
+			}
+			if got, want := payload["content"], "hello master"; got != want {
+				t.Fatalf("send content mismatch: got %q want %q", got, want)
+			}
+			return jsonResponse(http.StatusCreated, `{
+				"id":"m-master",
+				"conversation_id":"c-send",
+				"sender_id":"u1",
+				"content":"hello master",
+				"edited":false,
+				"deleted":false,
+				"created_at":"2026-01-01T00:00:00Z",
+				"updated_at":"2026-01-01T00:00:00Z"
+			}`), nil
+		default:
+			t.Fatalf("unexpected request: %s %s", req.Method, req.URL.Path)
+			return nil, nil
+		}
+	})
+	rt.Config.Master = "jay"
+
+	command := newSendMessageCommand(rt)
+	command.SetArgs([]string{"hello master"})
+
+	if err := command.Execute(); err != nil {
+		t.Fatalf("execute send command: %v", err)
+	}
+	if got, want := strings.TrimSpace(stdout.String()), "sent m-master"; got != want {
+		t.Fatalf("stdout mismatch: got %q want %q", got, want)
+	}
+}
+
+func TestSendCommandUsesToFlagToOverrideConfiguredMaster(t *testing.T) {
+	t.Parallel()
+
+	rt, stdout, _ := newTestRuntime(t, "http://example.test", "tok-send", func(req *http.Request, body []byte) (*http.Response, error) {
+		switch {
+		case req.Method == http.MethodPost && req.URL.Path == "/api/conversations":
+			var payload map[string]string
+			if err := json.Unmarshal(body, &payload); err != nil {
+				t.Fatalf("decode open payload: %v", err)
+			}
+			if got, want := payload["username"], "bob"; got != want {
+				t.Fatalf("open username mismatch: got %q want %q", got, want)
+			}
+			return jsonResponse(http.StatusOK, `{
+				"conversation":{"id":"c-send","participant_a":"u1","participant_b":"u2","created_at":"2026-01-01T00:00:00Z"},
+				"participant_a":{"id":"u1","username":"alice","created_at":"2026-01-01T00:00:00Z"},
+				"participant_b":{"id":"u2","username":"bob","created_at":"2026-01-01T00:00:00Z"}
+			}`), nil
+		case req.Method == http.MethodPost && req.URL.Path == "/api/conversations/c-send/messages":
+			var payload map[string]string
+			if err := json.Unmarshal(body, &payload); err != nil {
+				t.Fatalf("decode send payload: %v", err)
+			}
+			if got, want := payload["content"], "hello bob"; got != want {
+				t.Fatalf("send content mismatch: got %q want %q", got, want)
+			}
+			return jsonResponse(http.StatusCreated, `{
+				"id":"m-override",
+				"conversation_id":"c-send",
+				"sender_id":"u1",
+				"content":"hello bob",
+				"edited":false,
+				"deleted":false,
+				"created_at":"2026-01-01T00:00:00Z",
+				"updated_at":"2026-01-01T00:00:00Z"
+			}`), nil
+		default:
+			t.Fatalf("unexpected request: %s %s", req.Method, req.URL.Path)
+			return nil, nil
+		}
+	})
+	rt.Config.Master = "jay"
+
+	command := newSendMessageCommand(rt)
+	command.SetArgs([]string{"--to", "bob", "hello bob"})
+
+	if err := command.Execute(); err != nil {
+		t.Fatalf("execute send command: %v", err)
+	}
+	if got, want := strings.TrimSpace(stdout.String()), "sent m-override"; got != want {
 		t.Fatalf("stdout mismatch: got %q want %q", got, want)
 	}
 }
@@ -233,6 +342,104 @@ func TestRunSendMessageRejectsAttachmentForJSONRender(t *testing.T) {
 	}
 	if got := err.Error(); !strings.Contains(got, "attachments are only supported with kind text") {
 		t.Fatalf("unexpected error: %q", got)
+	}
+}
+
+func TestResolveSendMessageInputs(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name           string
+		cfg            config.Config
+		to             string
+		args           []string
+		kind           string
+		attachmentPath string
+		wantUsername   string
+		wantText       string
+		wantErr        string
+	}{
+		{
+			name:    "requires username without master",
+			args:    nil,
+			kind:    "text",
+			wantErr: "config set master",
+		},
+		{
+			name:         "uses master for single text arg",
+			cfg:          config.Config{Master: "jay"},
+			args:         []string{"hello"},
+			kind:         "text",
+			wantUsername: "jay",
+			wantText:     "hello",
+		},
+		{
+			name:         "allows explicit username with master",
+			cfg:          config.Config{Master: "jay"},
+			args:         []string{"bob", "hello"},
+			kind:         "text",
+			wantUsername: "bob",
+			wantText:     "hello",
+		},
+		{
+			name:           "uses master for attachment without text",
+			cfg:            config.Config{Master: "jay"},
+			args:           nil,
+			kind:           "text",
+			attachmentPath: "/tmp/file.png",
+			wantUsername:   "jay",
+		},
+		{
+			name:         "to flag overrides master",
+			cfg:          config.Config{Master: "jay"},
+			to:           "bob",
+			args:         []string{"hello"},
+			kind:         "text",
+			wantUsername: "bob",
+			wantText:     "hello",
+		},
+		{
+			name:    "to flag rejects extra positional username",
+			cfg:     config.Config{Master: "jay"},
+			to:      "bob",
+			args:    []string{"alice", "hello"},
+			kind:    "text",
+			wantErr: "when --to is set",
+		},
+		{
+			name:    "master still requires json payload",
+			cfg:     config.Config{Master: "jay"},
+			args:    nil,
+			kind:    "json_render",
+			wantErr: "json_render inline JSON object is required",
+		},
+	}
+
+	for _, tc := range tests {
+		tc := tc
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+
+			gotUsername, gotText, err := resolveSendMessageInputs(tc.cfg, tc.to, tc.args, tc.kind, tc.attachmentPath)
+			if tc.wantErr != "" {
+				if err == nil {
+					t.Fatalf("expected error")
+				}
+				if got := err.Error(); !strings.Contains(got, tc.wantErr) {
+					t.Fatalf("unexpected error: %q", got)
+				}
+				return
+			}
+			if err != nil {
+				t.Fatalf("resolveSendMessageInputs: %v", err)
+			}
+			if gotUsername != tc.wantUsername {
+				t.Fatalf("username mismatch: got %q want %q", gotUsername, tc.wantUsername)
+			}
+			if gotText != tc.wantText {
+				t.Fatalf("text mismatch: got %q want %q", gotText, tc.wantText)
+			}
+		})
 	}
 }
 

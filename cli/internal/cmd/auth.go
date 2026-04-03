@@ -168,6 +168,7 @@ func activateAuthenticatedProfile(rt *Runtime, username, serverURL, token string
 	cfg.ActiveProfile = profileName
 	cfg.ActiveProfileServerURL = serverURL
 	cfg.Token = strings.TrimSpace(token)
+	cfg.Master = existingProfile.Master
 	cfg.ReadSessions = cloneReadSessionsMap(existingProfile.ReadSessions)
 	cfg.LastReadConversationID = existingProfile.LastReadConversationID
 

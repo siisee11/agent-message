@@ -18,26 +18,75 @@ const defaultReadLimit = 20
 func newSendMessageCommand(rt *Runtime) *cobra.Command {
 	var kind string
 	var attachmentPath string
+	var toUsername string
 	cmd := &cobra.Command{
-		Use:   "send <username> [text-or-inline-json]",
-		Short: "Send a message to a user",
+		Use:   "send [username] [text-or-inline-json]",
+		Short: "Send a message to a user or your configured master",
 		Args: func(_ *cobra.Command, args []string) error {
-			if len(args) < 1 || len(args) > 2 {
-				return fmt.Errorf("accepts 1 to 2 arg(s), received %d", len(args))
+			if len(args) > 2 {
+				return fmt.Errorf("accepts at most 2 arg(s), received %d", len(args))
 			}
 			return nil
 		},
 		RunE: func(_ *cobra.Command, args []string) error {
-			text := ""
-			if len(args) == 2 {
-				text = args[1]
+			username, text, err := resolveSendMessageInputs(rt.Config, strings.TrimSpace(toUsername), args, kind, attachmentPath)
+			if err != nil {
+				return err
 			}
-			return runSendMessage(rt, args[0], text, kind, attachmentPath)
+			return runSendMessage(rt, username, text, kind, attachmentPath)
 		},
 	}
+	cmd.Flags().StringVar(&toUsername, "to", "", "Override recipient username")
 	cmd.Flags().StringVar(&kind, "kind", "text", "Message kind: text or json_render")
 	cmd.Flags().StringVar(&attachmentPath, "attach", "", "Path to a file or image to attach")
 	return cmd
+}
+
+func resolveSendMessageInputs(cfg config.Config, toUsername string, args []string, kind string, attachmentPath string) (string, string, error) {
+	trimmedTo := strings.TrimSpace(toUsername)
+	trimmedMaster := strings.TrimSpace(cfg.Master)
+	trimmedAttachmentPath := strings.TrimSpace(attachmentPath)
+
+	if trimmedTo != "" {
+		switch len(args) {
+		case 0:
+			return trimmedTo, "", nil
+		case 1:
+			return trimmedTo, args[0], nil
+		default:
+			return "", "", errors.New("send accepts at most 1 text-or-inline-json arg when --to is set")
+		}
+	}
+
+	if trimmedMaster != "" {
+		switch len(args) {
+		case 0:
+			if trimmedAttachmentPath != "" {
+				return trimmedMaster, "", nil
+			}
+			if strings.TrimSpace(kind) == "json_render" {
+				return "", "", errors.New("json_render inline JSON object is required")
+			}
+			return "", "", errors.New("message text is required")
+		case 1:
+			return trimmedMaster, args[0], nil
+		case 2:
+			return args[0], args[1], nil
+		default:
+			return "", "", fmt.Errorf("accepts at most 2 arg(s), received %d", len(args))
+		}
+	}
+
+	switch len(args) {
+	case 0:
+		return "", "", errors.New("username is required; set one with `agent-message config set master <username>` or pass --to <username>")
+	case 1:
+		return args[0], "", nil
+	case 2:
+		return args[0], args[1], nil
+	default:
+		return "", "", fmt.Errorf("accepts at most 2 arg(s), received %d", len(args))
+	}
 }
 
 func runSendMessage(rt *Runtime, username, text, kind, attachmentPath string) error {

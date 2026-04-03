@@ -6,6 +6,7 @@ import (
 	"io"
 	"net/http"
 	"path/filepath"
+	"slices"
 	"strings"
 	"testing"
 
@@ -162,6 +163,130 @@ func TestRunLoginRestoresStoredMasterForProfile(t *testing.T) {
 	}
 }
 
+func TestRunOnboardLogsInAndSetsMaster(t *testing.T) {
+	t.Parallel()
+
+	requests := make([]string, 0, 2)
+	rt, stdout, _ := newTestRuntime(t, "http://example.test", "", func(req *http.Request, body []byte) (*http.Response, error) {
+		requests = append(requests, req.URL.Path)
+		if req.Method != http.MethodPost {
+			t.Fatalf("unexpected method: %s", req.Method)
+		}
+
+		var payload map[string]string
+		if err := json.Unmarshal(body, &payload); err != nil {
+			t.Fatalf("decode payload: %v", err)
+		}
+		if got, want := payload["username"], "alice"; got != want {
+			t.Fatalf("username mismatch: got %q want %q", got, want)
+		}
+		if got, want := payload["password"], "secret123"; got != want {
+			t.Fatalf("password mismatch: got %q want %q", got, want)
+		}
+
+		switch req.URL.Path {
+		case "/api/auth/login":
+			return jsonResponse(http.StatusOK, `{"token":"login-token","user":{"id":"u1","username":"alice","created_at":"2026-01-01T00:00:00Z"}}`), nil
+		default:
+			t.Fatalf("unexpected path: %s", req.URL.Path)
+			return nil, nil
+		}
+	})
+	rt.Config.Profiles = map[string]config.Profile{
+		"alice": {
+			Username:  "alice",
+			ServerURL: "http://example.test",
+			Master:    "stale-master",
+		},
+	}
+	if err := rt.ConfigStore.Save(rt.Config); err != nil {
+		t.Fatalf("seed profiles: %v", err)
+	}
+	rt.Stdin = strings.NewReader("alice\nsecret123\n")
+
+	if err := runOnboard(rt); err != nil {
+		t.Fatalf("runOnboard: %v", err)
+	}
+
+	if got, want := requests, []string{"/api/auth/login"}; !slices.Equal(got, want) {
+		t.Fatalf("request path sequence mismatch: got %v want %v", got, want)
+	}
+	if got, want := rt.Config.Token, "login-token"; got != want {
+		t.Fatalf("token mismatch: got %q want %q", got, want)
+	}
+	if got, want := rt.Config.ActiveProfile, "alice"; got != want {
+		t.Fatalf("active profile mismatch: got %q want %q", got, want)
+	}
+	if got, want := rt.Config.Master, "alice"; got != want {
+		t.Fatalf("master mismatch: got %q want %q", got, want)
+	}
+	if got, want := stdout.String(), "username: password: onboarded alice\n"; got != want {
+		t.Fatalf("stdout mismatch: got %q want %q", got, want)
+	}
+
+	persisted, err := rt.ConfigStore.Load()
+	if err != nil {
+		t.Fatalf("load persisted config: %v", err)
+	}
+	if got, want := persisted.Master, "alice"; got != want {
+		t.Fatalf("persisted master mismatch: got %q want %q", got, want)
+	}
+	if got, want := persisted.Profiles["alice"].Master, "alice"; got != want {
+		t.Fatalf("persisted profile master mismatch: got %q want %q", got, want)
+	}
+}
+
+func TestRunOnboardRegistersWhenLoginReturnsUnauthorized(t *testing.T) {
+	t.Parallel()
+
+	requests := make([]string, 0, 2)
+	rt, stdout, _ := newTestRuntime(t, "http://example.test", "", func(req *http.Request, body []byte) (*http.Response, error) {
+		requests = append(requests, req.URL.Path)
+		if req.Method != http.MethodPost {
+			t.Fatalf("unexpected method: %s", req.Method)
+		}
+
+		var payload map[string]string
+		if err := json.Unmarshal(body, &payload); err != nil {
+			t.Fatalf("decode payload: %v", err)
+		}
+		if got, want := payload["username"], "alice"; got != want {
+			t.Fatalf("username mismatch: got %q want %q", got, want)
+		}
+		if got, want := payload["password"], "secret123"; got != want {
+			t.Fatalf("password mismatch: got %q want %q", got, want)
+		}
+
+		switch req.URL.Path {
+		case "/api/auth/login":
+			return jsonResponse(http.StatusUnauthorized, `{"error":"invalid credentials"}`), nil
+		case "/api/auth/register":
+			return jsonResponse(http.StatusCreated, `{"token":"reg-token","user":{"id":"u1","username":"alice","created_at":"2026-01-01T00:00:00Z"}}`), nil
+		default:
+			t.Fatalf("unexpected path: %s", req.URL.Path)
+			return nil, nil
+		}
+	})
+	rt.Stdin = strings.NewReader("alice\nsecret123\n")
+
+	if err := runOnboard(rt); err != nil {
+		t.Fatalf("runOnboard: %v", err)
+	}
+
+	if got, want := requests, []string{"/api/auth/login", "/api/auth/register"}; !slices.Equal(got, want) {
+		t.Fatalf("request path sequence mismatch: got %v want %v", got, want)
+	}
+	if got, want := rt.Config.Token, "reg-token"; got != want {
+		t.Fatalf("token mismatch: got %q want %q", got, want)
+	}
+	if got, want := rt.Config.Master, "alice"; got != want {
+		t.Fatalf("master mismatch: got %q want %q", got, want)
+	}
+	if got, want := stdout.String(), "username: password: onboarded alice\n"; got != want {
+		t.Fatalf("stdout mismatch: got %q want %q", got, want)
+	}
+}
+
 func TestRunRegisterUsesConfiguredServerURLInsteadOfActiveProfileServerURL(t *testing.T) {
 	t.Parallel()
 
@@ -237,6 +362,89 @@ func TestRunRegisterUsesConfiguredServerURLInsteadOfActiveProfileServerURL(t *te
 	}
 	if got, want := persisted.Profiles["alice"].ServerURL, "https://am.namjaeyoun.com"; got != want {
 		t.Fatalf("registered profile server_url mismatch: got %q want %q", got, want)
+	}
+}
+
+func TestRunOnboardUsesConfiguredServerURLInsteadOfActiveProfileServerURL(t *testing.T) {
+	t.Parallel()
+
+	rt, _, _ := newTestRuntime(t, "https://am.namjaeyoun.com", "", func(req *http.Request, body []byte) (*http.Response, error) {
+		if got, want := req.URL.Scheme, "https"; got != want {
+			t.Fatalf("scheme mismatch: got %q want %q", got, want)
+		}
+		if got, want := req.URL.Host, "am.namjaeyoun.com"; got != want {
+			t.Fatalf("host mismatch: got %q want %q", got, want)
+		}
+		var payload map[string]string
+		if err := json.Unmarshal(body, &payload); err != nil {
+			t.Fatalf("decode onboard payload: %v", err)
+		}
+		if got, want := payload["username"], "alice"; got != want {
+			t.Fatalf("username mismatch: got %q want %q", got, want)
+		}
+		return jsonResponse(http.StatusOK, `{"token":"login-token","user":{"id":"u1","username":"alice","created_at":"2026-01-01T00:00:00Z"}}`), nil
+	})
+	rt.Config.ActiveProfile = "local-alice"
+	rt.Config.ActiveProfileServerURL = "http://127.0.0.1:45180"
+	rt.Config.Profiles = map[string]config.Profile{
+		"local-alice": {
+			Username:  "local-alice",
+			ServerURL: "http://127.0.0.1:45180",
+			Token:     "local-token",
+		},
+	}
+	var err error
+	rt.Client, err = api.NewClient("http://127.0.0.1:45180", "")
+	if err != nil {
+		t.Fatalf("create local api client: %v", err)
+	}
+	rt.Client.SetHTTPClient(&http.Client{Transport: roundTripFunc(func(req *http.Request) (*http.Response, error) {
+		var body []byte
+		if req.Body != nil {
+			var err error
+			body, err = io.ReadAll(req.Body)
+			if err != nil {
+				t.Fatalf("read request body: %v", err)
+			}
+			_ = req.Body.Close()
+		}
+		if got, want := req.URL.Scheme, "https"; got != want {
+			t.Fatalf("scheme mismatch: got %q want %q", got, want)
+		}
+		if got, want := req.URL.Host, "am.namjaeyoun.com"; got != want {
+			t.Fatalf("host mismatch: got %q want %q", got, want)
+		}
+		var payload map[string]string
+		if err := json.Unmarshal(body, &payload); err != nil {
+			t.Fatalf("decode onboard payload: %v", err)
+		}
+		if got, want := payload["username"], "alice"; got != want {
+			t.Fatalf("username mismatch: got %q want %q", got, want)
+		}
+		return jsonResponse(http.StatusOK, `{"token":"login-token","user":{"id":"u1","username":"alice","created_at":"2026-01-01T00:00:00Z"}}`), nil
+	})})
+
+	rt.Stdin = strings.NewReader("alice\n1234\n")
+
+	if err := runOnboard(rt); err != nil {
+		t.Fatalf("runOnboard: %v", err)
+	}
+
+	persisted, err := rt.ConfigStore.Load()
+	if err != nil {
+		t.Fatalf("load persisted config: %v", err)
+	}
+	if got, want := persisted.ServerURL, "https://am.namjaeyoun.com"; got != want {
+		t.Fatalf("configured server_url mismatch: got %q want %q", got, want)
+	}
+	if got, want := persisted.ActiveProfileServerURL, "https://am.namjaeyoun.com"; got != want {
+		t.Fatalf("active profile server_url mismatch: got %q want %q", got, want)
+	}
+	if got, want := persisted.Profiles["alice"].ServerURL, "https://am.namjaeyoun.com"; got != want {
+		t.Fatalf("onboarded profile server_url mismatch: got %q want %q", got, want)
+	}
+	if got, want := persisted.Profiles["alice"].Master, "alice"; got != want {
+		t.Fatalf("onboarded profile master mismatch: got %q want %q", got, want)
 	}
 }
 
@@ -414,6 +622,7 @@ func newTestRuntime(
 		ConfigStore: store,
 		Config:      cfg,
 		Client:      client,
+		Stdin:       strings.NewReader(""),
 		Stdout:      stdout,
 		Stderr:      stderr,
 	}, stdout, stderr

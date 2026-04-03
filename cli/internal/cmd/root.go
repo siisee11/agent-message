@@ -17,6 +17,7 @@ type Runtime struct {
 	ConfigStore *config.Store
 	Config      config.Config
 	Client      *api.Client
+	Stdin       io.Reader
 	Stdout      io.Writer
 	Stderr      io.Writer
 }
@@ -27,6 +28,7 @@ func Execute() error {
 
 func NewRootCommand() *cobra.Command {
 	rt := &Runtime{
+		Stdin:  os.Stdin,
 		Stdout: os.Stdout,
 		Stderr: os.Stderr,
 	}
@@ -77,6 +79,7 @@ func NewRootCommand() *cobra.Command {
 		newCatalogCommand(rt),
 		newConfigCommand(rt),
 		newProfileCommand(rt),
+		newOnboardCommand(rt),
 		newRegisterCommand(rt),
 		newLoginCommand(rt),
 		newLogoutCommand(rt),
@@ -111,7 +114,7 @@ func commandUsesConfiguredServerURL(command *cobra.Command) bool {
 		return false
 	}
 	switch strings.TrimSpace(command.Name()) {
-	case "register", "login":
+	case "register", "login", "onboard":
 		return true
 	default:
 		return false

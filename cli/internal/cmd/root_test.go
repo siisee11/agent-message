@@ -8,7 +8,7 @@ import (
 	"github.com/spf13/cobra"
 )
 
-func TestResolvedClientServerURLUsesConfiguredServerURLForRegisterAndLogin(t *testing.T) {
+func TestResolvedClientServerURLUsesConfiguredServerURLForAuthCommands(t *testing.T) {
 	t.Parallel()
 
 	cfg := config.Config{
@@ -23,7 +23,7 @@ func TestResolvedClientServerURLUsesConfiguredServerURLForRegisterAndLogin(t *te
 		},
 	}
 
-	for _, name := range []string{"register", "login"} {
+	for _, name := range []string{"register", "login", "onboard"} {
 		command := &cobra.Command{Use: name}
 		if got, want := resolvedClientServerURL(cfg, command, ""), "https://am.namjaeyoun.com"; got != want {
 			t.Fatalf("%s server_url mismatch: got %q want %q", name, got, want)

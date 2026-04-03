@@ -5,6 +5,8 @@ server/*.sqlite-*
 agent-messenger
 agent-message
 npm/runtime/
+codex-message/npm/runtime/
+claude-message/npm/runtime/
 claude-message/target/
 *.tgz
 ref/codex/

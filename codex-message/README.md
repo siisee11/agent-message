@@ -4,6 +4,15 @@
 the `agent-message` binary as its transport layer and reuses the default
 `agent-message` config/profile store.
 
+Install:
+
+```bash
+npm install -g agent-message codex-message
+```
+
+`codex-message` expects both `agent-message` and the `codex` CLI to already be
+available on your `PATH`.
+
 Behavior:
 
 1. Starts a fresh `agent-{chatId}` account with a generated password.
@@ -16,8 +25,7 @@ Behavior:
 Example:
 
 ```bash
-cd codex-message
-cargo run -- --to jay --model gpt-5.4
+codex-message --to jay --model gpt-5.4
 ```
 
 Useful flags:

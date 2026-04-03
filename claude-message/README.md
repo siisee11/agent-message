@@ -3,6 +3,15 @@
 `claude-message` wraps `claude -p --output-format json` and uses `agent-message`
 as its transport layer.
 
+Install:
+
+```bash
+npm install -g agent-message claude-message
+```
+
+`claude-message` expects both `agent-message` and the `claude` CLI to already
+be available on your `PATH`.
+
 Behavior:
 
 1. Starts a fresh `agent-{chatId}` account with a generated password.
@@ -17,8 +26,7 @@ Behavior:
 Example:
 
 ```bash
-cd claude-message
-cargo run -- --to jay --model sonnet --permission-mode accept-edits
+claude-message --to jay --model sonnet --permission-mode accept-edits
 ```
 
 Build from the repo root:

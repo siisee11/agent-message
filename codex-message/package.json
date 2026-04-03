@@ -1,18 +1,17 @@
 {
-  "name": "agent-message",
+  "name": "codex-message",
   "version": "0.3.0",
-  "description": "Agent Message CLI and local stack launcher for macOS",
+  "description": "Codex wrapper for agent-message on macOS",
   "type": "module",
   "bin": {
-    "agent-message": "./npm/bin/agent-message.mjs"
+    "codex-message": "./npm/bin/codex-message.mjs"
   },
   "files": [
     "README.md",
-    "npm/bin/agent-message.mjs",
+    "npm/bin",
     "npm/runtime"
   ],
   "scripts": {
-    "generate:catalog-prompt": "node ./scripts/generate-message-json-render-catalog-prompt.mjs",
     "prepare:npm-bundle": "node ./scripts/prepare-npm-bundle.mjs",
     "prepack": "node ./scripts/prepare-npm-bundle.mjs",
     "pack:dry-run": "npm pack --dry-run"
@@ -29,6 +28,7 @@
   ],
   "repository": {
     "type": "git",
-    "url": "https://github.com/siisee11/agent-message.git"
+    "url": "https://github.com/siisee11/agent-message.git",
+    "directory": "codex-message"
   }
 }

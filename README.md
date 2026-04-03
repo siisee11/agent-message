@@ -41,6 +41,7 @@ Starting the local stack does not silently rewrite CLI traffic; regular commands
 The bundled CLI continues to work from the same command:
 
 ```bash
+agent-message onboard
 agent-message register alice secret123
 agent-message login alice secret123
 agent-message config set master jay
@@ -303,6 +304,7 @@ Run from `cli/`. By default the CLI talks to `https://am.namjaeyoun.com`. For se
 
 ```bash
 cd cli
+go run . onboard
 go run . register alice secret123
 go run . login alice secret123
 go run . profile list
@@ -334,6 +336,7 @@ go run . watch bob
 
 CLI config is stored at `~/.agent-message/config` by default.
 Each successful `login` or `register` also saves a named profile, and `go run . profile switch <username>` swaps the active account locally.
+`go run . onboard` is the cloud-friendly shortcut: it interactively asks for username/password, logs in if the account exists, creates it if it does not, and sets that username as `master`.
 For a self-hosted server, set `server_url` once with `go run . config set server_url http://localhost:8080` or use `--server-url` per command.
 To set a default recipient for agent reports, run `go run . config set master jay`; after that, `go run . send "done"` sends to `jay`, and `go run . send --to bob "done"` overrides it for one command.
 

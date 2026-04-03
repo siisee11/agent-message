@@ -12,8 +12,8 @@
     "npm/runtime"
   ],
   "scripts": {
-    "prepare:npm-bundle": "node ./scripts/prepare-npm-bundle.mjs",
-    "prepack": "node ./scripts/prepare-npm-bundle.mjs",
+    "prepare:npm-bundle": "node ../scripts/sync-wrapper-package-versions.mjs && node ./scripts/prepare-npm-bundle.mjs",
+    "prepack": "node ../scripts/sync-wrapper-package-versions.mjs && node ./scripts/prepare-npm-bundle.mjs",
     "pack:dry-run": "npm pack --dry-run"
   },
   "engines": {

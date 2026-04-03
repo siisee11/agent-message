@@ -36,7 +36,7 @@ enum SandboxArg {
 }
 
 #[derive(Debug, Clone, Parser)]
-#[command(author, version, about)]
+#[command(author, version = env!("APP_VERSION"), about)]
 struct Cli {
     #[arg(long = "to", env = "CODEX_MESSAGE_TO", default_value = "jay")]
     to_username: String,

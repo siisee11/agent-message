@@ -13,6 +13,7 @@
   ],
   "scripts": {
     "generate:catalog-prompt": "node ./scripts/generate-message-json-render-catalog-prompt.mjs",
+    "sync:wrapper-versions": "node ./scripts/sync-wrapper-package-versions.mjs",
     "prepare:npm-bundle": "node ./scripts/prepare-npm-bundle.mjs",
     "prepack": "node ./scripts/prepare-npm-bundle.mjs",
     "pack:dry-run": "npm pack --dry-run"

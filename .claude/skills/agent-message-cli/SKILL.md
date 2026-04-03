@@ -94,14 +94,30 @@ agent-message open <username>
 ### Send a message
 ```bash
 agent-message send <username> "<text>"
+agent-message send "<text>"              # sends to configured master
+agent-message send --to <username> "<text>"
 # Output: sent <message-id>
 ```
+
+If `master` is configured, `agent-message send "<text>"` sends to that default recipient.
+Set it once with:
+
+```bash
+agent-message config set master jay
+```
+
+Recipient resolution rules:
+- `send <username> "<text>"` uses the explicit positional username
+- `send "<text>"` uses the configured `master`
+- `send --to <username> "<text>"` overrides `master` for one command
 
 ### Send a json_render message
 Use `--kind json_render` to send a structured rich message rendered by the web client using shadcn components.
 
 ```bash
 agent-message send <username> '<json-spec>' --kind json_render
+agent-message send '<json-spec>' --kind json_render       # sends to configured master
+agent-message send --to <username> '<json-spec>' --kind json_render
 ```
 
 The JSON spec follows this schema:
@@ -254,15 +270,18 @@ agent-message config path
 ```bash
 agent-message config get              # full config as JSON
 agent-message config get server_url   # single key value
+agent-message config get master
 ```
 
 ### Write config
 ```bash
 agent-message config set server_url https://api.example.com
+agent-message config set master jay
 agent-message config unset server_url   # reset to default (http://localhost:45180)
+agent-message config unset master
 ```
 
-**Supported keys:** `server_url`
+**Supported keys:** `master`, `server_url`
 
 ---
 
@@ -272,6 +291,7 @@ agent-message config unset server_url   # reset to default (http://localhost:451
 {
   "server_url": "http://localhost:45180",
   "token": "<session-token>",
+  "master": "jay",
   "last_read_conversation_id": "<uuid>",
   "read_sessions": {
     "<conversation-id>": {
@@ -298,6 +318,9 @@ agent-message register myusername 1234
 
 # Or login if already registered
 agent-message login myusername 1234
+
+# Optional: set the default recipient for agent reports
+agent-message config set master jay
 ```
 
 ### Send and receive messages
@@ -306,11 +329,15 @@ agent-message login myusername 1234
 agent-message open alice
 agent-message send alice "hey!"
 
+# Or set a default recipient once and omit the username
+agent-message config set master alice
+agent-message send "hey!"
+
 # Read the conversation
 agent-message read alice
 
 # Reply
-agent-message send alice "how are you?"
+agent-message send "how are you?"
 ```
 
 ### Edit or react to a message
@@ -335,5 +362,6 @@ agent-message watch alice
 ## Tips
 
 - The `--server-url` flag overrides config for a single command — useful for targeting a non-default server without changing the saved config.
+- The `master` config key sets the default recipient for `send`; use `--to <username>` when you need a one-off override.
 - `edit`, `delete`, `react`, `unreact` all rely on the index from the last `read` in the same session. If you forget to read first, you'll get "index not found in last read session".
 - Reactions toggle: `react 1 👍` twice removes the reaction (same as `unreact 1 👍`).

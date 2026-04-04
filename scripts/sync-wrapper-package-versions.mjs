@@ -12,11 +12,13 @@ const wrappers = [
     name: 'codex-message',
     packageJsonPath: resolve(repoRoot, 'codex-message', 'package.json'),
     cargoTomlPath: resolve(repoRoot, 'codex-message', 'Cargo.toml'),
+    cargoLockPath: resolve(repoRoot, 'codex-message', 'Cargo.lock'),
   },
   {
     name: 'claude-message',
     packageJsonPath: resolve(repoRoot, 'claude-message', 'package.json'),
     cargoTomlPath: resolve(repoRoot, 'claude-message', 'Cargo.toml'),
+    cargoLockPath: resolve(repoRoot, 'claude-message', 'Cargo.lock'),
   },
 ]
 
@@ -47,5 +49,20 @@ for (const wrapper of wrappers) {
 
   if (nextCargoToml !== cargoToml) {
     writeFileSync(wrapper.cargoTomlPath, nextCargoToml)
+  }
+
+  const cargoLock = readFileSync(wrapper.cargoLockPath, 'utf8')
+  const lockPattern = new RegExp(`(name = "${wrapper.name}"\\nversion = ")([^"]+)(")`, 'm')
+  if (!lockPattern.test(cargoLock)) {
+    throw new Error(`failed to find package version in ${wrapper.cargoLockPath}`)
+  }
+
+  const nextCargoLock = cargoLock.replace(
+    lockPattern,
+    `$1${sourceVersion}$3`,
+  )
+
+  if (nextCargoLock !== cargoLock) {
+    writeFileSync(wrapper.cargoLockPath, nextCargoLock)
   }
 }

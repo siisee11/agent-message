@@ -7,7 +7,7 @@ use std::path::PathBuf;
 
 use anyhow::Context;
 use app::App;
-use clap::{CommandFactory, Parser};
+use clap::Parser;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, clap::ValueEnum)]
 enum ApprovalPolicyArg {

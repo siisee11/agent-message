@@ -105,6 +105,33 @@ describe('MessageJsonRender', () => {
     expect(html).toContain('<a href="https://example.com">links</a>')
   })
 
+  it('renders json tables inside a dedicated scroll container', () => {
+    const html = ReactDOMServer.renderToStaticMarkup(
+      <MessageJsonRender
+        spec={{
+          root: 'table-1',
+          elements: {
+            'table-1': {
+              type: 'Table',
+              props: {
+                columns: ['Name', 'Value'],
+                rows: [
+                  ['Alpha', '123'],
+                  ['Beta', '456'],
+                ],
+              },
+            },
+          },
+        }}
+      />,
+    )
+
+    expect(html).toContain('data-slot="table-container"')
+    expect(html).toContain('data-slot="table"')
+    expect(html).toContain('>Name</th>')
+    expect(html).toContain('>456</td>')
+  })
+
   it('renders custom bar graphs', () => {
     const html = ReactDOMServer.renderToStaticMarkup(
       <MessageJsonRender

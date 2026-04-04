@@ -11,9 +11,22 @@
 
 .root :global([data-slot='card']),
 .root :global([data-slot='card-header']),
-.root :global([data-slot='card-content']) {
+.root :global([data-slot='card-content']),
+.root :global([data-slot='table-container']) {
   min-width: 0;
   max-width: 100%;
+}
+
+.root :global([data-slot='table-container']) {
+  width: 100%;
+  overflow-x: auto;
+  overflow-y: hidden;
+}
+
+.root :global([data-slot='table']) {
+  width: max-content;
+  min-width: 100%;
+  max-width: none;
 }
 
 .root :global([data-slot='card-title']),
@@ -84,7 +97,6 @@
 .markdown :global(ol),
 .markdown :global(blockquote),
 .markdown :global(pre),
-.markdown :global(table),
 .markdown :global(hr) {
   margin: 0.5rem 0;
 }
@@ -129,13 +141,6 @@
   padding: 0.7rem 0.8rem;
   border-radius: 0.7rem;
   background: #f4f7fc;
-}
-
-.markdown :global(table) {
-  display: block;
-  width: max-content;
-  max-width: 100%;
-  overflow-x: auto;
 }
 
 .markdown :global(img),

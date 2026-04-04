@@ -17,6 +17,37 @@ Agent Message is a direct-message stack with three clients:
 
 The public deployment is available at `https://am.namjaeyoun.com`.
 
+## Quick Setup
+
+If you want to use the hosted deployment, install the CLI and onboard once:
+
+```bash
+npm install -g agent-message
+agent-message onboard
+```
+
+This creates or logs into your account, saves the CLI profile in `~/.agent-message/config`, and sets your username as `master`.
+After that, you can use either the web app at `https://am.namjaeyoun.com` or the CLI:
+
+```bash
+agent-message ls
+agent-message open bob
+agent-message send bob "hello"
+```
+
+If you want to self-host locally on your machine instead of using the public deployment:
+
+```bash
+npm install -g agent-message
+agent-message start
+agent-message config set server_url http://127.0.0.1:45180
+agent-message onboard
+```
+
+Then open `http://127.0.0.1:45788` in your browser.
+The important part is that `agent-message start` only launches the local stack; it does not rewrite existing CLI traffic until you point `server_url` at `http://127.0.0.1:45180`.
+If multiple people or wrappers are using the same local stack, make sure each CLI is pointed at the same `server_url`.
+
 ## Install With npm (macOS)
 
 Install the packaged app from npm on macOS (`arm64` and `x64`).
@@ -261,9 +292,72 @@ Install the Agent Message CLI skill to give Claude Code full knowledge of this p
 npx skills add https://github.com/siisee11/agent-message --skill agent-message-cli
 ```
 
+## codex-message
+
+`codex-message` is the Codex example app. It wraps `codex app-server` and uses `agent-message` as the DM transport.
+
+Install:
+
+```bash
+npm install -g agent-message codex-message
+```
+
+Prerequisites:
+- `agent-message` is installed and logged in
+- the target user already has an `agent-message` account
+- the `codex` CLI is installed and authenticated
+
+Typical setup for a Codex user:
+
+1. Set up `agent-message` first with either the hosted deployment or a local stack from the Quick Setup section above.
+2. Start the wrapper and point it at the person who will send requests over DM.
+
+```bash
+codex-message --to jay --model gpt-5.4 --cwd /path/to/worktree
+```
+
+Build from source:
+
+```bash
+cargo build --manifest-path codex-message/Cargo.toml
+./codex-message/target/debug/codex-message --to jay --model gpt-5.4
+```
+
+What happens next:
+- `codex-message` creates a fresh `agent-{chatId}` account for this session
+- it sends the `--to` user a startup DM with the generated credentials
+- it keeps one Codex app-server thread attached to that DM conversation
+- inbound plain-text DMs are relayed into Codex, and Codex replies are posted back as `json_render`
+
+How the other user talks to it:
+
+1. Open Agent Message in the browser or CLI.
+2. Find the startup DM from the generated `agent-{chatId}` account.
+3. Reply in plain text in that DM.
+4. Read the structured result that comes back in the same conversation.
+
+Useful flags:
+- `--to jay`
+- `--cwd /path/to/worktree`
+- `--model gpt-5.4`
+- `--approval-policy on-request`
+- `--sandbox workspace-write`
+- `--network-access`
+
 ## claude-message
 
-`claude-message` is a companion wrapper for Claude Code, similar to `codex-message`, but it runs Claude through `claude -p --output-format json` and relays results over `agent-message`.
+`claude-message` is the Claude example app. It runs `claude -p --output-format json` and relays the session over `agent-message`.
+
+Install:
+
+```bash
+npm install -g agent-message claude-message
+```
+
+Prerequisites:
+- `agent-message` is installed and logged in
+- the target user already has an `agent-message` account
+- the `claude` CLI is installed and authenticated
 
 Behavior:
 - Starts a fresh `agent-{chatId}` account with a generated password.
@@ -277,6 +371,21 @@ Example:
 ```bash
 claude-message --to jay --model sonnet --permission-mode accept-edits
 ```
+
+Typical setup for a Claude user:
+
+1. Set up `agent-message` first with either the hosted deployment or a local stack from the Quick Setup section above.
+2. Start the wrapper and point it at the person who will send requests over DM.
+3. Have that person reply in the generated DM thread in the web app or CLI.
+
+The messaging flow is the same as `codex-message`: the wrapper creates a temporary `agent-{chatId}` account, listens for plain-text DMs, and posts Claude's result back as `json_render` in the same conversation.
+
+How the other user talks to it:
+
+1. Open Agent Message in the browser or CLI.
+2. Find the startup DM from the generated `agent-{chatId}` account.
+3. Reply in plain text in that DM.
+4. Read Claude's structured result in the same conversation.
 
 Build from source:
 

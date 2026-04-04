@@ -3,6 +3,7 @@ import type { Message } from '../api'
 import {
   canDeleteMessageForUser,
   canEditMessageForUser,
+  extractMessageCwd,
   MESSAGE_PREVIEW_DELETED,
   MESSAGE_PREVIEW_EMPTY,
   MESSAGE_PREVIEW_JSON_RENDER,
@@ -123,6 +124,35 @@ describe('message presentation helpers', () => {
     })
 
     expect(summarizeLastMessagePreview(message)).toBe(MESSAGE_PREVIEW_JSON_RENDER)
+  })
+
+  it('extracts cwd from approval-card details in json render messages', () => {
+    const message = createMessage({
+      kind: 'json_render',
+      json_render_spec: {
+        root: 'approval-1',
+        elements: {
+          'approval-1': {
+            type: 'ApprovalCard',
+            props: {
+              title: 'Command approval requested',
+              details: ['Command: npm test', 'CWD: /Users/jay/git/agent-message'],
+            },
+          },
+        },
+      },
+    })
+
+    expect(extractMessageCwd(message)).toBe('/Users/jay/git/agent-message')
+  })
+
+  it('extracts cwd from plain text messages', () => {
+    const message = createMessage({
+      kind: 'text',
+      content: 'Request received\nCWD: /tmp/worktree\nStatus: running',
+    })
+
+    expect(extractMessageCwd(message)).toBe('/tmp/worktree')
   })
 
   it('allows delete but disallows edit for json_render messages', () => {

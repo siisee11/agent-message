@@ -21,6 +21,7 @@ import { MessageJsonRender } from '../components/MessageJsonRender'
 import {
   canDeleteMessageForUser,
   canEditMessageForUser,
+  extractMessageCwd,
   MESSAGE_PREVIEW_DELETED,
   resolveMessageRenderContent,
 } from '../messages/messagePresentation'
@@ -228,6 +229,16 @@ export function DmConversationPage() {
     }
     return resolveOtherParticipant(conversationQuery.data, user)
   }, [conversationQuery.data, user])
+
+  const conversationCwd = useMemo(() => {
+    for (let index = messagesAscending.length - 1; index >= 0; index -= 1) {
+      const cwd = extractMessageCwd(messagesAscending[index].message)
+      if (cwd) {
+        return cwd
+      }
+    }
+    return null
+  }, [messagesAscending])
 
   const hasOlderMessages = Boolean(messagePagesQuery.hasNextPage)
   const isSubmitting = messagePagesQuery.isFetchingNextPage
@@ -679,6 +690,11 @@ export function DmConversationPage() {
   const headerStatus = conversationQuery.isError
     ? resolveErrorMessage(conversationQuery.error, 'Failed to load conversation.')
     : formatRealtimeStatusLabel(realtime.status)
+  const headerCwdValue = conversationQuery.isLoading
+    ? 'loading...'
+    : conversationQuery.isError
+      ? 'unavailable'
+      : conversationCwd ?? 'unavailable'
 
   return (
     <section className={styles.page}>
@@ -693,14 +709,21 @@ export function DmConversationPage() {
             >
               ←
             </button>
-            <h2 className={styles.title}>{headerTitle}</h2>
-            <span
-              className={`${styles.headerStatusBadge}${
-                conversationQuery.isError ? ` ${styles.headerStatusBadgeError}` : ''
-              }`}
-            >
-              {headerStatus}
-            </span>
+            <div className={styles.headerCopy}>
+              <div className={styles.headerTitleRow}>
+                <h2 className={styles.title}>{headerTitle}</h2>
+                <span
+                  className={`${styles.headerStatusBadge}${
+                    conversationQuery.isError ? ` ${styles.headerStatusBadgeError}` : ''
+                  }`}
+                >
+                  {headerStatus}
+                </span>
+              </div>
+              <p className={styles.headerCwd} title={`cwd: ${headerCwdValue}`}>
+                {`cwd: ${headerCwdValue}`}
+              </p>
+            </div>
           </div>
         </header>
 

@@ -30,6 +30,20 @@
 
 .headerBar {
   display: flex;
+  align-items: flex-start;
+  gap: 0.6rem;
+  min-width: 0;
+}
+
+.headerCopy {
+  min-width: 0;
+  flex: 1;
+  display: grid;
+  gap: 0.18rem;
+}
+
+.headerTitleRow {
+  display: flex;
   align-items: center;
   gap: 0.6rem;
   min-width: 0;
@@ -53,6 +67,18 @@
   flex: 1;
   font-size: 1rem;
   color: #152b53;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.headerCwd {
+  margin: 0;
+  min-width: 0;
+  color: #5b74a3;
+  font-size: 0.74rem;
+  line-height: 1.25;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;

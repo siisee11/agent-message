@@ -16,6 +16,8 @@ interface BareUISpec {
   elements: Record<string, BareUIElement>
 }
 
+const CWD_PREFIX_PATTERN = /^CWD:\s*(.+)$/im
+
 function isObject(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null
 }
@@ -147,6 +149,68 @@ function summarizeElement(element: BareUIElement): { primary?: string; secondary
   }
 }
 
+function extractCwdFromText(value: string | null | undefined): string | null {
+  if (typeof value !== 'string') {
+    return null
+  }
+
+  const match = value.match(CWD_PREFIX_PATTERN)
+  const cwd = match?.[1]?.trim()
+  return cwd ? cwd : null
+}
+
+function extractJsonRenderCwd(spec: JsonRenderSpec | null): string | null {
+  if (!isBareUISpec(spec) || !spec.elements[spec.root]) {
+    return null
+  }
+
+  const queue = [spec.root]
+  const visited = new Set<string>()
+
+  while (queue.length > 0) {
+    const elementId = queue.shift()
+    if (!elementId || visited.has(elementId)) {
+      continue
+    }
+    visited.add(elementId)
+
+    const element = spec.elements[elementId]
+    if (!element) {
+      continue
+    }
+
+    const props = isObject(element.props) ? element.props : undefined
+    const candidateTexts = [
+      typeof props?.title === 'string' ? props.title : null,
+      typeof props?.message === 'string' ? props.message : null,
+      typeof props?.text === 'string' ? props.text : null,
+      typeof props?.description === 'string' ? props.description : null,
+      typeof props?.label === 'string' ? props.label : null,
+      typeof props?.content === 'string' ? props.content : null,
+      ...(Array.isArray(props?.details)
+        ? props.details.filter((value): value is string => typeof value === 'string')
+        : []),
+    ]
+
+    for (const candidateText of candidateTexts) {
+      const cwd = extractCwdFromText(candidateText)
+      if (cwd) {
+        return cwd
+      }
+    }
+
+    if (Array.isArray(element.children)) {
+      for (const child of element.children) {
+        if (typeof child === 'string' && child.trim() !== '') {
+          queue.push(child)
+        }
+      }
+    }
+  }
+
+  return null
+}
+
 function extractJsonRenderPreview(spec: JsonRenderSpec | null): string | null {
   if (!isBareUISpec(spec) || !spec.elements[spec.root]) {
     return null
@@ -242,6 +306,19 @@ export function summarizeLastMessagePreview(lastMessage?: Message): string {
   }
 
   return MESSAGE_PREVIEW_EMPTY
+}
+
+export function extractMessageCwd(message: Message): string | null {
+  if (message.deleted) {
+    return null
+  }
+
+  const parsed = parseMessageContent(message)
+  if (parsed.kind === 'json_render') {
+    return extractJsonRenderCwd(parsed.jsonRenderSpec)
+  }
+
+  return extractCwdFromText(parsed.textContent)
 }
 
 export function canDeleteMessageForUser(message: Message, currentUserId: string | undefined): boolean {

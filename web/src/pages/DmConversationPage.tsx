@@ -173,7 +173,6 @@ export function DmConversationPage() {
   const { conversationId } = useParams()
   const { user } = useAuth()
   const realtime = useRealtime()
-  const { messageReactions } = realtime
   const queryClient = useQueryClient()
 
   const timelineRef = useRef<HTMLDivElement | null>(null)
@@ -252,6 +251,7 @@ export function DmConversationPage() {
       const createdDetails: MessageDetails = {
         message: createdMessage,
         sender: user ?? fallbackSender(createdMessage),
+        reactions: [],
       }
 
       queryClient.setQueryData<InfiniteData<MessageDetails[]>>(['messages', conversationId], (current) =>
@@ -719,7 +719,7 @@ export function DmConversationPage() {
                 <ol className={styles.timelineList}>
                   {messagesAscending.map((details: MessageDetails) => {
                     const renderContent = resolveMessageRenderContent(details.message)
-                    const reactionGroups = groupReactionsByEmoji(messageReactions[details.message.id], user?.id)
+                    const reactionGroups = groupReactionsByEmoji(details.reactions, user?.id)
                     const isOwnMessage = details.message.sender_id === user?.id
                     const isAgentMessage = !isOwnMessage
                     const messageSurfaceClassName = isOwnMessage

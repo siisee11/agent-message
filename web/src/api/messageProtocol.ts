@@ -50,6 +50,7 @@ export function normalizeMessageDetailsProtocol(details: MessageDetails): Messag
   return {
     ...details,
     message: normalizeMessageProtocol(details.message),
+    reactions: Array.isArray(details.reactions) ? details.reactions : [],
   }
 }
 

@@ -678,7 +678,73 @@ func (s *PostgresStore) ListMessagesByConversation(ctx context.Context, params m
 		return nil, fmt.Errorf("iterate conversation messages: %w", err)
 	}
 
+	reactionsByMessage, err := s.listReactionsByMessageIDs(ctx, collectMessageIDs(messages))
+	if err != nil {
+		return nil, err
+	}
+	for index := range messages {
+		messages[index].Reactions = reactionsByMessage[messages[index].Message.ID]
+	}
+
 	return messages, nil
+}
+
+func (s *PostgresStore) listReactionsByMessageIDs(
+	ctx context.Context,
+	messageIDs []string,
+) (map[string][]models.Reaction, error) {
+	reactionsByMessage := make(map[string][]models.Reaction, len(messageIDs))
+	if len(messageIDs) == 0 {
+		return reactionsByMessage, nil
+	}
+
+	placeholders := strings.TrimSuffix(strings.Repeat("?,", len(messageIDs)), ",")
+	query := fmt.Sprintf(`
+		SELECT id, message_id, user_id, emoji, created_at
+		FROM reactions
+		WHERE message_id IN (%s)
+		ORDER BY created_at ASC, id ASC
+	`, placeholders)
+
+	args := make([]any, 0, len(messageIDs))
+	for _, messageID := range messageIDs {
+		args = append(args, messageID)
+	}
+
+	rows, err := s.queryContext(ctx, query, args...)
+	if err != nil {
+		return nil, fmt.Errorf("list reactions by message ids: %w", err)
+	}
+	defer rows.Close()
+
+	for rows.Next() {
+		var (
+			reaction      models.Reaction
+			createdAtText string
+		)
+		if err := rows.Scan(
+			&reaction.ID,
+			&reaction.MessageID,
+			&reaction.UserID,
+			&reaction.Emoji,
+			&createdAtText,
+		); err != nil {
+			return nil, fmt.Errorf("scan reaction by message ids: %w", err)
+		}
+
+		createdAt, err := parseStoredTime(createdAtText)
+		if err != nil {
+			return nil, fmt.Errorf("parse reaction created_at by message ids: %w", err)
+		}
+		reaction.CreatedAt = createdAt
+		reactionsByMessage[reaction.MessageID] = append(reactionsByMessage[reaction.MessageID], reaction)
+	}
+
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("iterate reactions by message ids: %w", err)
+	}
+
+	return reactionsByMessage, nil
 }
 
 func (s *PostgresStore) GetMessageByIDForUser(ctx context.Context, params models.GetMessageForUserParams) (models.Message, error) {

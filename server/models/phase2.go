@@ -118,8 +118,9 @@ type ConversationDetails struct {
 
 // MessageDetails enriches messages with sender profile information.
 type MessageDetails struct {
-	Message Message     `json:"message"`
-	Sender  UserProfile `json:"sender"`
+	Message   Message     `json:"message"`
+	Sender    UserProfile `json:"sender"`
+	Reactions []Reaction  `json:"reactions"`
 }
 
 // UploadResponse is returned by POST /api/upload.

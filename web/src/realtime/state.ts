@@ -1,8 +1,6 @@
 import type { InfiniteData } from '@tanstack/react-query'
 import type { ConversationDetails, Message, MessageDetails, Reaction, UserProfile } from '../api'
 
-export type MessageReactionsState = Record<string, Reaction[]>
-
 export function fallbackSender(message: Message): UserProfile {
   return {
     id: message.sender_id,
@@ -106,6 +104,86 @@ export function replaceMessageInPages(
   }
 }
 
+export function addReactionToPages(
+  current: InfiniteData<MessageDetails[]> | undefined,
+  reaction: Reaction,
+): InfiniteData<MessageDetails[]> | undefined {
+  if (!current) {
+    return current
+  }
+
+  let replaced = false
+  const nextPages = current.pages.map((page) =>
+    page.map((details) => {
+      if (details.message.id !== reaction.message_id) {
+        return details
+      }
+
+      const alreadyExists = details.reactions.some(
+        (existing) => existing.emoji === reaction.emoji && existing.user_id === reaction.user_id,
+      )
+      if (alreadyExists) {
+        return details
+      }
+
+      replaced = true
+      return {
+        ...details,
+        reactions: [...details.reactions, reaction],
+      }
+    }),
+  )
+
+  if (!replaced) {
+    return current
+  }
+
+  return {
+    ...current,
+    pages: nextPages,
+  }
+}
+
+export function removeReactionFromPages(
+  current: InfiniteData<MessageDetails[]> | undefined,
+  removal: { message_id: string; emoji: string; user_id: string },
+): InfiniteData<MessageDetails[]> | undefined {
+  if (!current) {
+    return current
+  }
+
+  let replaced = false
+  const nextPages = current.pages.map((page) =>
+    page.map((details) => {
+      if (details.message.id !== removal.message_id) {
+        return details
+      }
+
+      const nextReactions = details.reactions.filter(
+        (reaction) => !(reaction.emoji === removal.emoji && reaction.user_id === removal.user_id),
+      )
+      if (nextReactions.length === details.reactions.length) {
+        return details
+      }
+
+      replaced = true
+      return {
+        ...details,
+        reactions: nextReactions,
+      }
+    }),
+  )
+
+  if (!replaced) {
+    return current
+  }
+
+  return {
+    ...current,
+    pages: nextPages,
+  }
+}
+
 export function resolveRealtimeSender(
   message: Message,
   currentUser: UserProfile | null,
@@ -121,42 +199,4 @@ export function resolveRealtimeSender(
     return conversationDetails.participant_b
   }
   return fallbackSender(message)
-}
-
-export function addReactionToState(state: MessageReactionsState, reaction: Reaction): MessageReactionsState {
-  const current = state[reaction.message_id] ?? []
-  const alreadyExists = current.some(
-    (existing) => existing.emoji === reaction.emoji && existing.user_id === reaction.user_id,
-  )
-  if (alreadyExists) {
-    return state
-  }
-  return {
-    ...state,
-    [reaction.message_id]: [...current, reaction],
-  }
-}
-
-export function removeReactionFromState(
-  state: MessageReactionsState,
-  removal: { message_id: string; emoji: string; user_id: string },
-): MessageReactionsState {
-  const current = state[removal.message_id] ?? []
-  const next = current.filter(
-    (reaction) => !(reaction.emoji === removal.emoji && reaction.user_id === removal.user_id),
-  )
-
-  if (next.length === current.length) {
-    return state
-  }
-
-  if (next.length === 0) {
-    const { [removal.message_id]: _removed, ...rest } = state
-    return rest
-  }
-
-  return {
-    ...state,
-    [removal.message_id]: next,
-  }
 }

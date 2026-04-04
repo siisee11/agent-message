@@ -3,29 +3,23 @@ import {
   createContext,
   useCallback,
   useContext,
-  useEffect,
   useMemo,
-  useState,
   type PropsWithChildren,
 } from 'react'
 import type { ConversationDetails, Message, MessageDetails, Reaction } from '../api'
 import { useAuth } from '../auth'
 import { useEventStream, type EventStreamConnectionStatus } from '../hooks'
 import {
-  addReactionToState,
-  type MessageReactionsState,
+  addReactionToPages,
   markMessageDeletedInPages,
   prependMessageToPages,
-  removeReactionFromState,
+  removeReactionFromPages,
   replaceMessageInPages,
   resolveRealtimeSender,
 } from './state'
 
 interface RealtimeContextValue {
   status: EventStreamConnectionStatus
-  messageReactions: MessageReactionsState
-  applyReactionAdded: (reaction: Reaction) => void
-  applyReactionRemoved: (removal: { message_id: string; emoji: string; user_id: string }) => void
 }
 
 const RealtimeContext = createContext<RealtimeContextValue | undefined>(undefined)
@@ -33,7 +27,6 @@ const RealtimeContext = createContext<RealtimeContextValue | undefined>(undefine
 export function RealtimeProvider({ children }: PropsWithChildren) {
   const queryClient = useQueryClient()
   const { isAuthenticated, token, user } = useAuth()
-  const [messageReactions, setMessageReactions] = useState<MessageReactionsState>({})
 
   const invalidateConversations = useCallback(() => {
     void queryClient.invalidateQueries({ queryKey: ['conversations'] })
@@ -52,6 +45,7 @@ export function RealtimeProvider({ children }: PropsWithChildren) {
           prependMessageToPages(current, {
             message: incomingMessage,
             sender: resolveRealtimeSender(incomingMessage, user, conversationDetails),
+            reactions: [],
           }),
         )
       }
@@ -82,12 +76,16 @@ export function RealtimeProvider({ children }: PropsWithChildren) {
   )
 
   const applyReactionAdded = useCallback((reaction: Reaction) => {
-    setMessageReactions((state) => addReactionToState(state, reaction))
-  }, [])
+    queryClient.setQueriesData<InfiniteData<MessageDetails[]>>({ queryKey: ['messages'] }, (current) =>
+      addReactionToPages(current, reaction),
+    )
+  }, [queryClient])
 
   const applyReactionRemoved = useCallback((removal: { message_id: string; emoji: string; user_id: string }) => {
-    setMessageReactions((state) => removeReactionFromState(state, removal))
-  }, [])
+    queryClient.setQueriesData<InfiniteData<MessageDetails[]>>({ queryKey: ['messages'] }, (current) =>
+      removeReactionFromPages(current, removal),
+    )
+  }, [queryClient])
 
   const handleMessageNewEvent = useCallback(
     ({ data }: { data: Message }) => {
@@ -124,12 +122,6 @@ export function RealtimeProvider({ children }: PropsWithChildren) {
     [applyReactionRemoved],
   )
 
-  useEffect(() => {
-    if (!token) {
-      setMessageReactions({})
-    }
-  }, [token])
-
   const eventStream = useEventStream({
     token,
     enabled: Boolean(isAuthenticated && token),
@@ -143,11 +135,8 @@ export function RealtimeProvider({ children }: PropsWithChildren) {
   const value = useMemo<RealtimeContextValue>(
     () => ({
       status: eventStream.status,
-      messageReactions,
-      applyReactionAdded,
-      applyReactionRemoved,
     }),
-    [applyReactionAdded, applyReactionRemoved, eventStream.status, messageReactions],
+    [eventStream.status],
   )
 
   return <RealtimeContext.Provider value={value}>{children}</RealtimeContext.Provider>

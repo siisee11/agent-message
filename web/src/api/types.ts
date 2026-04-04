@@ -77,6 +77,7 @@ export interface ConversationDetails {
 export interface MessageDetails {
   message: Message
   sender: UserProfile
+  reactions: Reaction[]
 }
 
 export interface UploadResponse {

@@ -70,6 +70,60 @@ func TestMessagesEndpoints(t *testing.T) {
 		}
 	})
 
+	t.Run("list messages includes reactions for loaded history", func(t *testing.T) {
+		req := httptest.NewRequest(
+			http.MethodPost,
+			"/api/messages/"+msg2.ID+"/reactions",
+			bytes.NewBufferString(`{"emoji":"🎉"}`),
+		)
+		req.Header.Set("Authorization", "Bearer "+alice.Token)
+		req.Header.Set("Content-Type", "application/json")
+		resp := httptest.NewRecorder()
+		router.ServeHTTP(resp, req)
+		if resp.Code != http.StatusOK {
+			t.Fatalf("add alice reaction expected %d, got %d body=%s", http.StatusOK, resp.Code, resp.Body.String())
+		}
+
+		req = httptest.NewRequest(
+			http.MethodPost,
+			"/api/messages/"+msg2.ID+"/reactions",
+			bytes.NewBufferString(`{"emoji":"💎"}`),
+		)
+		req.Header.Set("Authorization", "Bearer "+bob.Token)
+		req.Header.Set("Content-Type", "application/json")
+		resp = httptest.NewRecorder()
+		router.ServeHTTP(resp, req)
+		if resp.Code != http.StatusOK {
+			t.Fatalf("add bob reaction expected %d, got %d body=%s", http.StatusOK, resp.Code, resp.Body.String())
+		}
+
+		req = httptest.NewRequest(http.MethodGet, "/api/conversations/"+conversationID+"/messages?before="+msg3.ID+"&limit=20", nil)
+		req.Header.Set("Authorization", "Bearer "+alice.Token)
+		resp = httptest.NewRecorder()
+		router.ServeHTTP(resp, req)
+
+		if resp.Code != http.StatusOK {
+			t.Fatalf("expected %d, got %d body=%s", http.StatusOK, resp.Code, resp.Body.String())
+		}
+
+		var messages []models.MessageDetails
+		if err := json.NewDecoder(resp.Body).Decode(&messages); err != nil {
+			t.Fatalf("decode paginated messages with reactions: %v", err)
+		}
+		if len(messages) != 2 {
+			t.Fatalf("expected two historical messages, got %+v", messages)
+		}
+		if messages[0].Message.ID != msg2.ID {
+			t.Fatalf("expected newest historical message to be msg2, got %+v", messages[0].Message)
+		}
+		if got := len(messages[0].Reactions); got != 2 {
+			t.Fatalf("expected 2 reactions on historical message, got %+v", messages[0].Reactions)
+		}
+		if messages[0].Reactions[0].Emoji != "🎉" || messages[0].Reactions[1].Emoji != "💎" {
+			t.Fatalf("unexpected reactions order/content: %+v", messages[0].Reactions)
+		}
+	})
+
 	t.Run("list messages rejects outsider", func(t *testing.T) {
 		req := httptest.NewRequest(http.MethodGet, "/api/conversations/"+conversationID+"/messages", nil)
 		req.Header.Set("Authorization", "Bearer "+charlie.Token)

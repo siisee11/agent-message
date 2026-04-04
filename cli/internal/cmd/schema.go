@@ -459,7 +459,32 @@ func schemaRegistry() map[string]commandSchemaDescriptor {
 				"username": usernameArg,
 				"password": {Description: "Password or PIN string sent to the auth API"},
 			},
+			Flags: map[string]parameterMetadata{
+				"payload":       {Description: "Inline raw JSON payload matching the register request body"},
+				"payload-file":  {Description: "Read the raw register JSON payload from a file"},
+				"payload-stdin": {Description: "Read the raw register JSON payload from stdin"},
+			},
 			Prerequisites: []string{"configured_server_url"},
+			InputModes: []commandInputMode{
+				{
+					Name:        "positional_fields",
+					Description: "Provide username and password as positional arguments",
+					Conditions:  []string{"requires `<username> <password>`"},
+					RequestShape: shapePtr(requestObjectShape("Register request body", map[string]schemaValueShape{
+						"username": stringShape("Username accepted by the server", withPattern(`^[A-Za-z0-9._-]{3,32}$`)),
+						"password": stringShape("Password or PIN string"),
+					}, "username", "password")),
+				},
+				{
+					Name:        "raw_payload",
+					Description: "Provide the register request body directly as JSON",
+					Conditions:  []string{"choose only one of --payload, --payload-file, or --payload-stdin", "no positional args are allowed in this mode"},
+					RequestShape: shapePtr(requestObjectShape("Register request body", map[string]schemaValueShape{
+						"username": stringShape("Username accepted by the server", withPattern(`^[A-Za-z0-9._-]{3,32}$`)),
+						"password": stringShape("Password or PIN string"),
+					}, "username", "password")),
+				},
+			},
 			RequestShapes: []commandRequestShape{
 				{
 					Name:        "auth_register_body",
@@ -472,13 +497,42 @@ func schemaRegistry() map[string]commandSchemaDescriptor {
 				},
 			},
 			OutputFormats: []string{"text", "json"},
+			Examples: []string{
+				"agent-message register alice secret123",
+				"agent-message register --payload '{\"username\":\"alice\",\"password\":\"secret123\"}'",
+			},
 		},
 		"agent-message login": {
 			Arguments: map[string]parameterMetadata{
 				"username": usernameArg,
 				"password": {Description: "Password or PIN string sent to the auth API"},
 			},
+			Flags: map[string]parameterMetadata{
+				"payload":       {Description: "Inline raw JSON payload matching the login request body"},
+				"payload-file":  {Description: "Read the raw login JSON payload from a file"},
+				"payload-stdin": {Description: "Read the raw login JSON payload from stdin"},
+			},
 			Prerequisites: []string{"configured_server_url"},
+			InputModes: []commandInputMode{
+				{
+					Name:        "positional_fields",
+					Description: "Provide username and password as positional arguments",
+					Conditions:  []string{"requires `<username> <password>`"},
+					RequestShape: shapePtr(requestObjectShape("Login request body", map[string]schemaValueShape{
+						"username": stringShape("Username accepted by the server", withPattern(`^[A-Za-z0-9._-]{3,32}$`)),
+						"password": stringShape("Password or PIN string"),
+					}, "username", "password")),
+				},
+				{
+					Name:        "raw_payload",
+					Description: "Provide the login request body directly as JSON",
+					Conditions:  []string{"choose only one of --payload, --payload-file, or --payload-stdin", "no positional args are allowed in this mode"},
+					RequestShape: shapePtr(requestObjectShape("Login request body", map[string]schemaValueShape{
+						"username": stringShape("Username accepted by the server", withPattern(`^[A-Za-z0-9._-]{3,32}$`)),
+						"password": stringShape("Password or PIN string"),
+					}, "username", "password")),
+				},
+			},
 			RequestShapes: []commandRequestShape{
 				{
 					Name:        "auth_login_body",
@@ -491,6 +545,10 @@ func schemaRegistry() map[string]commandSchemaDescriptor {
 				},
 			},
 			OutputFormats: []string{"text", "json"},
+			Examples: []string{
+				"agent-message login alice secret123",
+				"agent-message login --payload-file ./login.json",
+			},
 		},
 		"agent-message logout": {
 			Prerequisites: []string{"logged_in_for_remote_logout"},
@@ -508,7 +566,30 @@ func schemaRegistry() map[string]commandSchemaDescriptor {
 			Arguments: map[string]parameterMetadata{
 				"username": usernameArg,
 			},
+			Flags: map[string]parameterMetadata{
+				"payload":       {Description: "Inline raw JSON payload matching the open conversation request body"},
+				"payload-file":  {Description: "Read the raw open conversation JSON payload from a file"},
+				"payload-stdin": {Description: "Read the raw open conversation JSON payload from stdin"},
+			},
 			Prerequisites: []string{"logged_in"},
+			InputModes: []commandInputMode{
+				{
+					Name:        "positional_username",
+					Description: "Provide the target username as a positional argument",
+					Conditions:  []string{"requires `<username>`"},
+					RequestShape: shapePtr(requestObjectShape("Open conversation request body", map[string]schemaValueShape{
+						"username": stringShape("Recipient username", withPattern(`^[A-Za-z0-9._-]{3,32}$`)),
+					}, "username")),
+				},
+				{
+					Name:        "raw_payload",
+					Description: "Provide the open conversation request body directly as JSON",
+					Conditions:  []string{"choose only one of --payload, --payload-file, or --payload-stdin", "no positional args are allowed in this mode"},
+					RequestShape: shapePtr(requestObjectShape("Open conversation request body", map[string]schemaValueShape{
+						"username": stringShape("Recipient username", withPattern(`^[A-Za-z0-9._-]{3,32}$`)),
+					}, "username")),
+				},
+			},
 			RequestShapes: []commandRequestShape{
 				{
 					Name:        "open_conversation_body",
@@ -520,6 +601,10 @@ func schemaRegistry() map[string]commandSchemaDescriptor {
 				},
 			},
 			OutputFormats: []string{"text", "json"},
+			Examples: []string{
+				"agent-message open bob",
+				"agent-message open --payload '{\"username\":\"bob\"}'",
+			},
 		},
 		"agent-message send": {
 			Arguments: map[string]parameterMetadata{
@@ -533,6 +618,9 @@ func schemaRegistry() map[string]commandSchemaDescriptor {
 				"text":             {Description: "Explicit text content source"},
 				"json-render":      {Description: "Explicit inline json_render payload"},
 				"json-render-file": {Description: "Read a json_render payload from a file path"},
+				"payload":          {Description: "Inline raw JSON payload matching the send request body"},
+				"payload-file":     {Description: "Read the raw send JSON payload from a file"},
+				"payload-stdin":    {Description: "Read the raw send JSON payload from stdin"},
 				"stdin":            {Description: "Read message content from stdin"},
 			},
 			Prerequisites: []string{"logged_in"},
@@ -586,6 +674,27 @@ func schemaRegistry() map[string]commandSchemaDescriptor {
 						Required: []string{"attachment"},
 					},
 				},
+				{
+					Name:        "raw_payload",
+					Description: "Provide the send request body directly as JSON while resolving the recipient separately",
+					Conditions: []string{
+						"choose only one of --payload, --payload-file, or --payload-stdin",
+						"recipient resolution still uses `--to`, `master`, or the positional username",
+						"raw payload cannot be combined with `--attach`, `--text`, `--json-render`, `--json-render-file`, or `--stdin`",
+					},
+					RequestShape: shapePtr(requestObjectShape("Raw send request body", map[string]schemaValueShape{
+						"content":          stringShape("Optional text message body"),
+						"kind":             enumShape("Message kind", "text", "json_render"),
+						"json_render_spec": objectShape("Nested renderer payload object", nil),
+					})),
+					References: []schemaReference{
+						{
+							Kind:        "live_nested_schema",
+							Command:     "agent-message catalog prompt",
+							Description: "Use this command for the live nested json_render_spec contract when kind is `json_render`.",
+						},
+					},
+				},
 			},
 			RequestShapes: []commandRequestShape{
 				{
@@ -632,10 +741,12 @@ func schemaRegistry() map[string]commandSchemaDescriptor {
 				"agent-message send --to jay --text \"hello\"",
 				"agent-message send jay '{\"root\":\"r1\",\"elements\":{}}' --kind json_render",
 				"agent-message send jay --attach ./screenshot.png --text \"latest build\"",
+				"agent-message send --to jay --payload '{\"kind\":\"json_render\",\"json_render_spec\":{\"root\":\"r1\",\"elements\":{}}}'",
 			},
 			Notes: []string{
 				"Recipient resolution prefers `--to`, then the configured `master`, then positional username rules.",
 				"Exactly one explicit content source is allowed among `--text`, `--json-render`, `--json-render-file`, and `--stdin`.",
+				"Raw payload flags accept the request body directly and are mutually exclusive with the convenience content flags.",
 			},
 		},
 		"agent-message read": {
@@ -657,10 +768,31 @@ func schemaRegistry() map[string]commandSchemaDescriptor {
 				"text":                {Description: "Replacement message text", Constraints: []string{"must be non-empty after trimming"}},
 			},
 			Flags: map[string]parameterMetadata{
-				"message-id": {Description: "Explicit message ID to edit"},
-				"index":      indexFlag,
+				"message-id":    {Description: "Explicit message ID to edit"},
+				"index":         indexFlag,
+				"payload":       {Description: "Inline raw JSON payload matching the edit request body"},
+				"payload-file":  {Description: "Read the raw edit JSON payload from a file"},
+				"payload-stdin": {Description: "Read the raw edit JSON payload from stdin"},
 			},
 			Prerequisites: []string{"logged_in"},
+			InputModes: []commandInputMode{
+				{
+					Name:        "selector_plus_text",
+					Description: "Provide the selector and replacement text via convenience arguments",
+					Conditions:  []string{"use `<message-id-or-index> <text>` or combine `--message-id`/`--index` with `<text>`"},
+					RequestShape: shapePtr(requestObjectShape("Edit message body", map[string]schemaValueShape{
+						"content": stringShape("Replacement message text", withMinLength(1)),
+					}, "content")),
+				},
+				{
+					Name:        "raw_payload",
+					Description: "Provide the edit request body directly as JSON while resolving the selector separately",
+					Conditions:  []string{"choose only one of --payload, --payload-file, or --payload-stdin", "selector still comes from the positional argument or `--message-id`/`--index`"},
+					RequestShape: shapePtr(requestObjectShape("Edit message body", map[string]schemaValueShape{
+						"content": stringShape("Replacement message text", withMinLength(1)),
+					}, "content")),
+				},
+			},
 			RequestShapes: []commandRequestShape{
 				{
 					Name:        "edit_message_body",
@@ -674,6 +806,7 @@ func schemaRegistry() map[string]commandSchemaDescriptor {
 			OutputFormats: []string{"text", "json"},
 			Notes: []string{
 				"Use either a positional selector, `--message-id`, or `--index`. `--message-id` and `--index` are mutually exclusive.",
+				"Raw payload flags replace the convenience text argument for the request body only.",
 			},
 		},
 		"agent-message delete": {
@@ -696,10 +829,31 @@ func schemaRegistry() map[string]commandSchemaDescriptor {
 				"emoji":               {Description: "Emoji to add as a reaction", Constraints: []string{"must be non-empty and must not contain control characters"}},
 			},
 			Flags: map[string]parameterMetadata{
-				"message-id": {Description: "Explicit message ID to react to"},
-				"index":      indexFlag,
+				"message-id":    {Description: "Explicit message ID to react to"},
+				"index":         indexFlag,
+				"payload":       {Description: "Inline raw JSON payload matching the react request body"},
+				"payload-file":  {Description: "Read the raw react JSON payload from a file"},
+				"payload-stdin": {Description: "Read the raw react JSON payload from stdin"},
 			},
 			Prerequisites: []string{"logged_in"},
+			InputModes: []commandInputMode{
+				{
+					Name:        "selector_plus_emoji",
+					Description: "Provide the selector and emoji via convenience arguments",
+					Conditions:  []string{"use `<message-id-or-index> <emoji>` or combine `--message-id`/`--index` with `<emoji>`"},
+					RequestShape: shapePtr(requestObjectShape("Add reaction body", map[string]schemaValueShape{
+						"emoji": stringShape("Emoji to add as a reaction", withMinLength(1)),
+					}, "emoji")),
+				},
+				{
+					Name:        "raw_payload",
+					Description: "Provide the react request body directly as JSON while resolving the selector separately",
+					Conditions:  []string{"choose only one of --payload, --payload-file, or --payload-stdin", "selector still comes from the positional argument or `--message-id`/`--index`"},
+					RequestShape: shapePtr(requestObjectShape("Add reaction body", map[string]schemaValueShape{
+						"emoji": stringShape("Emoji to add as a reaction", withMinLength(1)),
+					}, "emoji")),
+				},
+			},
 			RequestShapes: []commandRequestShape{
 				{
 					Name:        "add_reaction_body",

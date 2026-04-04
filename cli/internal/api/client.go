@@ -105,8 +105,20 @@ func (c *Client) SetHTTPClient(httpClient *http.Client) {
 	c.httpClient = httpClient
 }
 
+type AuthRequest struct {
+	Username string `json:"username"`
+	Password string `json:"password"`
+}
+
 func (c *Client) Register(ctx context.Context, username, password string) (AuthResponse, error) {
-	normalizedUsername, err := validateUsername(username)
+	return c.RegisterWithRequest(ctx, AuthRequest{
+		Username: username,
+		Password: password,
+	})
+}
+
+func (c *Client) RegisterWithRequest(ctx context.Context, input AuthRequest) (AuthResponse, error) {
+	normalizedUsername, err := validateUsername(input.Username)
 	if err != nil {
 		return AuthResponse{}, err
 	}
@@ -114,13 +126,20 @@ func (c *Client) Register(ctx context.Context, username, password string) (AuthR
 	var out AuthResponse
 	err = c.doJSON(ctx, http.MethodPost, "/api/auth/register", map[string]string{
 		"username": normalizedUsername,
-		"password": password,
+		"password": input.Password,
 	}, &out)
 	return out, err
 }
 
 func (c *Client) Login(ctx context.Context, username, password string) (AuthResponse, error) {
-	normalizedUsername, err := validateUsername(username)
+	return c.LoginWithRequest(ctx, AuthRequest{
+		Username: username,
+		Password: password,
+	})
+}
+
+func (c *Client) LoginWithRequest(ctx context.Context, input AuthRequest) (AuthResponse, error) {
+	normalizedUsername, err := validateUsername(input.Username)
 	if err != nil {
 		return AuthResponse{}, err
 	}
@@ -128,7 +147,7 @@ func (c *Client) Login(ctx context.Context, username, password string) (AuthResp
 	var out AuthResponse
 	err = c.doJSON(ctx, http.MethodPost, "/api/auth/login", map[string]string{
 		"username": normalizedUsername,
-		"password": password,
+		"password": input.Password,
 	}, &out)
 	return out, err
 }
@@ -177,8 +196,18 @@ func (c *Client) ListConversations(ctx context.Context, limit int) ([]Conversati
 	return out, err
 }
 
+type OpenConversationRequest struct {
+	Username string `json:"username"`
+}
+
 func (c *Client) OpenConversation(ctx context.Context, username string) (ConversationDetails, error) {
-	normalizedUsername, err := validateUsername(username)
+	return c.OpenConversationWithRequest(ctx, OpenConversationRequest{
+		Username: username,
+	})
+}
+
+func (c *Client) OpenConversationWithRequest(ctx context.Context, input OpenConversationRequest) (ConversationDetails, error) {
+	normalizedUsername, err := validateUsername(input.Username)
 	if err != nil {
 		return ConversationDetails{}, err
 	}
@@ -368,7 +397,17 @@ func detectAttachmentContentType(file *os.File, attachmentPath string) string {
 	return "application/octet-stream"
 }
 
+type EditMessageRequest struct {
+	Content string `json:"content"`
+}
+
 func (c *Client) EditMessage(ctx context.Context, messageID, content string) (Message, error) {
+	return c.EditMessageWithRequest(ctx, messageID, EditMessageRequest{
+		Content: content,
+	})
+}
+
+func (c *Client) EditMessageWithRequest(ctx context.Context, messageID string, input EditMessageRequest) (Message, error) {
 	normalizedMessageID, err := validateResourceID("message ID", messageID)
 	if err != nil {
 		return Message{}, err
@@ -376,7 +415,7 @@ func (c *Client) EditMessage(ctx context.Context, messageID, content string) (Me
 
 	var out Message
 	err = c.doJSON(ctx, http.MethodPatch, "/api/messages/"+url.PathEscape(normalizedMessageID), map[string]string{
-		"content": content,
+		"content": input.Content,
 	}, &out)
 	return out, err
 }
@@ -392,18 +431,28 @@ func (c *Client) DeleteMessage(ctx context.Context, messageID string) (Message, 
 	return out, err
 }
 
+type ToggleReactionRequest struct {
+	Emoji string `json:"emoji"`
+}
+
 func (c *Client) AddReaction(ctx context.Context, messageID, emoji string) (ToggleReactionResult, error) {
+	return c.AddReactionWithRequest(ctx, messageID, ToggleReactionRequest{
+		Emoji: emoji,
+	})
+}
+
+func (c *Client) AddReactionWithRequest(ctx context.Context, messageID string, input ToggleReactionRequest) (ToggleReactionResult, error) {
 	normalizedMessageID, err := validateResourceID("message ID", messageID)
 	if err != nil {
 		return ToggleReactionResult{}, err
 	}
-	if hasControlCharacters(emoji) {
+	if hasControlCharacters(input.Emoji) {
 		return ToggleReactionResult{}, errors.New("emoji must not contain control characters")
 	}
 
 	var out ToggleReactionResult
 	err = c.doJSON(ctx, http.MethodPost, "/api/messages/"+url.PathEscape(normalizedMessageID)+"/reactions", map[string]string{
-		"emoji": emoji,
+		"emoji": input.Emoji,
 	}, &out)
 	return out, err
 }

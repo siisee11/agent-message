@@ -79,6 +79,40 @@ func TestRunOpenConversationUsesResolverAndPrintsConversation(t *testing.T) {
 	}
 }
 
+func TestOpenConversationCommandSupportsRawPayload(t *testing.T) {
+	t.Parallel()
+
+	rt, stdout, _ := newTestRuntime(t, "http://example.test", "tok-2", func(req *http.Request, body []byte) (*http.Response, error) {
+		if req.Method != http.MethodPost || req.URL.Path != "/api/conversations" {
+			t.Fatalf("unexpected request: %s %s", req.Method, req.URL.Path)
+		}
+
+		var payload map[string]string
+		if err := json.Unmarshal(body, &payload); err != nil {
+			t.Fatalf("decode request payload: %v", err)
+		}
+		if got, want := payload["username"], "bob"; got != want {
+			t.Fatalf("username mismatch: got %q want %q", got, want)
+		}
+
+		return jsonResponse(http.StatusCreated, `{
+			"conversation":{"id":"c-open","participant_a":"u1","participant_b":"u2","created_at":"2026-01-01T00:00:00Z"},
+			"participant_a":{"id":"u1","username":"alice","created_at":"2026-01-01T00:00:00Z"},
+			"participant_b":{"id":"u2","username":"bob","created_at":"2026-01-01T00:00:00Z"}
+		}`), nil
+	})
+
+	command := newOpenConversationCommand(rt)
+	command.SetArgs([]string{"--payload", `{"username":"bob"}`})
+
+	if err := command.Execute(); err != nil {
+		t.Fatalf("execute open command: %v", err)
+	}
+	if got, want := strings.TrimSpace(stdout.String()), "c-open bob"; got != want {
+		t.Fatalf("stdout mismatch: got %q want %q", got, want)
+	}
+}
+
 func TestRunListConversationsSupportsJSONOutput(t *testing.T) {
 	t.Parallel()
 

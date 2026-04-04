@@ -232,6 +232,60 @@ func TestRunSendMessageSupportsJSONRenderKind(t *testing.T) {
 	}
 }
 
+func TestSendCommandSupportsRawPayload(t *testing.T) {
+	t.Parallel()
+
+	rt, stdout, _ := newTestRuntime(t, "http://example.test", "tok-send", func(req *http.Request, body []byte) (*http.Response, error) {
+		switch {
+		case req.Method == http.MethodPost && req.URL.Path == "/api/conversations":
+			return jsonResponse(http.StatusOK, `{
+				"conversation":{"id":"c-send","participant_a":"u1","participant_b":"u2","created_at":"2026-01-01T00:00:00Z"},
+				"participant_a":{"id":"u1","username":"alice","created_at":"2026-01-01T00:00:00Z"},
+				"participant_b":{"id":"u2","username":"bob","created_at":"2026-01-01T00:00:00Z"}
+			}`), nil
+		case req.Method == http.MethodPost && req.URL.Path == "/api/conversations/c-send/messages":
+			var payload map[string]any
+			if err := json.Unmarshal(body, &payload); err != nil {
+				t.Fatalf("decode send payload: %v", err)
+			}
+			if got, want := payload["kind"], "json_render"; got != want {
+				t.Fatalf("kind mismatch: got %v want %q", got, want)
+			}
+			spec, ok := payload["json_render_spec"].(map[string]any)
+			if !ok {
+				t.Fatalf("expected json_render_spec object, got %T", payload["json_render_spec"])
+			}
+			if got, want := spec["root"], "stack-1"; got != want {
+				t.Fatalf("spec root mismatch: got %v want %q", got, want)
+			}
+			return jsonResponse(http.StatusCreated, `{
+				"id":"m-json-raw",
+				"conversation_id":"c-send",
+				"sender_id":"u1",
+				"kind":"json_render",
+				"json_render_spec":{"root":"stack-1","elements":{"stack-1":{"type":"Stack"}}},
+				"edited":false,
+				"deleted":false,
+				"created_at":"2026-01-01T00:00:00Z",
+				"updated_at":"2026-01-01T00:00:00Z"
+			}`), nil
+		default:
+			t.Fatalf("unexpected request: %s %s", req.Method, req.URL.Path)
+			return nil, nil
+		}
+	})
+
+	command := newSendMessageCommand(rt)
+	command.SetArgs([]string{"--to", "bob", "--payload", `{"kind":"json_render","json_render_spec":{"root":"stack-1","elements":{"stack-1":{"type":"Stack"}}}}`})
+
+	if err := command.Execute(); err != nil {
+		t.Fatalf("execute send command: %v", err)
+	}
+	if got, want := strings.TrimSpace(stdout.String()), "sent m-json-raw"; got != want {
+		t.Fatalf("stdout mismatch: got %q want %q", got, want)
+	}
+}
+
 func TestRunSendMessageSupportsJSONOutput(t *testing.T) {
 	t.Parallel()
 

@@ -35,7 +35,7 @@ func TestBuildSchemaDocumentForSendIncludesTypedModes(t *testing.T) {
 	if got, want := send.Path, "agent-message send"; got != want {
 		t.Fatalf("path mismatch: got %q want %q", got, want)
 	}
-	if got, want := len(send.InputModes), 3; got != want {
+	if got, want := len(send.InputModes), 4; got != want {
 		t.Fatalf("input mode count mismatch: got %d want %d", got, want)
 	}
 
@@ -60,6 +60,9 @@ func TestBuildSchemaDocumentForSendIncludesTypedModes(t *testing.T) {
 	}
 	if !foundReference {
 		t.Fatalf("expected send schema to reference agent-message catalog prompt")
+	}
+	if findFlag(send.LocalFlags, "payload") == nil {
+		t.Fatalf("expected payload flag in send schema")
 	}
 }
 

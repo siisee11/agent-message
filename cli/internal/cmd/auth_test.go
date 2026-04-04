@@ -128,6 +128,37 @@ func TestRunLoginStoresTokenInConfig(t *testing.T) {
 	}
 }
 
+func TestRegisterCommandSupportsRawPayload(t *testing.T) {
+	t.Parallel()
+
+	rt, stdout, _ := newTestRuntime(t, "http://example.test", "", func(req *http.Request, body []byte) (*http.Response, error) {
+		if req.URL.Path != "/api/auth/register" {
+			t.Fatalf("unexpected path: %s", req.URL.Path)
+		}
+		var payload map[string]string
+		if err := json.Unmarshal(body, &payload); err != nil {
+			t.Fatalf("decode register payload: %v", err)
+		}
+		if got, want := payload["username"], "alice"; got != want {
+			t.Fatalf("username mismatch: got %q want %q", got, want)
+		}
+		if got, want := payload["password"], "secret123"; got != want {
+			t.Fatalf("password mismatch: got %q want %q", got, want)
+		}
+		return jsonResponse(http.StatusCreated, `{"token":"reg-token","user":{"id":"u1","username":"alice","created_at":"2026-01-01T00:00:00Z"}}`), nil
+	})
+
+	command := newRegisterCommand(rt)
+	command.SetArgs([]string{"--payload", `{"username":"alice","password":"secret123"}`})
+
+	if err := command.Execute(); err != nil {
+		t.Fatalf("execute register command: %v", err)
+	}
+	if got, want := strings.TrimSpace(stdout.String()), "registered alice"; got != want {
+		t.Fatalf("stdout mismatch: got %q want %q", got, want)
+	}
+}
+
 func TestRunLoginRestoresStoredMasterForProfile(t *testing.T) {
 	t.Parallel()
 

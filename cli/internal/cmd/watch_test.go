@@ -9,8 +9,6 @@ import (
 )
 
 func TestRunWatchStreamsOnlyTargetConversationMessageNewEvents(t *testing.T) {
-	t.Parallel()
-
 	rt, stdout, stderr := newTestRuntime(t, "http://example.test", "tok-watch", func(req *http.Request, body []byte) (*http.Response, error) {
 		if req.Method != http.MethodPost || req.URL.Path != "/api/conversations" {
 			t.Fatalf("unexpected request: %s %s", req.Method, req.URL.Path)
@@ -79,8 +77,6 @@ func TestRunWatchRequiresLogin(t *testing.T) {
 }
 
 func TestRunWatchJSONWritesStructuredNDJSON(t *testing.T) {
-	t.Parallel()
-
 	rt, stdout, stderr := newTestRuntime(t, "http://example.test", "tok-watch", func(req *http.Request, body []byte) (*http.Response, error) {
 		if req.Method != http.MethodPost || req.URL.Path != "/api/conversations" {
 			t.Fatalf("unexpected request: %s %s", req.Method, req.URL.Path)
@@ -145,8 +141,6 @@ func TestRunWatchJSONWritesStructuredNDJSON(t *testing.T) {
 }
 
 func TestRunWaitReturnsAfterFirstMatchingEvent(t *testing.T) {
-	t.Parallel()
-
 	rt, stdout, stderr := newTestRuntime(t, "http://example.test", "tok-wait", func(req *http.Request, body []byte) (*http.Response, error) {
 		if req.Method != http.MethodPost || req.URL.Path != "/api/conversations" {
 			t.Fatalf("unexpected request: %s %s", req.Method, req.URL.Path)

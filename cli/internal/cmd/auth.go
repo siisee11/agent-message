@@ -16,14 +16,34 @@ import (
 )
 
 func newRegisterCommand(rt *Runtime) *cobra.Command {
-	return &cobra.Command{
+	var payload string
+	var payloadFile string
+	var payloadStdin bool
+	cmd := &cobra.Command{
 		Use:   "register <username> <password>",
 		Short: "Register a new account",
-		Args:  cobra.ExactArgs(2),
+		Args: func(_ *cobra.Command, args []string) error {
+			if len(args) > 2 {
+				return fmt.Errorf("accepts at most 2 arg(s), received %d", len(args))
+			}
+			return nil
+		},
 		RunE: func(_ *cobra.Command, args []string) error {
-			return runRegister(rt, args[0], args[1])
+			request, err := resolveAuthRequest(rt.Stdin, rawPayloadOptions{
+				Payload:      payload,
+				PayloadFile:  payloadFile,
+				PayloadStdin: payloadStdin,
+			}, args, "register")
+			if err != nil {
+				return err
+			}
+			return runRegisterRequest(rt, request)
 		},
 	}
+	cmd.Flags().StringVar(&payload, "payload", "", "Raw JSON payload matching the register request body")
+	cmd.Flags().StringVar(&payloadFile, "payload-file", "", "Read the raw register JSON payload from a file")
+	cmd.Flags().BoolVar(&payloadStdin, "payload-stdin", false, "Read the raw register JSON payload from stdin")
+	return cmd
 }
 
 func newOnboardCommand(rt *Runtime) *cobra.Command {
@@ -38,6 +58,13 @@ func newOnboardCommand(rt *Runtime) *cobra.Command {
 }
 
 func runRegister(rt *Runtime, username, password string) error {
+	return runRegisterRequest(rt, api.AuthRequest{
+		Username: username,
+		Password: password,
+	})
+}
+
+func runRegisterRequest(rt *Runtime, request api.AuthRequest) error {
 	if err := ensureRuntime(rt); err != nil {
 		return err
 	}
@@ -45,7 +72,7 @@ func runRegister(rt *Runtime, username, password string) error {
 		return fmt.Errorf("set register server_url: %w", err)
 	}
 
-	resp, err := rt.Client.Register(context.Background(), username, password)
+	resp, err := rt.Client.RegisterWithRequest(context.Background(), request)
 	if err != nil {
 		return err
 	}
@@ -101,17 +128,44 @@ func runOnboard(rt *Runtime) error {
 }
 
 func newLoginCommand(rt *Runtime) *cobra.Command {
-	return &cobra.Command{
+	var payload string
+	var payloadFile string
+	var payloadStdin bool
+	cmd := &cobra.Command{
 		Use:   "login <username> <password>",
 		Short: "Log in with username and password",
-		Args:  cobra.ExactArgs(2),
+		Args: func(_ *cobra.Command, args []string) error {
+			if len(args) > 2 {
+				return fmt.Errorf("accepts at most 2 arg(s), received %d", len(args))
+			}
+			return nil
+		},
 		RunE: func(_ *cobra.Command, args []string) error {
-			return runLogin(rt, args[0], args[1])
+			request, err := resolveAuthRequest(rt.Stdin, rawPayloadOptions{
+				Payload:      payload,
+				PayloadFile:  payloadFile,
+				PayloadStdin: payloadStdin,
+			}, args, "login")
+			if err != nil {
+				return err
+			}
+			return runLoginRequest(rt, request)
 		},
 	}
+	cmd.Flags().StringVar(&payload, "payload", "", "Raw JSON payload matching the login request body")
+	cmd.Flags().StringVar(&payloadFile, "payload-file", "", "Read the raw login JSON payload from a file")
+	cmd.Flags().BoolVar(&payloadStdin, "payload-stdin", false, "Read the raw login JSON payload from stdin")
+	return cmd
 }
 
 func runLogin(rt *Runtime, username, password string) error {
+	return runLoginRequest(rt, api.AuthRequest{
+		Username: username,
+		Password: password,
+	})
+}
+
+func runLoginRequest(rt *Runtime, request api.AuthRequest) error {
 	if err := ensureRuntime(rt); err != nil {
 		return err
 	}
@@ -119,7 +173,7 @@ func runLogin(rt *Runtime, username, password string) error {
 		return fmt.Errorf("set login server_url: %w", err)
 	}
 
-	resp, err := rt.Client.Login(context.Background(), username, password)
+	resp, err := rt.Client.LoginWithRequest(context.Background(), request)
 	if err != nil {
 		return err
 	}
@@ -132,6 +186,26 @@ func runLogin(rt *Runtime, username, password string) error {
 		"status": "logged_in",
 		"user":   resp.User,
 	})
+}
+
+func resolveAuthRequest(stdin io.Reader, payloadOptions rawPayloadOptions, args []string, action string) (api.AuthRequest, error) {
+	rawPayload, err := resolveRawPayload(stdin, payloadOptions)
+	if err != nil {
+		return api.AuthRequest{}, err
+	}
+	if rawPayload != nil {
+		if len(args) != 0 {
+			return api.AuthRequest{}, fmt.Errorf("%s accepts no positional args when raw payload flags are used", action)
+		}
+		return decodeStrictJSONObject[api.AuthRequest](rawPayload, action+" payload")
+	}
+	if len(args) != 2 {
+		return api.AuthRequest{}, fmt.Errorf("%s requires <username> <password>", action)
+	}
+	return api.AuthRequest{
+		Username: args[0],
+		Password: args[1],
+	}, nil
 }
 
 func loginOrRegister(client *api.Client, username, password string) (api.AuthResponse, error) {

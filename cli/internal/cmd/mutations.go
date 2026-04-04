@@ -4,9 +4,11 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"io"
 	"strconv"
 	"strings"
 
+	"agent-message/cli/internal/api"
 	"agent-message/cli/internal/config"
 
 	"github.com/spf13/cobra"
@@ -14,12 +16,15 @@ import (
 
 func newEditMessageCommand(rt *Runtime) *cobra.Command {
 	var explicitMessageID string
+	var payload string
+	var payloadFile string
+	var payloadStdin bool
 	cmd := &cobra.Command{
 		Use:   "edit [message-id-or-index] <text>",
 		Short: "Edit a message by explicit message ID or by index from the last read",
 		Args: func(_ *cobra.Command, args []string) error {
-			if len(args) < 1 || len(args) > 2 {
-				return fmt.Errorf("accepts 1 or 2 arg(s), received %d", len(args))
+			if len(args) > 2 {
+				return fmt.Errorf("accepts at most 2 arg(s), received %d", len(args))
 			}
 			return nil
 		},
@@ -28,18 +33,31 @@ func newEditMessageCommand(rt *Runtime) *cobra.Command {
 		},
 	}
 	cmd.Flags().StringVar(&explicitMessageID, "message-id", "", "Edit by explicit message ID")
+	cmd.Flags().StringVar(&payload, "payload", "", "Raw JSON payload matching the edit request body")
+	cmd.Flags().StringVar(&payloadFile, "payload-file", "", "Read the raw edit JSON payload from a file")
+	cmd.Flags().BoolVar(&payloadStdin, "payload-stdin", false, "Read the raw edit JSON payload from stdin")
 	indexPtr := cmd.Flags().IntP("index", "", 0, "Edit by index from the last read")
 	cmd.RunE = func(_ *cobra.Command, args []string) error {
-		selector, text, err := resolveEditArgs(args, explicitMessageID, *indexPtr)
+		selector, request, err := resolveEditInput(rt.Stdin, rawPayloadOptions{
+			Payload:      payload,
+			PayloadFile:  payloadFile,
+			PayloadStdin: payloadStdin,
+		}, args, explicitMessageID, *indexPtr)
 		if err != nil {
 			return err
 		}
-		return runEditMessage(rt, selector, text, explicitMessageID, *indexPtr)
+		return runEditMessageRequest(rt, selector, request, explicitMessageID, *indexPtr)
 	}
 	return cmd
 }
 
 func runEditMessage(rt *Runtime, selectorArg string, text string, explicitMessageID string, explicitIndex int) error {
+	return runEditMessageRequest(rt, selectorArg, api.EditMessageRequest{
+		Content: text,
+	}, explicitMessageID, explicitIndex)
+}
+
+func runEditMessageRequest(rt *Runtime, selectorArg string, request api.EditMessageRequest, explicitMessageID string, explicitIndex int) error {
 	if err := ensureRuntime(rt); err != nil {
 		return err
 	}
@@ -47,17 +65,18 @@ func runEditMessage(rt *Runtime, selectorArg string, text string, explicitMessag
 		return err
 	}
 
-	trimmedText := strings.TrimSpace(text)
+	trimmedText := strings.TrimSpace(request.Content)
 	if trimmedText == "" {
 		return errors.New("message text is required")
 	}
+	request.Content = trimmedText
 
 	messageID, source, err := resolveMessageTarget(rt, selectorArg, explicitMessageID, explicitIndex)
 	if err != nil {
 		return err
 	}
 
-	message, err := rt.Client.EditMessage(context.Background(), messageID, trimmedText)
+	message, err := rt.Client.EditMessageWithRequest(context.Background(), messageID, request)
 	if err != nil {
 		return err
 	}
@@ -130,12 +149,15 @@ func runDeleteMessage(rt *Runtime, selectorArg string, explicitMessageID string,
 
 func newReactCommand(rt *Runtime) *cobra.Command {
 	var explicitMessageID string
+	var payload string
+	var payloadFile string
+	var payloadStdin bool
 	cmd := &cobra.Command{
 		Use:   "react [message-id-or-index] <emoji>",
 		Short: "React to a message by explicit message ID or by index from the last read",
 		Args: func(_ *cobra.Command, args []string) error {
-			if len(args) < 1 || len(args) > 2 {
-				return fmt.Errorf("accepts 1 or 2 arg(s), received %d", len(args))
+			if len(args) > 2 {
+				return fmt.Errorf("accepts at most 2 arg(s), received %d", len(args))
 			}
 			return nil
 		},
@@ -148,18 +170,31 @@ func newReactCommand(rt *Runtime) *cobra.Command {
 		},
 	}
 	cmd.Flags().StringVar(&explicitMessageID, "message-id", "", "React by explicit message ID")
+	cmd.Flags().StringVar(&payload, "payload", "", "Raw JSON payload matching the react request body")
+	cmd.Flags().StringVar(&payloadFile, "payload-file", "", "Read the raw react JSON payload from a file")
+	cmd.Flags().BoolVar(&payloadStdin, "payload-stdin", false, "Read the raw react JSON payload from stdin")
 	indexPtr := cmd.Flags().IntP("index", "", 0, "React by index from the last read")
 	cmd.RunE = func(_ *cobra.Command, args []string) error {
-		selector, emoji, err := resolveReactionArgs(args, explicitMessageID, *indexPtr)
+		selector, request, err := resolveReactionInput(rt.Stdin, rawPayloadOptions{
+			Payload:      payload,
+			PayloadFile:  payloadFile,
+			PayloadStdin: payloadStdin,
+		}, args, explicitMessageID, *indexPtr, "react")
 		if err != nil {
 			return err
 		}
-		return runReact(rt, selector, emoji, explicitMessageID, *indexPtr)
+		return runReactRequest(rt, selector, request, explicitMessageID, *indexPtr)
 	}
 	return cmd
 }
 
 func runReact(rt *Runtime, selectorArg string, emoji string, explicitMessageID string, explicitIndex int) error {
+	return runReactRequest(rt, selectorArg, api.ToggleReactionRequest{
+		Emoji: emoji,
+	}, explicitMessageID, explicitIndex)
+}
+
+func runReactRequest(rt *Runtime, selectorArg string, request api.ToggleReactionRequest, explicitMessageID string, explicitIndex int) error {
 	if err := ensureRuntime(rt); err != nil {
 		return err
 	}
@@ -167,16 +202,17 @@ func runReact(rt *Runtime, selectorArg string, emoji string, explicitMessageID s
 		return err
 	}
 
-	trimmedEmoji := strings.TrimSpace(emoji)
+	trimmedEmoji := strings.TrimSpace(request.Emoji)
 	if trimmedEmoji == "" {
 		return errors.New("emoji is required")
 	}
+	request.Emoji = trimmedEmoji
 
 	messageID, source, err := resolveMessageTarget(rt, selectorArg, explicitMessageID, explicitIndex)
 	if err != nil {
 		return err
 	}
-	result, err := rt.Client.AddReaction(context.Background(), messageID, trimmedEmoji)
+	result, err := rt.Client.AddReactionWithRequest(context.Background(), messageID, request)
 	if err != nil {
 		return err
 	}
@@ -199,8 +235,8 @@ func newUnreactCommand(rt *Runtime) *cobra.Command {
 		Use:   "unreact [message-id-or-index] <emoji>",
 		Short: "Remove a reaction by explicit message ID or by index from the last read",
 		Args: func(_ *cobra.Command, args []string) error {
-			if len(args) < 1 || len(args) > 2 {
-				return fmt.Errorf("accepts 1 or 2 arg(s), received %d", len(args))
+			if len(args) > 2 {
+				return fmt.Errorf("accepts at most 2 arg(s), received %d", len(args))
 			}
 			return nil
 		},
@@ -252,6 +288,65 @@ func runUnreact(rt *Runtime, selectorArg string, emoji string, explicitMessageID
 		"message_id": reaction.MessageID,
 		"source":     source,
 	})
+}
+
+func resolveEditInput(stdin io.Reader, payloadOptions rawPayloadOptions, args []string, explicitMessageID string, explicitIndex int) (string, api.EditMessageRequest, error) {
+	rawPayload, err := resolveRawPayload(stdin, payloadOptions)
+	if err != nil {
+		return "", api.EditMessageRequest{}, err
+	}
+	if rawPayload != nil {
+		selector, resolveErr := resolveSelectorForRawPayload("edit", args, explicitMessageID, explicitIndex)
+		if resolveErr != nil {
+			return "", api.EditMessageRequest{}, resolveErr
+		}
+		request, decodeErr := decodeStrictJSONObject[api.EditMessageRequest](rawPayload, "edit payload")
+		if decodeErr != nil {
+			return "", api.EditMessageRequest{}, decodeErr
+		}
+		return selector, request, nil
+	}
+	selector, text, err := resolveEditArgs(args, explicitMessageID, explicitIndex)
+	if err != nil {
+		return "", api.EditMessageRequest{}, err
+	}
+	return selector, api.EditMessageRequest{Content: text}, nil
+}
+
+func resolveReactionInput(stdin io.Reader, payloadOptions rawPayloadOptions, args []string, explicitMessageID string, explicitIndex int, action string) (string, api.ToggleReactionRequest, error) {
+	rawPayload, err := resolveRawPayload(stdin, payloadOptions)
+	if err != nil {
+		return "", api.ToggleReactionRequest{}, err
+	}
+	if rawPayload != nil {
+		selector, resolveErr := resolveSelectorForRawPayload(action, args, explicitMessageID, explicitIndex)
+		if resolveErr != nil {
+			return "", api.ToggleReactionRequest{}, resolveErr
+		}
+		request, decodeErr := decodeStrictJSONObject[api.ToggleReactionRequest](rawPayload, action+" payload")
+		if decodeErr != nil {
+			return "", api.ToggleReactionRequest{}, decodeErr
+		}
+		return selector, request, nil
+	}
+	selector, emoji, err := resolveReactionArgs(args, explicitMessageID, explicitIndex)
+	if err != nil {
+		return "", api.ToggleReactionRequest{}, err
+	}
+	return selector, api.ToggleReactionRequest{Emoji: emoji}, nil
+}
+
+func resolveSelectorForRawPayload(action string, args []string, explicitMessageID string, explicitIndex int) (string, error) {
+	if strings.TrimSpace(explicitMessageID) != "" || explicitIndex > 0 {
+		if len(args) != 0 {
+			return "", fmt.Errorf("%s accepts no positional args when raw payload flags are used with --message-id or --index", action)
+		}
+		return "", nil
+	}
+	if len(args) != 1 {
+		return "", fmt.Errorf("%s requires <message-id-or-index> when raw payload flags are used", action)
+	}
+	return args[0], nil
 }
 
 func resolveEditArgs(args []string, explicitMessageID string, explicitIndex int) (string, string, error) {

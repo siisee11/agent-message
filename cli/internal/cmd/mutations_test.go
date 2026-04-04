@@ -137,6 +137,43 @@ func TestRunReactByMessageID(t *testing.T) {
 	}
 }
 
+func TestEditCommandSupportsRawPayload(t *testing.T) {
+	t.Parallel()
+
+	rt, stdout, _ := newTestRuntime(t, "http://example.test", "tok-edit", func(req *http.Request, body []byte) (*http.Response, error) {
+		if req.Method != http.MethodPatch || req.URL.Path != "/api/messages/m-explicit" {
+			t.Fatalf("unexpected request: %s %s", req.Method, req.URL.Path)
+		}
+		var payload map[string]string
+		if err := json.Unmarshal(body, &payload); err != nil {
+			t.Fatalf("decode edit payload: %v", err)
+		}
+		if got, want := payload["content"], "edited from payload"; got != want {
+			t.Fatalf("content mismatch: got %q want %q", got, want)
+		}
+		return jsonResponse(http.StatusOK, `{
+			"id":"m-explicit",
+			"conversation_id":"c-read",
+			"sender_id":"u1",
+			"content":"edited from payload",
+			"edited":true,
+			"deleted":false,
+			"created_at":"2026-01-01T00:00:00Z",
+			"updated_at":"2026-01-01T00:02:00Z"
+		}`), nil
+	})
+
+	command := newEditMessageCommand(rt)
+	command.SetArgs([]string{"--message-id", "m-explicit", "--payload", `{"content":"edited from payload"}`})
+
+	if err := command.Execute(); err != nil {
+		t.Fatalf("execute edit command: %v", err)
+	}
+	if got, want := strings.TrimSpace(stdout.String()), "edited m-explicit"; got != want {
+		t.Fatalf("stdout mismatch: got %q want %q", got, want)
+	}
+}
+
 func TestRunUnreactByMessageID(t *testing.T) {
 	t.Parallel()
 
@@ -159,6 +196,37 @@ func TestRunUnreactByMessageID(t *testing.T) {
 		t.Fatalf("runUnreact: %v", err)
 	}
 	if got, want := strings.TrimSpace(stdout.String()), "reaction removed m1 👍"; got != want {
+		t.Fatalf("stdout mismatch: got %q want %q", got, want)
+	}
+}
+
+func TestReactCommandSupportsRawPayload(t *testing.T) {
+	t.Parallel()
+
+	rt, stdout, _ := newTestRuntime(t, "http://example.test", "tok-react", func(req *http.Request, body []byte) (*http.Response, error) {
+		if req.Method != http.MethodPost || req.URL.Path != "/api/messages/m1/reactions" {
+			t.Fatalf("unexpected request: %s %s", req.Method, req.URL.Path)
+		}
+		var payload map[string]string
+		if err := json.Unmarshal(body, &payload); err != nil {
+			t.Fatalf("decode react payload: %v", err)
+		}
+		if got, want := payload["emoji"], "🔥"; got != want {
+			t.Fatalf("emoji mismatch: got %q want %q", got, want)
+		}
+		return jsonResponse(http.StatusOK, `{
+			"action":"added",
+			"reaction":{"id":"r2","message_id":"m1","user_id":"u1","emoji":"🔥","created_at":"2026-01-01T00:00:00Z"}
+		}`), nil
+	})
+
+	command := newReactCommand(rt)
+	command.SetArgs([]string{"m1", "--payload", `{"emoji":"🔥"}`})
+
+	if err := command.Execute(); err != nil {
+		t.Fatalf("execute react command: %v", err)
+	}
+	if got, want := strings.TrimSpace(stdout.String()), "reaction added m1 🔥"; got != want {
 		t.Fatalf("stdout mismatch: got %q want %q", got, want)
 	}
 }

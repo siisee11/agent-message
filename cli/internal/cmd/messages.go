@@ -21,6 +21,9 @@ func newSendMessageCommand(rt *Runtime) *cobra.Command {
 	var explicitText string
 	var explicitJSONRender string
 	var jsonRenderFile string
+	var payload string
+	var payloadFile string
+	var payloadStdin bool
 	var kind string
 	var attachmentPath string
 	var toUsername string
@@ -42,13 +45,19 @@ func newSendMessageCommand(rt *Runtime) *cobra.Command {
 				Text:           explicitText,
 				JSONRender:     explicitJSONRender,
 				JSONRenderFile: jsonRenderFile,
+				Payload:        payload,
+				PayloadFile:    payloadFile,
+				PayloadStdin:   payloadStdin,
 				Stdin:          stdinInput,
 			}
-			username, text, resolvedKind, err := resolveSendMessageInputs(rt.Config, rt.Stdin, options, args)
+			resolved, err := resolveSendMessageInput(rt.Config, rt.Stdin, options, args)
 			if err != nil {
 				return err
 			}
-			return runSendMessage(rt, username, text, resolvedKind, options.AttachmentPath)
+			if resolved.AttachmentPath != "" {
+				return runSendAttachmentMessage(rt, resolved.Username, resolved.Text, resolved.AttachmentPath)
+			}
+			return runSendMessageWithRequest(rt, resolved.Username, resolved.Request)
 		},
 	}
 	cmd.Flags().StringVar(&toUsername, "to", "", "Override recipient username")
@@ -57,6 +66,9 @@ func newSendMessageCommand(rt *Runtime) *cobra.Command {
 	cmd.Flags().StringVar(&explicitText, "text", "", "Explicit text message content")
 	cmd.Flags().StringVar(&explicitJSONRender, "json-render", "", "Explicit inline json_render payload")
 	cmd.Flags().StringVar(&jsonRenderFile, "json-render-file", "", "Read json_render payload from a file")
+	cmd.Flags().StringVar(&payload, "payload", "", "Raw JSON payload matching the send request body")
+	cmd.Flags().StringVar(&payloadFile, "payload-file", "", "Read the raw send JSON payload from a file")
+	cmd.Flags().BoolVar(&payloadStdin, "payload-stdin", false, "Read the raw send JSON payload from stdin")
 	cmd.Flags().BoolVar(&stdinInput, "stdin", false, "Read message content from stdin")
 	return cmd
 }
@@ -68,7 +80,60 @@ type sendMessageOptions struct {
 	Text           string
 	JSONRender     string
 	JSONRenderFile string
+	Payload        string
+	PayloadFile    string
+	PayloadStdin   bool
 	Stdin          bool
+}
+
+type resolvedSendMessageInput struct {
+	Username       string
+	Text           string
+	AttachmentPath string
+	Request        api.SendMessageRequest
+}
+
+func resolveSendMessageInput(cfg config.Config, stdin io.Reader, options sendMessageOptions, args []string) (resolvedSendMessageInput, error) {
+	trimmedTo := strings.TrimSpace(options.ToUsername)
+	trimmedMaster := strings.TrimSpace(cfg.Master)
+	trimmedAttachmentPath := strings.TrimSpace(options.AttachmentPath)
+
+	rawRequest, err := resolveRawSendMessageRequest(stdin, options)
+	if err != nil {
+		return resolvedSendMessageInput{}, err
+	}
+	if rawRequest != nil {
+		username, resolveErr := resolveExplicitRecipient(trimmedTo, trimmedMaster, args)
+		if resolveErr != nil {
+			return resolvedSendMessageInput{}, resolveErr
+		}
+		return resolvedSendMessageInput{
+			Username: username,
+			Request:  *rawRequest,
+		}, nil
+	}
+
+	username, text, resolvedKind, err := resolveSendMessageInputs(cfg, stdin, options, args)
+	if err != nil {
+		return resolvedSendMessageInput{}, err
+	}
+	if trimmedAttachmentPath != "" {
+		return resolvedSendMessageInput{
+			Username:       username,
+			Text:           text,
+			AttachmentPath: trimmedAttachmentPath,
+		}, nil
+	}
+
+	request, err := buildSendMessageRequest(text, resolvedKind)
+	if err != nil {
+		return resolvedSendMessageInput{}, err
+	}
+	return resolvedSendMessageInput{
+		Username: username,
+		Text:     text,
+		Request:  request,
+	}, nil
 }
 
 func resolveSendMessageInputs(cfg config.Config, stdin io.Reader, options sendMessageOptions, args []string) (string, string, string, error) {
@@ -207,7 +272,50 @@ func resolveExplicitRecipient(toUsername string, master string, args []string) (
 	}
 }
 
+func resolveRawSendMessageRequest(stdin io.Reader, options sendMessageOptions) (*api.SendMessageRequest, error) {
+	rawPayload, err := resolveRawPayload(stdin, rawPayloadOptions{
+		Payload:      options.Payload,
+		PayloadFile:  options.PayloadFile,
+		PayloadStdin: options.PayloadStdin,
+	})
+	if err != nil {
+		return nil, err
+	}
+	if rawPayload == nil {
+		return nil, nil
+	}
+	if strings.TrimSpace(options.AttachmentPath) != "" {
+		return nil, errors.New("raw send payload cannot be combined with --attach")
+	}
+	if strings.TrimSpace(options.Text) != "" || strings.TrimSpace(options.JSONRender) != "" || strings.TrimSpace(options.JSONRenderFile) != "" || options.Stdin {
+		return nil, errors.New("raw send payload cannot be combined with --text, --json-render, --json-render-file, or --stdin")
+	}
+	request, err := decodeStrictJSONObject[api.SendMessageRequest](rawPayload, "send payload")
+	if err != nil {
+		return nil, err
+	}
+	return &request, nil
+}
+
 func runSendMessage(rt *Runtime, username, text, kind, attachmentPath string) error {
+	if strings.TrimSpace(attachmentPath) != "" {
+		trimmedKind := strings.TrimSpace(kind)
+		if trimmedKind == "" {
+			trimmedKind = "text"
+		}
+		if trimmedKind != "text" {
+			return errors.New("attachments are only supported with kind text")
+		}
+		return runSendAttachmentMessage(rt, username, text, attachmentPath)
+	}
+	request, err := buildSendMessageRequest(text, kind)
+	if err != nil {
+		return err
+	}
+	return runSendMessageWithRequest(rt, username, request)
+}
+
+func runSendAttachmentMessage(rt *Runtime, username, text, attachmentPath string) error {
 	if err := ensureRuntime(rt); err != nil {
 		return err
 	}
@@ -215,14 +323,9 @@ func runSendMessage(rt *Runtime, username, text, kind, attachmentPath string) er
 		return err
 	}
 
-	trimmedKind := strings.TrimSpace(kind)
-	if trimmedKind == "" {
-		trimmedKind = "text"
-	}
-
 	trimmedAttachmentPath := strings.TrimSpace(attachmentPath)
-	if trimmedAttachmentPath != "" && trimmedKind != "text" {
-		return errors.New("attachments are only supported with kind text")
+	if trimmedAttachmentPath == "" {
+		return errors.New("attachment path is required")
 	}
 
 	conversationID, err := resolveConversationIDByUsername(context.Background(), rt, username)
@@ -230,24 +333,40 @@ func runSendMessage(rt *Runtime, username, text, kind, attachmentPath string) er
 		return err
 	}
 
-	var message api.Message
-	if trimmedAttachmentPath != "" {
-		var content *string
-		trimmedText := strings.TrimSpace(text)
-		if trimmedText != "" {
-			content = &trimmedText
-		}
-		message, err = rt.Client.SendAttachmentMessage(context.Background(), conversationID, api.SendAttachmentMessageRequest{
-			Content:        content,
-			AttachmentPath: trimmedAttachmentPath,
-		})
-	} else {
-		request, buildErr := buildSendMessageRequest(text, trimmedKind)
-		if buildErr != nil {
-			return buildErr
-		}
-		message, err = rt.Client.SendMessage(context.Background(), conversationID, request)
+	var content *string
+	trimmedText := strings.TrimSpace(text)
+	if trimmedText != "" {
+		content = &trimmedText
 	}
+	message, err := rt.Client.SendAttachmentMessage(context.Background(), conversationID, api.SendAttachmentMessageRequest{
+		Content:        content,
+		AttachmentPath: trimmedAttachmentPath,
+	})
+	if err != nil {
+		return err
+	}
+
+	return writeTextOrJSON(rt, fmt.Sprintf("sent %s", message.ID), map[string]any{
+		"message":         message,
+		"recipient":       username,
+		"conversation_id": conversationID,
+	})
+}
+
+func runSendMessageWithRequest(rt *Runtime, username string, request api.SendMessageRequest) error {
+	if err := ensureRuntime(rt); err != nil {
+		return err
+	}
+	if err := ensureLoggedIn(rt); err != nil {
+		return err
+	}
+
+	conversationID, err := resolveConversationIDByUsername(context.Background(), rt, username)
+	if err != nil {
+		return err
+	}
+
+	message, err := rt.Client.SendMessage(context.Background(), conversationID, request)
 	if err != nil {
 		return err
 	}

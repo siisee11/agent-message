@@ -39,6 +39,20 @@ impl AgentMessageClient {
         Ok(server_url.to_string())
     }
 
+    pub(crate) async fn master_username(&self) -> Result<String> {
+        let output = self
+            .run(&["config", "get", "master"])
+            .await
+            .context("run `agent-message config get master`")?;
+        let master = output.trim();
+        if master.is_empty() {
+            bail!(
+                "agent-message master is empty; pass --to or set one with `agent-message config set master <username>`"
+            );
+        }
+        Ok(master.to_string())
+    }
+
     pub(crate) async fn register(&self, username: &str, password: &str) -> Result<()> {
         let output = self
             .run(&["register", username, password])

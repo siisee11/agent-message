@@ -12,6 +12,8 @@ npm install -g agent-message claude-message
 `claude-message` expects both `agent-message` and the `claude` CLI to already
 be available on your `PATH`.
 
+If `--to` is omitted, `claude-message` uses the current `agent-message` `master` value.
+
 Behavior:
 
 1. Starts a fresh `agent-{chatId}` account with a generated password.
@@ -26,7 +28,9 @@ Behavior:
 Example:
 
 ```bash
-claude-message --to jay --model sonnet --permission-mode accept-edits
+agent-message config set master jay
+claude-message --model sonnet --permission-mode accept-edits
+claude-message --to alice --model sonnet --permission-mode accept-edits
 ```
 
 Build from the repo root:
@@ -38,7 +42,7 @@ make claude-message-build
 
 Useful flags:
 
-- `--to jay`
+- `--to <username>` overrides `agent-message` `master`
 - `--cwd /path/to/worktree`
 - `--model sonnet`
 - `--permission-mode accept-edits`

@@ -40,8 +40,8 @@ impl Runtime {
         let chat_id = new_chat_id();
         let username = format!("agent-{chat_id}");
         let password = new_password();
-        let to_username = config.to_username.clone();
         let mut agent_client = AgentMessageClient::new(std::path::PathBuf::from("agent-message"));
+        let to_username = resolve_target_username(&config, &agent_client).await?;
         let server_url = agent_client
             .server_url()
             .await
@@ -229,6 +229,25 @@ impl Runtime {
             );
         }
     }
+}
+
+async fn resolve_target_username(
+    config: &Config,
+    agent_client: &AgentMessageClient,
+) -> Result<String> {
+    if let Some(username) = config
+        .to_username
+        .as_deref()
+        .map(str::trim)
+        .filter(|username| !username.is_empty())
+    {
+        return Ok(username.to_string());
+    }
+
+    agent_client
+        .master_username()
+        .await
+        .context("resolve target username from agent-message master")
 }
 
 #[derive(Debug)]

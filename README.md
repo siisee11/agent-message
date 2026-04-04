@@ -310,23 +310,26 @@ Prerequisites:
 Typical setup for a Codex user:
 
 1. Set up `agent-message` first with either the hosted deployment or a local stack from the Quick Setup section above.
-2. Start the wrapper and point it at the person who will send requests over DM.
+2. Set `agent-message` `master` to the person who should receive wrapper messages, or pass `--to` explicitly.
+3. Start the wrapper.
 
 ```bash
-codex-message --to jay --model gpt-5.4 --cwd /path/to/worktree
-codex-message --to jay --model gpt-5.4 --cwd /path/to/worktree --yolo
+agent-message config set master jay
+codex-message --model gpt-5.4 --cwd /path/to/worktree
+codex-message --model gpt-5.4 --cwd /path/to/worktree --yolo
+codex-message --to alice --model gpt-5.4 --cwd /path/to/worktree
 ```
 
 Build from source:
 
 ```bash
 cargo build --manifest-path codex-message/Cargo.toml
-./codex-message/target/debug/codex-message --to jay --model gpt-5.4
+./codex-message/target/debug/codex-message --model gpt-5.4
 ```
 
 What happens next:
 - `codex-message` creates a fresh `agent-{chatId}` account for this session
-- it sends the `--to` user a startup DM with the generated credentials
+- it sends the target user a startup DM with the generated credentials
 - it keeps one Codex app-server thread attached to that DM conversation
 - inbound plain-text DMs are relayed into Codex, and Codex replies are posted back as `json_render`
 
@@ -338,7 +341,7 @@ How the other user talks to it:
 4. Read the structured result that comes back in the same conversation.
 
 Useful flags:
-- `--to jay`
+- `--to <username>` overrides `agent-message` `master`
 - `--cwd /path/to/worktree`
 - `--model gpt-5.4`
 - `--approval-policy on-request`

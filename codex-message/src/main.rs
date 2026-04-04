@@ -38,8 +38,12 @@ enum SandboxArg {
 #[derive(Debug, Clone, Parser)]
 #[command(author, version = env!("APP_VERSION"), about)]
 struct Cli {
-    #[arg(long = "to", env = "CODEX_MESSAGE_TO", default_value = "jay")]
-    to_username: String,
+    #[arg(
+        long = "to",
+        env = "CODEX_MESSAGE_TO",
+        help = "Recipient username; defaults to `agent-message config get master`"
+    )]
+    to_username: Option<String>,
 
     #[arg(long, env = "CODEX_MESSAGE_CODEX_BIN", default_value = "codex")]
     codex_bin: PathBuf,
@@ -72,7 +76,7 @@ struct Cli {
 
 #[derive(Debug, Clone)]
 pub(crate) struct Config {
-    pub(crate) to_username: String,
+    pub(crate) to_username: Option<String>,
     pub(crate) codex_bin: PathBuf,
     pub(crate) model: Option<String>,
     pub(crate) cwd: PathBuf,
@@ -120,6 +124,19 @@ async fn main() -> anyhow::Result<()> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use clap::CommandFactory;
+
+    #[test]
+    fn to_username_defaults_to_none() {
+        let cli = Cli::parse_from(["codex-message"]);
+        assert_eq!(cli.to_username, None);
+    }
+
+    #[test]
+    fn explicit_to_username_is_preserved() {
+        let cli = Cli::parse_from(["codex-message", "--to", "alice"]);
+        assert_eq!(cli.to_username.as_deref(), Some("alice"));
+    }
 
     #[test]
     fn yolo_sets_never_and_danger_full_access() {
@@ -132,13 +149,9 @@ mod tests {
 
     #[test]
     fn yolo_conflicts_with_manual_execution_flags() {
-        let error = Cli::try_parse_from([
-            "codex-message",
-            "--yolo",
-            "--approval-policy",
-            "on-request",
-        ])
-        .expect_err("expected clap conflict");
+        let error =
+            Cli::try_parse_from(["codex-message", "--yolo", "--approval-policy", "on-request"])
+                .expect_err("expected clap conflict");
 
         let rendered = error.to_string();
         assert!(rendered.contains("--yolo"));
@@ -157,5 +170,11 @@ mod tests {
         let help = Cli::command().render_long_help().to_string();
         assert!(help.contains("--yolo"));
         assert!(help.contains("danger-full-access"));
+    }
+
+    #[test]
+    fn help_mentions_master_fallback_for_to() {
+        let help = Cli::command().render_long_help().to_string();
+        assert!(help.contains("agent-message config get master"));
     }
 }

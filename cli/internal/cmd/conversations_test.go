@@ -79,6 +79,30 @@ func TestRunOpenConversationUsesResolverAndPrintsConversation(t *testing.T) {
 	}
 }
 
+func TestRunListConversationsSupportsJSONOutput(t *testing.T) {
+	t.Parallel()
+
+	rt, stdout, _ := newTestRuntime(t, "http://example.test", "tok-1", func(req *http.Request, _ []byte) (*http.Response, error) {
+		return jsonResponse(http.StatusOK, `[
+			{"conversation":{"id":"c1","participant_a":"u1","participant_b":"u2","created_at":"2026-01-01T00:00:00Z"},"other_user":{"id":"u2","username":"bob","created_at":"2026-01-01T00:00:00Z"}}
+		]`), nil
+	})
+	rt.JSONOutput = true
+
+	if err := runListConversations(rt); err != nil {
+		t.Fatalf("runListConversations: %v", err)
+	}
+
+	var payload map[string]any
+	if err := json.Unmarshal(stdout.Bytes(), &payload); err != nil {
+		t.Fatalf("decode stdout json: %v", err)
+	}
+	items, ok := payload["conversations"].([]any)
+	if !ok || len(items) != 1 {
+		t.Fatalf("unexpected conversations payload: %+v", payload)
+	}
+}
+
 func TestResolveConversationIDByUsernameReturnsConversationID(t *testing.T) {
 	t.Parallel()
 

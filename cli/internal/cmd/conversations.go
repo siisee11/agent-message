@@ -34,6 +34,11 @@ func runListConversations(rt *Runtime) error {
 	if err != nil {
 		return err
 	}
+	if rt.JSONOutput {
+		return writeJSON(rt.Stdout, map[string]any{
+			"conversations": summaries,
+		})
+	}
 
 	for _, summary := range summaries {
 		_, _ = fmt.Fprintf(rt.Stdout, "%s %s\n", summary.Conversation.ID, summary.OtherUser.Username)
@@ -63,8 +68,12 @@ func runOpenConversation(rt *Runtime, username string) error {
 	}
 
 	otherUsername := resolveOtherUsername(details, strings.TrimSpace(username))
-	_, _ = fmt.Fprintf(rt.Stdout, "%s %s\n", details.Conversation.ID, otherUsername)
-	return nil
+	return writeTextOrJSON(rt, fmt.Sprintf("%s %s", details.Conversation.ID, otherUsername), map[string]any{
+		"conversation":   details.Conversation,
+		"participant_a":  details.ParticipantA,
+		"participant_b":  details.ParticipantB,
+		"other_username": otherUsername,
+	})
 }
 
 // resolveConversationByUsername gets or creates a DM conversation for the provided username.

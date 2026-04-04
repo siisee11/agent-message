@@ -1,9 +1,11 @@
 package cobra
 
 import (
+	"encoding/json"
 	"errors"
 	"fmt"
 	"os"
+	"sort"
 	"strconv"
 	"strings"
 )
@@ -44,6 +46,31 @@ type Command struct {
 	argsOverride    []string
 }
 
+type FlagInfo struct {
+	Name       string `json:"name"`
+	Shorthand  string `json:"shorthand,omitempty"`
+	Type       string `json:"type"`
+	Usage      string `json:"usage"`
+	Default    any    `json:"default,omitempty"`
+	Persistent bool   `json:"persistent,omitempty"`
+}
+
+func (c *Command) CommandPath() string {
+	if c == nil {
+		return ""
+	}
+	parts := make([]string, 0, 4)
+	for current := c; current != nil; current = current.parent {
+		if name := current.Name(); name != "" {
+			parts = append(parts, name)
+		}
+	}
+	for left, right := 0, len(parts)-1; left < right; left, right = left+1, right-1 {
+		parts[left], parts[right] = parts[right], parts[left]
+	}
+	return strings.Join(parts, " ")
+}
+
 func (c *Command) Name() string {
 	trimmed := strings.TrimSpace(c.Use)
 	if trimmed == "" {
@@ -64,6 +91,13 @@ func (c *Command) AddCommand(cmds ...*Command) {
 		cmd.parent = c
 		c.subcommands = append(c.subcommands, cmd)
 	}
+}
+
+func (c *Command) Children() []*Command {
+	if c == nil || len(c.subcommands) == 0 {
+		return nil
+	}
+	return append([]*Command(nil), c.subcommands...)
 }
 
 func (c *Command) Flags() *FlagSet {
@@ -100,6 +134,17 @@ func (c *Command) ExecuteC() (*Command, error) {
 }
 
 func (c *Command) execute(args []string, inheritedPersistent *flagRegistry) (*Command, error) {
+	if c == nil {
+		return nil, errors.New("command is required")
+	}
+	if target, jsonMode, ok, err := c.resolveHelpRequest(args, inheritedPersistent); ok || err != nil {
+		if err != nil {
+			return c, err
+		}
+		target.printHelp(jsonMode)
+		return target, nil
+	}
+
 	mergedPersistent := mergeFlagRegistries(inheritedPersistent, toRegistry(c.persistentFlags))
 
 	if len(c.subcommands) > 0 {
@@ -109,7 +154,8 @@ func (c *Command) execute(args []string, inheritedPersistent *flagRegistry) (*Co
 		}
 		if len(remaining) == 0 {
 			if c.RunE == nil {
-				return c, errors.New("command is required")
+				c.printHelp(containsJSONFlag(args))
+				return c, nil
 			}
 			if err := c.runWithHooks(nil); err != nil {
 				return c, err
@@ -162,6 +208,231 @@ func (c *Command) runWithHooks(args []string) error {
 	return nil
 }
 
+func (c *Command) resolveHelpRequest(args []string, inheritedPersistent *flagRegistry) (*Command, bool, bool, error) {
+	if len(args) == 0 {
+		return nil, false, false, nil
+	}
+	if strings.TrimSpace(args[0]) == "help" {
+		target, err := c.findCommandForHelp(args[1:], inheritedPersistent)
+		if err != nil {
+			return nil, false, true, err
+		}
+		return target, containsJSONFlag(args), true, nil
+	}
+	if !containsHelpFlag(args) {
+		return nil, false, false, nil
+	}
+	target, err := c.findCommandForHelp(filterArgs(args, func(arg string) bool {
+		return arg == "--help" || arg == "-h"
+	}), inheritedPersistent)
+	if err != nil {
+		return nil, false, true, err
+	}
+	return target, containsJSONFlag(args), true, nil
+}
+
+func (c *Command) findCommandForHelp(args []string, inheritedPersistent *flagRegistry) (*Command, error) {
+	if c == nil {
+		return nil, errors.New("command is required")
+	}
+	mergedPersistent := mergeFlagRegistries(inheritedPersistent, toRegistry(c.persistentFlags))
+	remaining, err := mergedPersistent.parsePrefix(args)
+	if err != nil {
+		return nil, err
+	}
+	if len(remaining) == 0 || len(c.subcommands) == 0 {
+		return c, nil
+	}
+
+	subName := remaining[0]
+	for _, child := range c.subcommands {
+		if child.Name() == subName {
+			return child.findCommandForHelp(remaining[1:], mergedPersistent)
+		}
+	}
+	return nil, fmt.Errorf("unknown command: %s", subName)
+}
+
+func (c *Command) printHelp(jsonMode bool) {
+	if jsonMode {
+		_ = writeHelpJSON(os.Stdout, c)
+		return
+	}
+	_, _ = fmt.Fprint(os.Stdout, c.HelpText())
+}
+
+func (c *Command) HelpText() string {
+	if c == nil {
+		return ""
+	}
+
+	var builder strings.Builder
+	if short := strings.TrimSpace(c.Short); short != "" {
+		builder.WriteString(short)
+		builder.WriteString("\n\n")
+	}
+
+	builder.WriteString("Usage:\n")
+	builder.WriteString("  ")
+	builder.WriteString(c.CommandPath())
+	if use := strings.TrimSpace(c.Use); use != "" {
+		suffix := strings.TrimSpace(strings.TrimPrefix(use, c.Name()))
+		if suffix != "" {
+			builder.WriteString(" ")
+			builder.WriteString(suffix)
+		}
+	}
+	if len(c.allVisibleFlags()) > 0 {
+		builder.WriteString(" [flags]")
+	}
+	builder.WriteString("\n")
+
+	if len(c.subcommands) > 0 {
+		builder.WriteString("\nAvailable Commands:\n")
+		for _, child := range c.sortedSubcommands() {
+			builder.WriteString(fmt.Sprintf("  %-18s %s\n", child.Name(), strings.TrimSpace(child.Short)))
+		}
+	}
+
+	flags := c.allVisibleFlags()
+	if len(flags) > 0 {
+		builder.WriteString("\nFlags:\n")
+		for _, spec := range flags {
+			builder.WriteString("  ")
+			builder.WriteString(spec.helpLine())
+			builder.WriteString("\n")
+		}
+	}
+	return builder.String()
+}
+
+func (c *Command) allVisibleFlags() []*flagSpec {
+	if c == nil {
+		return nil
+	}
+	seen := make(map[string]struct{})
+	flags := make([]*flagSpec, 0, 8)
+
+	ancestors := make([]*Command, 0, 4)
+	for current := c.parent; current != nil; current = current.parent {
+		ancestors = append(ancestors, current)
+	}
+	for left, right := 0, len(ancestors)-1; left < right; left, right = left+1, right-1 {
+		ancestors[left], ancestors[right] = ancestors[right], ancestors[left]
+	}
+	for _, ancestor := range ancestors {
+		flags = appendUniqueFlagSpecs(flags, ancestor.persistentFlags, seen)
+	}
+	flags = appendUniqueFlagSpecs(flags, c.persistentFlags, seen)
+	flags = appendUniqueFlagSpecs(flags, c.flags, seen)
+	return flags
+}
+
+func appendUniqueFlagSpecs(dst []*flagSpec, set *FlagSet, seen map[string]struct{}) []*flagSpec {
+	if set == nil {
+		return dst
+	}
+	for _, spec := range set.specs {
+		if spec == nil {
+			continue
+		}
+		key := spec.name
+		if key == "" {
+			key = "-" + spec.shorthand
+		}
+		if _, ok := seen[key]; ok {
+			continue
+		}
+		seen[key] = struct{}{}
+		dst = append(dst, spec)
+	}
+	return dst
+}
+
+func (c *Command) sortedSubcommands() []*Command {
+	out := append([]*Command(nil), c.subcommands...)
+	sort.Slice(out, func(i, j int) bool {
+		return out[i].Name() < out[j].Name()
+	})
+	return out
+}
+
+func containsHelpFlag(args []string) bool {
+	for _, arg := range args {
+		if arg == "--help" || arg == "-h" {
+			return true
+		}
+	}
+	return false
+}
+
+func containsJSONFlag(args []string) bool {
+	for _, arg := range args {
+		if arg == "--json" {
+			return true
+		}
+	}
+	return false
+}
+
+func filterArgs(args []string, drop func(string) bool) []string {
+	filtered := make([]string, 0, len(args))
+	for _, arg := range args {
+		if drop(arg) {
+			continue
+		}
+		filtered = append(filtered, arg)
+	}
+	return filtered
+}
+
+func writeHelpJSON(w *os.File, c *Command) error {
+	encoder := json.NewEncoder(w)
+	encoder.SetEscapeHTML(false)
+	return encoder.Encode(map[string]any{
+		"command":     c.Name(),
+		"path":        c.CommandPath(),
+		"use":         strings.TrimSpace(c.Use),
+		"short":       strings.TrimSpace(c.Short),
+		"subcommands": buildHelpJSONSubcommands(c),
+		"flags":       buildHelpJSONFlags(c.allVisibleFlags()),
+	})
+}
+
+func buildHelpJSONSubcommands(c *Command) []map[string]string {
+	if c == nil || len(c.subcommands) == 0 {
+		return []map[string]string{}
+	}
+	items := make([]map[string]string, 0, len(c.subcommands))
+	for _, child := range c.sortedSubcommands() {
+		items = append(items, map[string]string{
+			"name":  child.Name(),
+			"use":   strings.TrimSpace(child.Use),
+			"short": strings.TrimSpace(child.Short),
+		})
+	}
+	return items
+}
+
+func buildHelpJSONFlags(flags []*flagSpec) []map[string]string {
+	items := make([]map[string]string, 0, len(flags))
+	for _, spec := range flags {
+		if spec == nil {
+			continue
+		}
+		item := map[string]string{
+			"name":  spec.name,
+			"type":  spec.kind.helpType(),
+			"usage": strings.TrimSpace(spec.usage),
+		}
+		if spec.shorthand != "" {
+			item["shorthand"] = spec.shorthand
+		}
+		items = append(items, item)
+	}
+	return items
+}
+
 // FlagSet stores command flag definitions.
 type FlagSet struct {
 	specs []*flagSpec
@@ -170,7 +441,9 @@ type FlagSet struct {
 type flagSpec struct {
 	name      string
 	shorthand string
+	usage     string
 	kind      flagKind
+	defValue  any
 	stringDst *string
 	intDst    *int
 	boolDst   *bool
@@ -184,42 +457,139 @@ const (
 	flagKindBool
 )
 
+func (k flagKind) helpType() string {
+	switch k {
+	case flagKindString:
+		return "string"
+	case flagKindInt:
+		return "int"
+	case flagKindBool:
+		return "bool"
+	default:
+		return "unknown"
+	}
+}
+
+func (s *flagSpec) helpLine() string {
+	if s == nil {
+		return ""
+	}
+	parts := make([]string, 0, 2)
+	if s.shorthand != "" {
+		parts = append(parts, "-"+s.shorthand)
+	}
+	long := "--" + s.name
+	if s.kind != flagKindBool {
+		long += " <" + s.kind.helpType() + ">"
+	}
+	parts = append(parts, long)
+	line := strings.Join(parts, ", ")
+	if usage := strings.TrimSpace(s.usage); usage != "" {
+		line += "  " + usage
+	}
+	return line
+}
+
 func NewFlagSet() *FlagSet {
 	return &FlagSet{specs: make([]*flagSpec, 0, 4)}
 }
 
-func (f *FlagSet) StringVar(dst *string, name, value, _ string) {
+func (f *FlagSet) StringVar(dst *string, name, value, usage string) {
 	if dst != nil {
 		*dst = value
 	}
 	f.specs = append(f.specs, &flagSpec{
 		name:      strings.TrimSpace(name),
+		usage:     strings.TrimSpace(usage),
 		kind:      flagKindString,
+		defValue:  value,
 		stringDst: dst,
 	})
 }
 
-func (f *FlagSet) IntP(name, shorthand string, value int, _ string) *int {
+func (f *FlagSet) IntP(name, shorthand string, value int, usage string) *int {
 	dst := new(int)
 	*dst = value
 	f.specs = append(f.specs, &flagSpec{
 		name:      strings.TrimSpace(name),
 		shorthand: strings.TrimSpace(shorthand),
+		usage:     strings.TrimSpace(usage),
 		kind:      flagKindInt,
+		defValue:  value,
 		intDst:    dst,
 	})
 	return dst
 }
 
-func (f *FlagSet) BoolVar(dst *bool, name string, value bool, _ string) {
+func (f *FlagSet) BoolVar(dst *bool, name string, value bool, usage string) {
 	if dst != nil {
 		*dst = value
 	}
 	f.specs = append(f.specs, &flagSpec{
-		name:    strings.TrimSpace(name),
-		kind:    flagKindBool,
-		boolDst: dst,
+		name:     strings.TrimSpace(name),
+		usage:    strings.TrimSpace(usage),
+		kind:     flagKindBool,
+		defValue: value,
+		boolDst:  dst,
 	})
+}
+
+func (c *Command) LocalFlagInfos() []FlagInfo {
+	return buildFlagInfos(c.flags, false)
+}
+
+func (c *Command) PersistentFlagInfos() []FlagInfo {
+	return buildFlagInfos(c.persistentFlags, true)
+}
+
+func (c *Command) InheritedPersistentFlagInfos() []FlagInfo {
+	if c == nil {
+		return nil
+	}
+	ancestors := make([]*Command, 0, 4)
+	for current := c.parent; current != nil; current = current.parent {
+		ancestors = append(ancestors, current)
+	}
+	for left, right := 0, len(ancestors)-1; left < right; left, right = left+1, right-1 {
+		ancestors[left], ancestors[right] = ancestors[right], ancestors[left]
+	}
+	seen := make(map[string]struct{})
+	out := make([]FlagInfo, 0, 8)
+	for _, ancestor := range ancestors {
+		for _, info := range buildFlagInfos(ancestor.persistentFlags, true) {
+			key := info.Name
+			if key == "" {
+				key = "-" + info.Shorthand
+			}
+			if _, ok := seen[key]; ok {
+				continue
+			}
+			seen[key] = struct{}{}
+			out = append(out, info)
+		}
+	}
+	return out
+}
+
+func buildFlagInfos(set *FlagSet, persistent bool) []FlagInfo {
+	if set == nil || len(set.specs) == 0 {
+		return nil
+	}
+	out := make([]FlagInfo, 0, len(set.specs))
+	for _, spec := range set.specs {
+		if spec == nil {
+			continue
+		}
+		out = append(out, FlagInfo{
+			Name:       spec.name,
+			Shorthand:  spec.shorthand,
+			Type:       spec.kind.helpType(),
+			Usage:      spec.usage,
+			Default:    spec.defValue,
+			Persistent: persistent,
+		})
+	}
+	return out
 }
 
 type flagRegistry struct {

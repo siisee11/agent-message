@@ -232,6 +232,52 @@ func TestRunSendMessageSupportsJSONRenderKind(t *testing.T) {
 	}
 }
 
+func TestRunSendMessageSupportsJSONOutput(t *testing.T) {
+	t.Parallel()
+
+	rt, stdout, _ := newTestRuntime(t, "http://example.test", "tok-send", func(req *http.Request, body []byte) (*http.Response, error) {
+		switch {
+		case req.Method == http.MethodPost && req.URL.Path == "/api/conversations":
+			return jsonResponse(http.StatusOK, `{
+				"conversation":{"id":"c-send","participant_a":"u1","participant_b":"u2","created_at":"2026-01-01T00:00:00Z"},
+				"participant_a":{"id":"u1","username":"alice","created_at":"2026-01-01T00:00:00Z"},
+				"participant_b":{"id":"u2","username":"bob","created_at":"2026-01-01T00:00:00Z"}
+			}`), nil
+		case req.Method == http.MethodPost && req.URL.Path == "/api/conversations/c-send/messages":
+			var payload map[string]string
+			if err := json.Unmarshal(body, &payload); err != nil {
+				t.Fatalf("decode send payload: %v", err)
+			}
+			return jsonResponse(http.StatusCreated, `{
+				"id":"m-send",
+				"conversation_id":"c-send",
+				"sender_id":"u1",
+				"content":"hello world",
+				"edited":false,
+				"deleted":false,
+				"created_at":"2026-01-01T00:00:00Z",
+				"updated_at":"2026-01-01T00:00:00Z"
+			}`), nil
+		default:
+			t.Fatalf("unexpected request: %s %s", req.Method, req.URL.Path)
+			return nil, nil
+		}
+	})
+	rt.JSONOutput = true
+
+	if err := runSendMessage(rt, "bob", "hello world", "text", ""); err != nil {
+		t.Fatalf("runSendMessage: %v", err)
+	}
+
+	var payload map[string]any
+	if err := json.Unmarshal(stdout.Bytes(), &payload); err != nil {
+		t.Fatalf("decode stdout json: %v", err)
+	}
+	if got, want := payload["recipient"], "bob"; got != want {
+		t.Fatalf("recipient mismatch: got %v want %q", got, want)
+	}
+}
+
 func TestRunSendMessageSupportsAttachment(t *testing.T) {
 	t.Parallel()
 
@@ -420,7 +466,11 @@ func TestResolveSendMessageInputs(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
-			gotUsername, gotText, err := resolveSendMessageInputs(tc.cfg, tc.to, tc.args, tc.kind, tc.attachmentPath)
+			gotUsername, gotText, _, err := resolveSendMessageInputs(tc.cfg, nil, sendMessageOptions{
+				ToUsername:     tc.to,
+				Kind:           tc.kind,
+				AttachmentPath: tc.attachmentPath,
+			}, tc.args)
 			if tc.wantErr != "" {
 				if err == nil {
 					t.Fatalf("expected error")
@@ -440,6 +490,47 @@ func TestResolveSendMessageInputs(t *testing.T) {
 				t.Fatalf("text mismatch: got %q want %q", gotText, tc.wantText)
 			}
 		})
+	}
+}
+
+func TestResolveSendMessageInputsSupportsExplicitContentFlags(t *testing.T) {
+	t.Parallel()
+
+	gotUsername, gotText, gotKind, err := resolveSendMessageInputs(config.Config{Master: "jay"}, nil, sendMessageOptions{
+		Text: "hello explicit",
+	}, nil)
+	if err != nil {
+		t.Fatalf("resolveSendMessageInputs: %v", err)
+	}
+	if got, want := gotUsername, "jay"; got != want {
+		t.Fatalf("username mismatch: got %q want %q", got, want)
+	}
+	if got, want := gotText, "hello explicit"; got != want {
+		t.Fatalf("text mismatch: got %q want %q", got, want)
+	}
+	if got, want := gotKind, "text"; got != want {
+		t.Fatalf("kind mismatch: got %q want %q", got, want)
+	}
+}
+
+func TestResolveSendMessageInputsSupportsJSONRenderFile(t *testing.T) {
+	t.Parallel()
+
+	path := createTestAttachmentFile(t, "spec.json", []byte(`{"root":"stack-1"}`))
+	gotUsername, gotText, gotKind, err := resolveSendMessageInputs(config.Config{}, nil, sendMessageOptions{
+		JSONRenderFile: path,
+	}, []string{"bob"})
+	if err != nil {
+		t.Fatalf("resolveSendMessageInputs: %v", err)
+	}
+	if got, want := gotUsername, "bob"; got != want {
+		t.Fatalf("username mismatch: got %q want %q", got, want)
+	}
+	if got, want := gotText, `{"root":"stack-1"}`; got != want {
+		t.Fatalf("text mismatch: got %q want %q", got, want)
+	}
+	if got, want := gotKind, "json_render"; got != want {
+		t.Fatalf("kind mismatch: got %q want %q", got, want)
 	}
 }
 

@@ -13,17 +13,33 @@ import (
 )
 
 func newEditMessageCommand(rt *Runtime) *cobra.Command {
-	return &cobra.Command{
-		Use:   "edit <index> <text>",
-		Short: "Edit a message by index from last read",
-		Args:  cobra.ExactArgs(2),
+	var explicitMessageID string
+	cmd := &cobra.Command{
+		Use:   "edit [message-id-or-index] <text>",
+		Short: "Edit a message by explicit message ID or by index from the last read",
+		Args: func(_ *cobra.Command, args []string) error {
+			if len(args) < 1 || len(args) > 2 {
+				return fmt.Errorf("accepts 1 or 2 arg(s), received %d", len(args))
+			}
+			return nil
+		},
 		RunE: func(_ *cobra.Command, args []string) error {
-			return runEditMessage(rt, args[0], args[1])
+			return nil
 		},
 	}
+	cmd.Flags().StringVar(&explicitMessageID, "message-id", "", "Edit by explicit message ID")
+	indexPtr := cmd.Flags().IntP("index", "", 0, "Edit by index from the last read")
+	cmd.RunE = func(_ *cobra.Command, args []string) error {
+		selector, text, err := resolveEditArgs(args, explicitMessageID, *indexPtr)
+		if err != nil {
+			return err
+		}
+		return runEditMessage(rt, selector, text, explicitMessageID, *indexPtr)
+	}
+	return cmd
 }
 
-func runEditMessage(rt *Runtime, indexArg string, text string) error {
+func runEditMessage(rt *Runtime, selectorArg string, text string, explicitMessageID string, explicitIndex int) error {
 	if err := ensureRuntime(rt); err != nil {
 		return err
 	}
@@ -36,7 +52,7 @@ func runEditMessage(rt *Runtime, indexArg string, text string) error {
 		return errors.New("message text is required")
 	}
 
-	messageID, _, err := resolveMessageIDFromLastRead(rt, indexArg)
+	messageID, source, err := resolveMessageTarget(rt, selectorArg, explicitMessageID, explicitIndex)
 	if err != nil {
 		return err
 	}
@@ -46,22 +62,47 @@ func runEditMessage(rt *Runtime, indexArg string, text string) error {
 		return err
 	}
 
-	_, _ = fmt.Fprintf(rt.Stdout, "edited %s\n", message.ID)
-	return nil
+	return writeTextOrJSON(rt, fmt.Sprintf("edited %s", message.ID), map[string]any{
+		"action":     "edited",
+		"message":    message,
+		"message_id": message.ID,
+		"source":     source,
+	})
 }
 
 func newDeleteMessageCommand(rt *Runtime) *cobra.Command {
-	return &cobra.Command{
-		Use:   "delete <index>",
-		Short: "Delete a message by index from last read",
-		Args:  cobra.ExactArgs(1),
+	var explicitMessageID string
+	index := 0
+	cmd := &cobra.Command{
+		Use:   "delete [message-id-or-index]",
+		Short: "Delete a message by explicit message ID or by index from the last read",
+		Args: func(_ *cobra.Command, args []string) error {
+			if len(args) > 1 {
+				return fmt.Errorf("accepts at most 1 arg(s), received %d", len(args))
+			}
+			return nil
+		},
 		RunE: func(_ *cobra.Command, args []string) error {
-			return runDeleteMessage(rt, args[0])
+			selector, err := resolveDeleteArgs(args, explicitMessageID, index)
+			if err != nil {
+				return err
+			}
+			return runDeleteMessage(rt, selector, explicitMessageID, index)
 		},
 	}
+	cmd.Flags().StringVar(&explicitMessageID, "message-id", "", "Delete by explicit message ID")
+	indexPtr := cmd.Flags().IntP("index", "", 0, "Delete by index from the last read")
+	cmd.RunE = func(_ *cobra.Command, args []string) error {
+		selector, err := resolveDeleteArgs(args, explicitMessageID, *indexPtr)
+		if err != nil {
+			return err
+		}
+		return runDeleteMessage(rt, selector, explicitMessageID, *indexPtr)
+	}
+	return cmd
 }
 
-func runDeleteMessage(rt *Runtime, indexArg string) error {
+func runDeleteMessage(rt *Runtime, selectorArg string, explicitMessageID string, explicitIndex int) error {
 	if err := ensureRuntime(rt); err != nil {
 		return err
 	}
@@ -69,7 +110,7 @@ func runDeleteMessage(rt *Runtime, indexArg string) error {
 		return err
 	}
 
-	messageID, _, err := resolveMessageIDFromLastRead(rt, indexArg)
+	messageID, source, err := resolveMessageTarget(rt, selectorArg, explicitMessageID, explicitIndex)
 	if err != nil {
 		return err
 	}
@@ -79,22 +120,46 @@ func runDeleteMessage(rt *Runtime, indexArg string) error {
 		return err
 	}
 
-	_, _ = fmt.Fprintf(rt.Stdout, "deleted %s\n", message.ID)
-	return nil
+	return writeTextOrJSON(rt, fmt.Sprintf("deleted %s", message.ID), map[string]any{
+		"action":     "deleted",
+		"message":    message,
+		"message_id": message.ID,
+		"source":     source,
+	})
 }
 
 func newReactCommand(rt *Runtime) *cobra.Command {
-	return &cobra.Command{
-		Use:   "react <message-id> <emoji>",
-		Short: "React to a message by message ID",
-		Args:  cobra.ExactArgs(2),
+	var explicitMessageID string
+	cmd := &cobra.Command{
+		Use:   "react [message-id-or-index] <emoji>",
+		Short: "React to a message by explicit message ID or by index from the last read",
+		Args: func(_ *cobra.Command, args []string) error {
+			if len(args) < 1 || len(args) > 2 {
+				return fmt.Errorf("accepts 1 or 2 arg(s), received %d", len(args))
+			}
+			return nil
+		},
 		RunE: func(_ *cobra.Command, args []string) error {
-			return runReact(rt, args[0], args[1])
+			selector, emoji, err := resolveReactionArgs(args, explicitMessageID, 0)
+			if err != nil {
+				return err
+			}
+			return runReact(rt, selector, emoji, explicitMessageID, 0)
 		},
 	}
+	cmd.Flags().StringVar(&explicitMessageID, "message-id", "", "React by explicit message ID")
+	indexPtr := cmd.Flags().IntP("index", "", 0, "React by index from the last read")
+	cmd.RunE = func(_ *cobra.Command, args []string) error {
+		selector, emoji, err := resolveReactionArgs(args, explicitMessageID, *indexPtr)
+		if err != nil {
+			return err
+		}
+		return runReact(rt, selector, emoji, explicitMessageID, *indexPtr)
+	}
+	return cmd
 }
 
-func runReact(rt *Runtime, messageIDArg string, emoji string) error {
+func runReact(rt *Runtime, selectorArg string, emoji string, explicitMessageID string, explicitIndex int) error {
 	if err := ensureRuntime(rt); err != nil {
 		return err
 	}
@@ -107,11 +172,10 @@ func runReact(rt *Runtime, messageIDArg string, emoji string) error {
 		return errors.New("emoji is required")
 	}
 
-	messageID := strings.TrimSpace(messageIDArg)
-	if messageID == "" {
-		return errors.New("message ID is required")
+	messageID, source, err := resolveMessageTarget(rt, selectorArg, explicitMessageID, explicitIndex)
+	if err != nil {
+		return err
 	}
-
 	result, err := rt.Client.AddReaction(context.Background(), messageID, trimmedEmoji)
 	if err != nil {
 		return err
@@ -121,22 +185,46 @@ func runReact(rt *Runtime, messageIDArg string, emoji string) error {
 	if action == "" {
 		action = "added"
 	}
-	_, _ = fmt.Fprintf(rt.Stdout, "reaction %s %s %s\n", action, result.Reaction.MessageID, result.Reaction.Emoji)
-	return nil
+	return writeTextOrJSON(rt, fmt.Sprintf("reaction %s %s %s", action, result.Reaction.MessageID, result.Reaction.Emoji), map[string]any{
+		"action":     action,
+		"reaction":   result.Reaction,
+		"message_id": result.Reaction.MessageID,
+		"source":     source,
+	})
 }
 
 func newUnreactCommand(rt *Runtime) *cobra.Command {
-	return &cobra.Command{
-		Use:   "unreact <message-id> <emoji>",
-		Short: "Remove a reaction from a message by message ID",
-		Args:  cobra.ExactArgs(2),
+	var explicitMessageID string
+	cmd := &cobra.Command{
+		Use:   "unreact [message-id-or-index] <emoji>",
+		Short: "Remove a reaction by explicit message ID or by index from the last read",
+		Args: func(_ *cobra.Command, args []string) error {
+			if len(args) < 1 || len(args) > 2 {
+				return fmt.Errorf("accepts 1 or 2 arg(s), received %d", len(args))
+			}
+			return nil
+		},
 		RunE: func(_ *cobra.Command, args []string) error {
-			return runUnreact(rt, args[0], args[1])
+			selector, emoji, err := resolveReactionArgs(args, explicitMessageID, 0)
+			if err != nil {
+				return err
+			}
+			return runUnreact(rt, selector, emoji, explicitMessageID, 0)
 		},
 	}
+	cmd.Flags().StringVar(&explicitMessageID, "message-id", "", "Unreact by explicit message ID")
+	indexPtr := cmd.Flags().IntP("index", "", 0, "Unreact by index from the last read")
+	cmd.RunE = func(_ *cobra.Command, args []string) error {
+		selector, emoji, err := resolveReactionArgs(args, explicitMessageID, *indexPtr)
+		if err != nil {
+			return err
+		}
+		return runUnreact(rt, selector, emoji, explicitMessageID, *indexPtr)
+	}
+	return cmd
 }
 
-func runUnreact(rt *Runtime, messageIDArg string, emoji string) error {
+func runUnreact(rt *Runtime, selectorArg string, emoji string, explicitMessageID string, explicitIndex int) error {
 	if err := ensureRuntime(rt); err != nil {
 		return err
 	}
@@ -149,18 +237,87 @@ func runUnreact(rt *Runtime, messageIDArg string, emoji string) error {
 		return errors.New("emoji is required")
 	}
 
-	messageID := strings.TrimSpace(messageIDArg)
-	if messageID == "" {
-		return errors.New("message ID is required")
+	messageID, source, err := resolveMessageTarget(rt, selectorArg, explicitMessageID, explicitIndex)
+	if err != nil {
+		return err
 	}
-
 	reaction, err := rt.Client.RemoveReaction(context.Background(), messageID, trimmedEmoji)
 	if err != nil {
 		return err
 	}
 
-	_, _ = fmt.Fprintf(rt.Stdout, "reaction removed %s %s\n", reaction.MessageID, reaction.Emoji)
-	return nil
+	return writeTextOrJSON(rt, fmt.Sprintf("reaction removed %s %s", reaction.MessageID, reaction.Emoji), map[string]any{
+		"action":     "removed",
+		"reaction":   reaction,
+		"message_id": reaction.MessageID,
+		"source":     source,
+	})
+}
+
+func resolveEditArgs(args []string, explicitMessageID string, explicitIndex int) (string, string, error) {
+	if strings.TrimSpace(explicitMessageID) != "" || explicitIndex > 0 {
+		if len(args) != 1 {
+			return "", "", errors.New("edit requires only <text> when --message-id or --index is set")
+		}
+		return "", args[0], nil
+	}
+	if len(args) != 2 {
+		return "", "", errors.New("edit requires <message-id-or-index> and <text>")
+	}
+	return args[0], args[1], nil
+}
+
+func resolveDeleteArgs(args []string, explicitMessageID string, explicitIndex int) (string, error) {
+	if strings.TrimSpace(explicitMessageID) != "" || explicitIndex > 0 {
+		if len(args) != 0 {
+			return "", errors.New("delete accepts no positional args when --message-id or --index is set")
+		}
+		return "", nil
+	}
+	if len(args) != 1 {
+		return "", errors.New("delete requires <message-id-or-index>")
+	}
+	return args[0], nil
+}
+
+func resolveReactionArgs(args []string, explicitMessageID string, explicitIndex int) (string, string, error) {
+	if strings.TrimSpace(explicitMessageID) != "" || explicitIndex > 0 {
+		if len(args) != 1 {
+			return "", "", errors.New("reaction commands require only <emoji> when --message-id or --index is set")
+		}
+		return "", args[0], nil
+	}
+	if len(args) == 1 {
+		return "", args[0], nil
+	}
+	if len(args) != 2 {
+		return "", "", errors.New("reaction commands require <message-id-or-index> and <emoji>")
+	}
+	return args[0], args[1], nil
+}
+
+func resolveMessageTarget(rt *Runtime, selectorArg string, explicitMessageID string, explicitIndex int) (string, string, error) {
+	trimmedMessageID := strings.TrimSpace(explicitMessageID)
+	if trimmedMessageID != "" && explicitIndex > 0 {
+		return "", "", errors.New("choose only one of --message-id or --index")
+	}
+	if trimmedMessageID != "" {
+		return trimmedMessageID, "message_id", nil
+	}
+	if explicitIndex > 0 {
+		messageID, _, err := resolveMessageIDFromLastRead(rt, strconv.Itoa(explicitIndex))
+		return messageID, "index", err
+	}
+
+	selector := strings.TrimSpace(selectorArg)
+	if selector == "" {
+		return "", "", errors.New("message ID or index is required")
+	}
+	if _, err := strconv.Atoi(selector); err == nil {
+		messageID, _, resolveErr := resolveMessageIDFromLastRead(rt, selector)
+		return messageID, "index", resolveErr
+	}
+	return selector, "message_id", nil
 }
 
 func resolveMessageIDFromLastRead(rt *Runtime, indexArg string) (messageID string, session config.ReadSession, err error) {

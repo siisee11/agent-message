@@ -43,6 +43,11 @@ func runCatalogPrompt(rt *Runtime) error {
 	}
 
 	prompt := response.Prompt
+	if rt.JSONOutput {
+		return writeJSON(rt.Stdout, map[string]any{
+			"prompt": prompt,
+		})
+	}
 	if strings.HasSuffix(prompt, "\n") {
 		_, _ = fmt.Fprint(rt.Stdout, prompt)
 		return nil

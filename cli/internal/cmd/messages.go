@@ -5,6 +5,8 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io"
+	"os"
 	"strings"
 
 	"agent-message/cli/internal/api"
@@ -16,9 +18,13 @@ import (
 const defaultReadLimit = 20
 
 func newSendMessageCommand(rt *Runtime) *cobra.Command {
+	var explicitText string
+	var explicitJSONRender string
+	var jsonRenderFile string
 	var kind string
 	var attachmentPath string
 	var toUsername string
+	var stdinInput bool
 	cmd := &cobra.Command{
 		Use:   "send [username] [text-or-inline-json]",
 		Short: "Send a message to a user or your configured master",
@@ -29,32 +35,71 @@ func newSendMessageCommand(rt *Runtime) *cobra.Command {
 			return nil
 		},
 		RunE: func(_ *cobra.Command, args []string) error {
-			username, text, err := resolveSendMessageInputs(rt.Config, strings.TrimSpace(toUsername), args, kind, attachmentPath)
+			options := sendMessageOptions{
+				ToUsername:     strings.TrimSpace(toUsername),
+				Kind:           strings.TrimSpace(kind),
+				AttachmentPath: strings.TrimSpace(attachmentPath),
+				Text:           explicitText,
+				JSONRender:     explicitJSONRender,
+				JSONRenderFile: jsonRenderFile,
+				Stdin:          stdinInput,
+			}
+			username, text, resolvedKind, err := resolveSendMessageInputs(rt.Config, rt.Stdin, options, args)
 			if err != nil {
 				return err
 			}
-			return runSendMessage(rt, username, text, kind, attachmentPath)
+			return runSendMessage(rt, username, text, resolvedKind, options.AttachmentPath)
 		},
 	}
 	cmd.Flags().StringVar(&toUsername, "to", "", "Override recipient username")
 	cmd.Flags().StringVar(&kind, "kind", "text", "Message kind: text or json_render")
 	cmd.Flags().StringVar(&attachmentPath, "attach", "", "Path to a file or image to attach")
+	cmd.Flags().StringVar(&explicitText, "text", "", "Explicit text message content")
+	cmd.Flags().StringVar(&explicitJSONRender, "json-render", "", "Explicit inline json_render payload")
+	cmd.Flags().StringVar(&jsonRenderFile, "json-render-file", "", "Read json_render payload from a file")
+	cmd.Flags().BoolVar(&stdinInput, "stdin", false, "Read message content from stdin")
 	return cmd
 }
 
-func resolveSendMessageInputs(cfg config.Config, toUsername string, args []string, kind string, attachmentPath string) (string, string, error) {
-	trimmedTo := strings.TrimSpace(toUsername)
+type sendMessageOptions struct {
+	ToUsername     string
+	Kind           string
+	AttachmentPath string
+	Text           string
+	JSONRender     string
+	JSONRenderFile string
+	Stdin          bool
+}
+
+func resolveSendMessageInputs(cfg config.Config, stdin io.Reader, options sendMessageOptions, args []string) (string, string, string, error) {
+	trimmedTo := strings.TrimSpace(options.ToUsername)
 	trimmedMaster := strings.TrimSpace(cfg.Master)
-	trimmedAttachmentPath := strings.TrimSpace(attachmentPath)
+	trimmedAttachmentPath := strings.TrimSpace(options.AttachmentPath)
+	trimmedKind := strings.TrimSpace(options.Kind)
+	if trimmedKind == "" {
+		trimmedKind = "text"
+	}
+
+	explicitContent, resolvedKind, err := resolveExplicitSendContent(stdin, options, trimmedKind)
+	if err != nil {
+		return "", "", "", err
+	}
+	if explicitContent != nil {
+		username, resolveErr := resolveExplicitRecipient(trimmedTo, trimmedMaster, args)
+		if resolveErr != nil {
+			return "", "", "", resolveErr
+		}
+		return username, *explicitContent, resolvedKind, nil
+	}
 
 	if trimmedTo != "" {
 		switch len(args) {
 		case 0:
-			return trimmedTo, "", nil
+			return trimmedTo, "", trimmedKind, nil
 		case 1:
-			return trimmedTo, args[0], nil
+			return trimmedTo, args[0], trimmedKind, nil
 		default:
-			return "", "", errors.New("send accepts at most 1 text-or-inline-json arg when --to is set")
+			return "", "", "", errors.New("send accepts at most 1 text-or-inline-json arg when --to is set")
 		}
 	}
 
@@ -62,30 +107,103 @@ func resolveSendMessageInputs(cfg config.Config, toUsername string, args []strin
 		switch len(args) {
 		case 0:
 			if trimmedAttachmentPath != "" {
-				return trimmedMaster, "", nil
+				return trimmedMaster, "", trimmedKind, nil
 			}
-			if strings.TrimSpace(kind) == "json_render" {
-				return "", "", errors.New("json_render inline JSON object is required")
+			if trimmedKind == "json_render" {
+				return "", "", "", errors.New("json_render inline JSON object is required")
 			}
-			return "", "", errors.New("message text is required")
+			return "", "", "", errors.New("message text is required")
 		case 1:
-			return trimmedMaster, args[0], nil
+			return trimmedMaster, args[0], trimmedKind, nil
 		case 2:
-			return args[0], args[1], nil
+			return args[0], args[1], trimmedKind, nil
 		default:
-			return "", "", fmt.Errorf("accepts at most 2 arg(s), received %d", len(args))
+			return "", "", "", fmt.Errorf("accepts at most 2 arg(s), received %d", len(args))
 		}
 	}
 
 	switch len(args) {
 	case 0:
-		return "", "", errors.New("username is required; set one with `agent-message config set master <username>` or pass --to <username>")
+		return "", "", "", errors.New("username is required; set one with `agent-message config set master <username>` or pass --to <username>")
 	case 1:
-		return args[0], "", nil
+		return args[0], "", trimmedKind, nil
 	case 2:
-		return args[0], args[1], nil
+		return args[0], args[1], trimmedKind, nil
 	default:
-		return "", "", fmt.Errorf("accepts at most 2 arg(s), received %d", len(args))
+		return "", "", "", fmt.Errorf("accepts at most 2 arg(s), received %d", len(args))
+	}
+}
+
+func resolveExplicitSendContent(stdin io.Reader, options sendMessageOptions, fallbackKind string) (*string, string, error) {
+	modeCount := 0
+	kind := fallbackKind
+	var content string
+
+	if strings.TrimSpace(options.Text) != "" {
+		modeCount++
+		kind = "text"
+		content = options.Text
+	}
+	if strings.TrimSpace(options.JSONRender) != "" {
+		modeCount++
+		kind = "json_render"
+		content = options.JSONRender
+	}
+	if strings.TrimSpace(options.JSONRenderFile) != "" {
+		modeCount++
+		fileBytes, err := os.ReadFile(strings.TrimSpace(options.JSONRenderFile))
+		if err != nil {
+			return nil, "", fmt.Errorf("read json-render file: %w", err)
+		}
+		kind = "json_render"
+		content = string(fileBytes)
+	}
+	if options.Stdin {
+		modeCount++
+		if stdin == nil {
+			return nil, "", errors.New("stdin reader is not initialized")
+		}
+		stdinBytes, err := io.ReadAll(stdin)
+		if err != nil {
+			return nil, "", fmt.Errorf("read stdin: %w", err)
+		}
+		content = string(stdinBytes)
+	}
+	if modeCount == 0 {
+		return nil, kind, nil
+	}
+	if modeCount > 1 {
+		return nil, "", errors.New("send accepts only one explicit content source among --text, --json-render, --json-render-file, and --stdin")
+	}
+	if strings.TrimSpace(options.Text) != "" && fallbackKind == "json_render" {
+		return nil, "", errors.New("--text cannot be used with --kind json_render")
+	}
+	if (strings.TrimSpace(options.JSONRender) != "" || strings.TrimSpace(options.JSONRenderFile) != "") && fallbackKind == "text" {
+		if strings.TrimSpace(options.Kind) != "" {
+			return nil, "", errors.New("--json-render and --json-render-file require --kind json_render or no explicit --kind")
+		}
+	}
+
+	return &content, kind, nil
+}
+
+func resolveExplicitRecipient(toUsername string, master string, args []string) (string, error) {
+	if toUsername != "" {
+		if len(args) > 0 {
+			return "", errors.New("send accepts only a recipient via --to when explicit content flags are used")
+		}
+		return toUsername, nil
+	}
+	switch len(args) {
+	case 0:
+		if master == "" {
+			return "", errors.New("username is required; set one with `agent-message config set master <username>` or pass --to <username>")
+		}
+		return master, nil
+	case 1:
+		return args[0], nil
+	default:
+		return "", errors.New("send accepts at most 1 username arg when explicit content flags are used")
 	}
 }
 
@@ -134,8 +252,11 @@ func runSendMessage(rt *Runtime, username, text, kind, attachmentPath string) er
 		return err
 	}
 
-	_, _ = fmt.Fprintf(rt.Stdout, "sent %s\n", message.ID)
-	return nil
+	return writeTextOrJSON(rt, fmt.Sprintf("sent %s", message.ID), map[string]any{
+		"message":         message,
+		"recipient":       username,
+		"conversation_id": conversationID,
+	})
 }
 
 func buildSendMessageRequest(rawText, kind string) (api.SendMessageRequest, error) {
@@ -212,15 +333,22 @@ func runReadMessages(rt *Runtime, username string, limit int) error {
 	if err != nil {
 		return err
 	}
+	if err := persistReadSession(rt, conversationID, username, messages); err != nil {
+		return err
+	}
+	if rt.JSONOutput {
+		return writeJSON(rt.Stdout, map[string]any{
+			"conversation_id": conversationID,
+			"username":        strings.TrimSpace(username),
+			"messages":        messages,
+		})
+	}
 
 	for idx, details := range messages {
 		index := idx + 1
 		_, _ = fmt.Fprintf(rt.Stdout, "[%d] %s %s: %s\n", index, details.Message.ID, messageSender(details), messageText(details))
 	}
 
-	if err := persistReadSession(rt, conversationID, username, messages); err != nil {
-		return err
-	}
 	return nil
 }
 

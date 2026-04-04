@@ -54,8 +54,10 @@ func runRegister(rt *Runtime, username, password string) error {
 		return err
 	}
 
-	_, _ = fmt.Fprintf(rt.Stdout, "registered %s\n", resp.User.Username)
-	return nil
+	return writeTextOrJSON(rt, fmt.Sprintf("registered %s", resp.User.Username), map[string]any{
+		"status": "registered",
+		"user":   resp.User,
+	})
 }
 
 func runOnboard(rt *Runtime) error {
@@ -91,8 +93,11 @@ func runOnboard(rt *Runtime) error {
 		return err
 	}
 
-	_, _ = fmt.Fprintf(rt.Stdout, "onboarded %s\n", resp.User.Username)
-	return nil
+	return writeTextOrJSON(rt, fmt.Sprintf("onboarded %s", resp.User.Username), map[string]any{
+		"status": "onboarded",
+		"user":   resp.User,
+		"master": rt.Config.Master,
+	})
 }
 
 func newLoginCommand(rt *Runtime) *cobra.Command {
@@ -123,8 +128,10 @@ func runLogin(rt *Runtime, username, password string) error {
 		return err
 	}
 
-	_, _ = fmt.Fprintf(rt.Stdout, "logged in as %s\n", resp.User.Username)
-	return nil
+	return writeTextOrJSON(rt, fmt.Sprintf("logged in as %s", resp.User.Username), map[string]any{
+		"status": "logged_in",
+		"user":   resp.User,
+	})
 }
 
 func loginOrRegister(client *api.Client, username, password string) (api.AuthResponse, error) {
@@ -181,8 +188,10 @@ func runWhoAmI(rt *Runtime) error {
 		return err
 	}
 
-	_, _ = fmt.Fprintln(rt.Stdout, user.Username)
-	return nil
+	return writeTextOrJSON(rt, user.Username, map[string]any{
+		"username": user.Username,
+		"user":     user,
+	})
 }
 
 func runLogout(rt *Runtime) error {
@@ -207,8 +216,9 @@ func runLogout(rt *Runtime) error {
 	if remoteErr != nil {
 		_, _ = fmt.Fprintf(rt.Stderr, "warning: server logout failed: %v\n", remoteErr)
 	}
-	_, _ = fmt.Fprintln(rt.Stdout, "logged out")
-	return nil
+	return writeTextOrJSON(rt, "logged out", map[string]any{
+		"status": "logged_out",
+	})
 }
 
 func ensureRuntime(rt *Runtime) error {

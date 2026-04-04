@@ -17,6 +17,7 @@ type Runtime struct {
 	ConfigStore *config.Store
 	Config      config.Config
 	Client      *api.Client
+	JSONOutput  bool
 	Stdin       io.Reader
 	Stdout      io.Writer
 	Stderr      io.Writer
@@ -36,6 +37,8 @@ func NewRootCommand() *cobra.Command {
 	var configPath string
 	var serverURLOverride string
 	var fromProfile string
+	var jsonOutput bool
+	var root *cobra.Command
 
 	cmd := &cobra.Command{
 		Use:   "agent-message",
@@ -67,6 +70,7 @@ func NewRootCommand() *cobra.Command {
 			rt.ConfigStore = store
 			rt.Config = cfg
 			rt.Client = client
+			rt.JSONOutput = jsonOutput
 			return nil
 		},
 	}
@@ -74,8 +78,10 @@ func NewRootCommand() *cobra.Command {
 	cmd.PersistentFlags().StringVar(&configPath, "config", config.DefaultPath(), "Path to config file")
 	cmd.PersistentFlags().StringVar(&serverURLOverride, "server-url", "", "Override server URL for this command")
 	cmd.PersistentFlags().StringVar(&fromProfile, "from", "", "Use a specific profile for this command without switching the active profile")
+	cmd.PersistentFlags().BoolVar(&jsonOutput, "json", false, "Output command results as JSON when supported")
 
 	cmd.AddCommand(
+		newSchemaCommand(rt, func() *cobra.Command { return root }),
 		newCatalogCommand(rt),
 		newConfigCommand(rt),
 		newProfileCommand(rt),
@@ -95,6 +101,7 @@ func NewRootCommand() *cobra.Command {
 		newWatchCommand(rt),
 		newWaitCommand(rt),
 	)
+	root = cmd
 
 	return cmd
 }

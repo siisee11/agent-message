@@ -40,7 +40,7 @@ func TestRunEditMessageByIndex(t *testing.T) {
 	})
 	seedLastReadSession(t, rt, "c-read", "bob", map[int]string{1: "m2", 2: "m1"})
 
-	if err := runEditMessage(rt, "1", "edited text"); err != nil {
+	if err := runEditMessage(rt, "1", "edited text", "", 0); err != nil {
 		t.Fatalf("runEditMessage: %v", err)
 	}
 	if got, want := strings.TrimSpace(stdout.String()), "edited m2"; got != want {
@@ -70,10 +70,39 @@ func TestRunDeleteMessageByIndex(t *testing.T) {
 	})
 	seedLastReadSession(t, rt, "c-read", "bob", map[int]string{1: "m2", 2: "m1"})
 
-	if err := runDeleteMessage(rt, "2"); err != nil {
+	if err := runDeleteMessage(rt, "2", "", 0); err != nil {
 		t.Fatalf("runDeleteMessage: %v", err)
 	}
 	if got, want := strings.TrimSpace(stdout.String()), "deleted m1"; got != want {
+		t.Fatalf("stdout mismatch: got %q want %q", got, want)
+	}
+}
+
+func TestRunDeleteMessageByExplicitMessageID(t *testing.T) {
+	t.Parallel()
+
+	rt, stdout, _ := newTestRuntime(t, "http://example.test", "tok-delete", func(req *http.Request, _ []byte) (*http.Response, error) {
+		if req.Method != http.MethodDelete {
+			t.Fatalf("unexpected method: %s", req.Method)
+		}
+		if req.URL.Path != "/api/messages/m-explicit" {
+			t.Fatalf("unexpected path: %s", req.URL.Path)
+		}
+		return jsonResponse(http.StatusOK, `{
+			"id":"m-explicit",
+			"conversation_id":"c-read",
+			"sender_id":"u1",
+			"edited":false,
+			"deleted":true,
+			"created_at":"2026-01-01T00:00:00Z",
+			"updated_at":"2026-01-01T00:03:00Z"
+		}`), nil
+	})
+
+	if err := runDeleteMessage(rt, "", "m-explicit", 0); err != nil {
+		t.Fatalf("runDeleteMessage: %v", err)
+	}
+	if got, want := strings.TrimSpace(stdout.String()), "deleted m-explicit"; got != want {
 		t.Fatalf("stdout mismatch: got %q want %q", got, want)
 	}
 }
@@ -100,7 +129,7 @@ func TestRunReactByMessageID(t *testing.T) {
 			"reaction":{"id":"r1","message_id":"m1","user_id":"u1","emoji":"👍","created_at":"2026-01-01T00:00:00Z"}
 		}`), nil
 	})
-	if err := runReact(rt, "m1", "👍"); err != nil {
+	if err := runReact(rt, "m1", "👍", "", 0); err != nil {
 		t.Fatalf("runReact: %v", err)
 	}
 	if got, want := strings.TrimSpace(stdout.String()), "reaction added m1 👍"; got != want {
@@ -126,7 +155,7 @@ func TestRunUnreactByMessageID(t *testing.T) {
 			"created_at":"2026-01-01T00:00:00Z"
 		}`), nil
 	})
-	if err := runUnreact(rt, "m1", "👍"); err != nil {
+	if err := runUnreact(rt, "m1", "👍", "", 0); err != nil {
 		t.Fatalf("runUnreact: %v", err)
 	}
 	if got, want := strings.TrimSpace(stdout.String()), "reaction removed m1 👍"; got != want {
@@ -142,11 +171,11 @@ func TestRunReactRequiresMessageID(t *testing.T) {
 		return nil, nil
 	})
 
-	err := runReact(rt, "   ", "👍")
+	err := runReact(rt, "   ", "👍", "", 0)
 	if err == nil {
 		t.Fatalf("expected error")
 	}
-	if got := err.Error(); !strings.Contains(got, "message ID is required") {
+	if got := err.Error(); !strings.Contains(got, "message ID or index is required") {
 		t.Fatalf("unexpected error: %q", got)
 	}
 }
@@ -159,11 +188,11 @@ func TestRunUnreactRequiresMessageID(t *testing.T) {
 		return nil, nil
 	})
 
-	err := runUnreact(rt, "   ", "👍")
+	err := runUnreact(rt, "   ", "👍", "", 0)
 	if err == nil {
 		t.Fatalf("expected error")
 	}
-	if got := err.Error(); !strings.Contains(got, "message ID is required") {
+	if got := err.Error(); !strings.Contains(got, "message ID or index is required") {
 		t.Fatalf("unexpected error: %q", got)
 	}
 }

@@ -91,8 +91,9 @@ func runConfigPath(rt *Runtime) error {
 		return err
 	}
 
-	_, _ = fmt.Fprintln(rt.Stdout, rt.ConfigStore.Path())
-	return nil
+	return writeTextOrJSON(rt, rt.ConfigStore.Path(), map[string]any{
+		"path": rt.ConfigStore.Path(),
+	})
 }
 
 func runConfigGet(rt *Runtime, key string) error {
@@ -103,6 +104,9 @@ func runConfigGet(rt *Runtime, key string) error {
 	normalizedKey := normalizeConfigKey(key)
 	switch normalizedKey {
 	case "":
+		if rt.JSONOutput {
+			return writeJSON(rt.Stdout, rt.Config)
+		}
 		payload, err := json.MarshalIndent(rt.Config, "", "  ")
 		if err != nil {
 			return fmt.Errorf("encode config: %w", err)
@@ -110,11 +114,15 @@ func runConfigGet(rt *Runtime, key string) error {
 		_, _ = fmt.Fprintln(rt.Stdout, string(payload))
 		return nil
 	case configKeyServerURL:
-		_, _ = fmt.Fprintln(rt.Stdout, rt.Config.ServerURL)
-		return nil
+		return writeTextOrJSON(rt, rt.Config.ServerURL, map[string]any{
+			"key":   configKeyServerURL,
+			"value": rt.Config.ServerURL,
+		})
 	case configKeyMaster:
-		_, _ = fmt.Fprintln(rt.Stdout, rt.Config.Master)
-		return nil
+		return writeTextOrJSON(rt, rt.Config.Master, map[string]any{
+			"key":   configKeyMaster,
+			"value": rt.Config.Master,
+		})
 	default:
 		return unsupportedConfigKeyError(normalizedKey)
 	}
@@ -133,16 +141,20 @@ func runConfigSet(rt *Runtime, key string, value string) error {
 		if err := saveRuntimeConfig(rt, cfg); err != nil {
 			return err
 		}
-		_, _ = fmt.Fprintln(rt.Stdout, rt.Config.ServerURL)
-		return nil
+		return writeTextOrJSON(rt, rt.Config.ServerURL, map[string]any{
+			"key":   configKeyServerURL,
+			"value": rt.Config.ServerURL,
+		})
 	case configKeyMaster:
 		cfg := rt.Config
 		cfg.Master = value
 		if err := saveRuntimeConfig(rt, cfg); err != nil {
 			return err
 		}
-		_, _ = fmt.Fprintln(rt.Stdout, rt.Config.Master)
-		return nil
+		return writeTextOrJSON(rt, rt.Config.Master, map[string]any{
+			"key":   configKeyMaster,
+			"value": rt.Config.Master,
+		})
 	default:
 		return unsupportedConfigKeyError(normalizedKey)
 	}
@@ -161,16 +173,20 @@ func runConfigUnset(rt *Runtime, key string) error {
 		if err := saveRuntimeConfig(rt, cfg); err != nil {
 			return err
 		}
-		_, _ = fmt.Fprintln(rt.Stdout, rt.Config.ServerURL)
-		return nil
+		return writeTextOrJSON(rt, rt.Config.ServerURL, map[string]any{
+			"key":   configKeyServerURL,
+			"value": rt.Config.ServerURL,
+		})
 	case configKeyMaster:
 		cfg := rt.Config
 		cfg.Master = ""
 		if err := saveRuntimeConfig(rt, cfg); err != nil {
 			return err
 		}
-		_, _ = fmt.Fprintln(rt.Stdout, rt.Config.Master)
-		return nil
+		return writeTextOrJSON(rt, rt.Config.Master, map[string]any{
+			"key":   configKeyMaster,
+			"value": rt.Config.Master,
+		})
 	default:
 		return unsupportedConfigKeyError(normalizedKey)
 	}

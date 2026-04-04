@@ -65,6 +65,18 @@ func runProfileList(rt *Runtime) error {
 	}
 
 	names := sortedProfileNames(rt.Config.Profiles)
+	if rt.JSONOutput {
+		profiles := make([]map[string]any, 0, len(names))
+		for _, name := range names {
+			profile := rt.Config.Profiles[name]
+			profiles = append(profiles, map[string]any{
+				"name":      name,
+				"active":    name == rt.Config.ActiveProfile,
+				"logged_in": strings.TrimSpace(profile.Token) != "",
+			})
+		}
+		return writeJSON(rt.Stdout, map[string]any{"profiles": profiles})
+	}
 	for _, name := range names {
 		profile := rt.Config.Profiles[name]
 		marker := " "
@@ -89,8 +101,9 @@ func runProfileCurrent(rt *Runtime) error {
 	if strings.TrimSpace(rt.Config.ActiveProfile) == "" {
 		return errors.New("no active profile")
 	}
-	_, _ = fmt.Fprintln(rt.Stdout, rt.Config.ActiveProfile)
-	return nil
+	return writeTextOrJSON(rt, rt.Config.ActiveProfile, map[string]any{
+		"profile": rt.Config.ActiveProfile,
+	})
 }
 
 func runProfileSwitch(rt *Runtime, rawName string) error {
@@ -115,8 +128,10 @@ func runProfileSwitch(rt *Runtime, rawName string) error {
 		return err
 	}
 
-	_, _ = fmt.Fprintf(rt.Stdout, "switched to %s\n", name)
-	return nil
+	return writeTextOrJSON(rt, fmt.Sprintf("switched to %s", name), map[string]any{
+		"status":  "switched",
+		"profile": name,
+	})
 }
 
 func resolveStoredProfile(cfg config.Config, rawName string) (string, config.Profile, error) {

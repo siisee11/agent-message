@@ -57,9 +57,9 @@ func NewClient(serverURL, token string) (*Client, error) {
 }
 
 func (c *Client) SetServerURL(serverURL string) error {
-	raw := strings.TrimSpace(serverURL)
-	if raw == "" {
-		return errors.New("server URL is required")
+	raw, err := validateServerURLInput(serverURL)
+	if err != nil {
+		return err
 	}
 	parsed, err := url.Parse(raw)
 	if err != nil {
@@ -70,6 +70,12 @@ func (c *Client) SetServerURL(serverURL string) error {
 	}
 	if strings.TrimSpace(parsed.Host) == "" {
 		return errors.New("server URL host is required")
+	}
+	if parsed.RawQuery != "" {
+		return errors.New("server URL must not contain a query string")
+	}
+	if parsed.Fragment != "" {
+		return errors.New("server URL must not contain a fragment")
 	}
 	parsed.Path = strings.TrimSuffix(parsed.Path, "/")
 	parsed.RawPath = strings.TrimSuffix(parsed.RawPath, "/")
@@ -100,18 +106,28 @@ func (c *Client) SetHTTPClient(httpClient *http.Client) {
 }
 
 func (c *Client) Register(ctx context.Context, username, password string) (AuthResponse, error) {
+	normalizedUsername, err := validateUsername(username)
+	if err != nil {
+		return AuthResponse{}, err
+	}
+
 	var out AuthResponse
-	err := c.doJSON(ctx, http.MethodPost, "/api/auth/register", map[string]string{
-		"username": username,
+	err = c.doJSON(ctx, http.MethodPost, "/api/auth/register", map[string]string{
+		"username": normalizedUsername,
 		"password": password,
 	}, &out)
 	return out, err
 }
 
 func (c *Client) Login(ctx context.Context, username, password string) (AuthResponse, error) {
+	normalizedUsername, err := validateUsername(username)
+	if err != nil {
+		return AuthResponse{}, err
+	}
+
 	var out AuthResponse
-	err := c.doJSON(ctx, http.MethodPost, "/api/auth/login", map[string]string{
-		"username": username,
+	err = c.doJSON(ctx, http.MethodPost, "/api/auth/login", map[string]string{
+		"username": normalizedUsername,
 		"password": password,
 	}, &out)
 	return out, err
@@ -134,13 +150,18 @@ func (c *Client) Me(ctx context.Context) (UserProfile, error) {
 }
 
 func (c *Client) SearchUsers(ctx context.Context, username string, limit int) ([]UserProfile, error) {
+	normalizedUsername, err := validateUsername(username)
+	if err != nil {
+		return nil, err
+	}
+
 	query := url.Values{}
-	query.Set("username", username)
+	query.Set("username", normalizedUsername)
 	if limit > 0 {
 		query.Set("limit", strconv.Itoa(limit))
 	}
 	var out []UserProfile
-	err := c.doJSON(ctx, http.MethodGet, "/api/users?"+query.Encode(), nil, &out)
+	err = c.doJSON(ctx, http.MethodGet, "/api/users?"+query.Encode(), nil, &out)
 	return out, err
 }
 
@@ -157,33 +178,52 @@ func (c *Client) ListConversations(ctx context.Context, limit int) ([]Conversati
 }
 
 func (c *Client) OpenConversation(ctx context.Context, username string) (ConversationDetails, error) {
+	normalizedUsername, err := validateUsername(username)
+	if err != nil {
+		return ConversationDetails{}, err
+	}
+
 	var out ConversationDetails
-	err := c.doJSON(ctx, http.MethodPost, "/api/conversations", map[string]string{"username": username}, &out)
+	err = c.doJSON(ctx, http.MethodPost, "/api/conversations", map[string]string{"username": normalizedUsername}, &out)
 	return out, err
 }
 
 func (c *Client) GetConversation(ctx context.Context, conversationID string) (ConversationDetails, error) {
+	normalizedConversationID, err := validateResourceID("conversation ID", conversationID)
+	if err != nil {
+		return ConversationDetails{}, err
+	}
+
 	var out ConversationDetails
-	err := c.doJSON(ctx, http.MethodGet, "/api/conversations/"+url.PathEscape(conversationID), nil, &out)
+	err = c.doJSON(ctx, http.MethodGet, "/api/conversations/"+url.PathEscape(normalizedConversationID), nil, &out)
 	return out, err
 }
 
 func (c *Client) ListMessages(ctx context.Context, conversationID string, before string, limit int) ([]MessageDetails, error) {
+	normalizedConversationID, err := validateResourceID("conversation ID", conversationID)
+	if err != nil {
+		return nil, err
+	}
+
 	values := url.Values{}
 	if strings.TrimSpace(before) != "" {
-		values.Set("before", before)
+		normalizedBefore, err := validateResourceID("before cursor", before)
+		if err != nil {
+			return nil, err
+		}
+		values.Set("before", normalizedBefore)
 	}
 	if limit > 0 {
 		values.Set("limit", strconv.Itoa(limit))
 	}
 
-	requestPath := "/api/conversations/" + url.PathEscape(conversationID) + "/messages"
+	requestPath := "/api/conversations/" + url.PathEscape(normalizedConversationID) + "/messages"
 	if len(values) > 0 {
 		requestPath += "?" + values.Encode()
 	}
 
 	var out []MessageDetails
-	err := c.doJSON(ctx, http.MethodGet, requestPath, nil, &out)
+	err = c.doJSON(ctx, http.MethodGet, requestPath, nil, &out)
 	return out, err
 }
 
@@ -199,8 +239,13 @@ type SendAttachmentMessageRequest struct {
 }
 
 func (c *Client) SendMessage(ctx context.Context, conversationID string, input SendMessageRequest) (Message, error) {
+	normalizedConversationID, err := validateResourceID("conversation ID", conversationID)
+	if err != nil {
+		return Message{}, err
+	}
+
 	var out Message
-	err := c.doJSON(ctx, http.MethodPost, "/api/conversations/"+url.PathEscape(conversationID)+"/messages", input, &out)
+	err = c.doJSON(ctx, http.MethodPost, "/api/conversations/"+url.PathEscape(normalizedConversationID)+"/messages", input, &out)
 	return out, err
 }
 
@@ -209,9 +254,14 @@ func (c *Client) SendAttachmentMessage(ctx context.Context, conversationID strin
 		return Message{}, errors.New("server URL is not configured")
 	}
 
-	attachmentPath := strings.TrimSpace(input.AttachmentPath)
-	if attachmentPath == "" {
-		return Message{}, errors.New("attachment path is required")
+	normalizedConversationID, err := validateResourceID("conversation ID", conversationID)
+	if err != nil {
+		return Message{}, err
+	}
+
+	attachmentPath, err := validateAttachmentPath(input.AttachmentPath)
+	if err != nil {
+		return Message{}, err
 	}
 
 	file, err := os.Open(attachmentPath)
@@ -252,7 +302,7 @@ func (c *Client) SendAttachmentMessage(ctx context.Context, conversationID strin
 	}
 
 	u := *c.baseURL
-	u.Path = strings.TrimSuffix(c.baseURL.Path, "/") + "/api/conversations/" + url.PathEscape(conversationID) + "/messages"
+	u.Path = strings.TrimSuffix(c.baseURL.Path, "/") + "/api/conversations/" + url.PathEscape(normalizedConversationID) + "/messages"
 
 	req, err := http.NewRequestWithContext(ctx, http.MethodPost, u.String(), &body)
 	if err != nil {
@@ -319,30 +369,56 @@ func detectAttachmentContentType(file *os.File, attachmentPath string) string {
 }
 
 func (c *Client) EditMessage(ctx context.Context, messageID, content string) (Message, error) {
+	normalizedMessageID, err := validateResourceID("message ID", messageID)
+	if err != nil {
+		return Message{}, err
+	}
+
 	var out Message
-	err := c.doJSON(ctx, http.MethodPatch, "/api/messages/"+url.PathEscape(messageID), map[string]string{
+	err = c.doJSON(ctx, http.MethodPatch, "/api/messages/"+url.PathEscape(normalizedMessageID), map[string]string{
 		"content": content,
 	}, &out)
 	return out, err
 }
 
 func (c *Client) DeleteMessage(ctx context.Context, messageID string) (Message, error) {
+	normalizedMessageID, err := validateResourceID("message ID", messageID)
+	if err != nil {
+		return Message{}, err
+	}
+
 	var out Message
-	err := c.doJSON(ctx, http.MethodDelete, "/api/messages/"+url.PathEscape(messageID), nil, &out)
+	err = c.doJSON(ctx, http.MethodDelete, "/api/messages/"+url.PathEscape(normalizedMessageID), nil, &out)
 	return out, err
 }
 
 func (c *Client) AddReaction(ctx context.Context, messageID, emoji string) (ToggleReactionResult, error) {
+	normalizedMessageID, err := validateResourceID("message ID", messageID)
+	if err != nil {
+		return ToggleReactionResult{}, err
+	}
+	if hasControlCharacters(emoji) {
+		return ToggleReactionResult{}, errors.New("emoji must not contain control characters")
+	}
+
 	var out ToggleReactionResult
-	err := c.doJSON(ctx, http.MethodPost, "/api/messages/"+url.PathEscape(messageID)+"/reactions", map[string]string{
+	err = c.doJSON(ctx, http.MethodPost, "/api/messages/"+url.PathEscape(normalizedMessageID)+"/reactions", map[string]string{
 		"emoji": emoji,
 	}, &out)
 	return out, err
 }
 
 func (c *Client) RemoveReaction(ctx context.Context, messageID, emoji string) (Reaction, error) {
+	normalizedMessageID, err := validateResourceID("message ID", messageID)
+	if err != nil {
+		return Reaction{}, err
+	}
+	if hasControlCharacters(emoji) {
+		return Reaction{}, errors.New("emoji must not contain control characters")
+	}
+
 	var out Reaction
-	err := c.doJSON(ctx, http.MethodDelete, "/api/messages/"+url.PathEscape(messageID)+"/reactions/"+url.PathEscape(emoji), nil, &out)
+	err = c.doJSON(ctx, http.MethodDelete, "/api/messages/"+url.PathEscape(normalizedMessageID)+"/reactions/"+url.PathEscape(emoji), nil, &out)
 	return out, err
 }
 
@@ -375,6 +451,9 @@ func (c *Client) doJSON(ctx context.Context, method, requestPath string, in, out
 	}
 	if parsedRequestPath.IsAbs() {
 		return errors.New("request path must be relative")
+	}
+	if parsedRequestPath.Fragment != "" {
+		return errors.New("request path must not contain a fragment")
 	}
 
 	var body io.Reader

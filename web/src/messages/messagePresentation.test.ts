@@ -46,9 +46,25 @@ describe('message presentation helpers', () => {
     const message = createMessage({
       kind: 'json_render',
       content: '{"root":"raw-json-that-should-not-preview"}',
-      json_render_spec: { root: 'r1', elements: {} },
+      json_render_spec: {
+        root: 'stack-1',
+        elements: {
+          'stack-1': {
+            type: 'Stack',
+            children: ['heading-1', 'text-1'],
+          },
+          'heading-1': {
+            type: 'Heading',
+            props: { text: 'Deploy status' },
+          },
+          'text-1': {
+            type: 'Text',
+            props: { text: 'Build running on production' },
+          },
+        },
+      },
     })
-    expect(summarizeLastMessagePreview(message)).toBe(MESSAGE_PREVIEW_JSON_RENDER)
+    expect(summarizeLastMessagePreview(message)).toBe('Deploy status Build running on production')
   })
 
   it('combines attachment labels with json-render preview fallback', () => {
@@ -56,9 +72,20 @@ describe('message presentation helpers', () => {
       kind: 'json_render',
       attachment_type: 'image',
       attachment_url: 'https://example.test/image.png',
-      json_render_spec: { root: 'r1', elements: {} },
+      json_render_spec: {
+        root: 'alert-1',
+        elements: {
+          'alert-1': {
+            type: 'Alert',
+            props: {
+              title: 'Heads up',
+              message: 'Quarterly report is ready',
+            },
+          },
+        },
+      },
     })
-    expect(summarizeLastMessagePreview(imageMessage)).toBe('[image] [json-render]')
+    expect(summarizeLastMessagePreview(imageMessage)).toBe('[image] Heads up Quarterly report is ready')
 
     const fileMessage = createMessage({
       kind: 'json_render',
@@ -67,6 +94,35 @@ describe('message presentation helpers', () => {
       json_render_spec: { root: 'r1', elements: {} },
     })
     expect(summarizeLastMessagePreview(fileMessage)).toBe('[file] [json-render]')
+  })
+
+  it('extracts a useful preview from table-based json render messages', () => {
+    const message = createMessage({
+      kind: 'json_render',
+      json_render_spec: {
+        root: 'table-1',
+        elements: {
+          'table-1': {
+            type: 'Table',
+            props: {
+              columns: ['Step', 'Status'],
+              rows: [['Build', 'running']],
+            },
+          },
+        },
+      },
+    })
+
+    expect(summarizeLastMessagePreview(message)).toBe('Step, Status - Build, running')
+  })
+
+  it('falls back to placeholder when json render has no extractable text', () => {
+    const message = createMessage({
+      kind: 'json_render',
+      json_render_spec: { root: 'r1', elements: {} },
+    })
+
+    expect(summarizeLastMessagePreview(message)).toBe(MESSAGE_PREVIEW_JSON_RENDER)
   })
 
   it('allows delete but disallows edit for json_render messages', () => {

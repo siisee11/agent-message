@@ -3,6 +3,200 @@ import { parseMessageContent, type JsonRenderSpec, type Message } from '../api'
 export const MESSAGE_PREVIEW_EMPTY = 'Start a conversation'
 export const MESSAGE_PREVIEW_DELETED = 'This message was deleted'
 export const MESSAGE_PREVIEW_JSON_RENDER = '[json-render]'
+const JSON_RENDER_PREVIEW_MAX_LENGTH = 96
+
+interface BareUIElement {
+  type: string
+  props?: Record<string, unknown>
+  children?: string[]
+}
+
+interface BareUISpec {
+  root: string
+  elements: Record<string, BareUIElement>
+}
+
+function isObject(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null
+}
+
+function isBareUISpec(value: JsonRenderSpec | null): value is BareUISpec {
+  if (!isObject(value) || typeof value.root !== 'string' || !isObject(value.elements)) {
+    return false
+  }
+
+  return Object.values(value.elements).every(
+    (element) => isObject(element) && typeof element.type === 'string',
+  )
+}
+
+function normalizePreviewText(value: string): string {
+  return value
+    .replace(/!\[[^\]]*\]\([^)]+\)/g, ' ')
+    .replace(/\[([^\]]+)\]\([^)]+\)/g, '$1')
+    .replace(/[`#>*_~|-]/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim()
+}
+
+function clipPreview(value: string): string {
+  if (value.length <= JSON_RENDER_PREVIEW_MAX_LENGTH) {
+    return value
+  }
+  return `${value.slice(0, JSON_RENDER_PREVIEW_MAX_LENGTH - 1).trimEnd()}…`
+}
+
+function readStringProp(props: Record<string, unknown> | undefined, key: string): string | null {
+  const value = props?.[key]
+  if (typeof value !== 'string') {
+    return null
+  }
+  const normalized = normalizePreviewText(value)
+  return normalized === '' ? null : normalized
+}
+
+function joinCandidateParts(parts: Array<string | null | undefined>, separator = ' '): string | null {
+  const normalized = parts.filter((part): part is string => typeof part === 'string' && part.trim() !== '')
+  if (normalized.length === 0) {
+    return null
+  }
+  return normalized.join(separator)
+}
+
+function summarizeTable(props: Record<string, unknown> | undefined): string | null {
+  if (!props) {
+    return null
+  }
+
+  const caption = readStringProp(props, 'caption')
+  const columns = Array.isArray(props.columns)
+    ? props.columns.filter((value): value is string => typeof value === 'string' && value.trim() !== '').slice(0, 3)
+    : []
+  const rows = Array.isArray(props.rows)
+    ? props.rows
+        .find((row): row is unknown[] => Array.isArray(row))
+        ?.filter((value): value is string => typeof value === 'string' && value.trim() !== '')
+        .slice(0, 3) ?? []
+    : []
+
+  return joinCandidateParts(
+    [
+      caption,
+      columns.length > 0 ? columns.join(', ') : null,
+      rows.length > 0 ? rows.join(', ') : null,
+    ],
+    ' - ',
+  )
+}
+
+function summarizeElement(element: BareUIElement): { primary?: string; secondary?: string; fallback?: string } {
+  const props = isObject(element.props) ? element.props : undefined
+
+  switch (element.type) {
+    case 'Text':
+    case 'Heading':
+      return { primary: readStringProp(props, 'text') ?? undefined }
+    case 'Alert':
+      return {
+        primary: joinCandidateParts([readStringProp(props, 'title'), readStringProp(props, 'message')]) ?? undefined,
+      }
+    case 'ApprovalCard':
+      return {
+        primary:
+          joinCandidateParts([
+            readStringProp(props, 'title'),
+            Array.isArray(props?.details)
+              ? props.details.find((value): value is string => typeof value === 'string' && value.trim() !== '')
+              : null,
+          ]) ?? undefined,
+        secondary: readStringProp(props, 'badge') ?? undefined,
+      }
+    case 'Card':
+      return {
+        primary:
+          joinCandidateParts([readStringProp(props, 'title'), readStringProp(props, 'description')]) ?? undefined,
+      }
+    case 'Markdown':
+      return { primary: readStringProp(props, 'content') ?? undefined }
+    case 'Table':
+      return { secondary: summarizeTable(props) ?? undefined }
+    case 'Progress':
+      return { secondary: readStringProp(props, 'label') ?? undefined }
+    case 'BarGraph':
+    case 'LineGraph':
+      return {
+        secondary:
+          joinCandidateParts([readStringProp(props, 'title'), readStringProp(props, 'description')]) ?? undefined,
+      }
+    case 'Avatar':
+      return { fallback: readStringProp(props, 'name') ?? undefined }
+    case 'Image':
+      return { fallback: readStringProp(props, 'alt') ?? undefined }
+    case 'Badge':
+      return { fallback: readStringProp(props, 'text') ?? undefined }
+    default:
+      return {
+        fallback:
+          joinCandidateParts([
+            readStringProp(props, 'title'),
+            readStringProp(props, 'text'),
+            readStringProp(props, 'label'),
+            readStringProp(props, 'message'),
+          ]) ?? undefined,
+      }
+  }
+}
+
+function extractJsonRenderPreview(spec: JsonRenderSpec | null): string | null {
+  if (!isBareUISpec(spec) || !spec.elements[spec.root]) {
+    return null
+  }
+
+  const queue = [spec.root]
+  const visited = new Set<string>()
+  const primary: string[] = []
+  const secondary: string[] = []
+  const fallback: string[] = []
+
+  while (queue.length > 0) {
+    const elementId = queue.shift()
+    if (!elementId || visited.has(elementId)) {
+      continue
+    }
+    visited.add(elementId)
+
+    const element = spec.elements[elementId]
+    if (!element) {
+      continue
+    }
+
+    const summary = summarizeElement(element)
+    if (summary.primary) {
+      primary.push(summary.primary)
+    }
+    if (summary.secondary) {
+      secondary.push(summary.secondary)
+    }
+    if (summary.fallback) {
+      fallback.push(summary.fallback)
+    }
+
+    if (Array.isArray(element.children)) {
+      for (const child of element.children) {
+        if (typeof child === 'string' && child.trim() !== '') {
+          queue.push(child)
+        }
+      }
+    }
+  }
+
+  const candidates = primary.length > 0 ? primary : secondary.length > 0 ? secondary : fallback
+  const preview = joinCandidateParts(candidates.slice(0, 2))
+  if (!preview) {
+    return null
+  }
+  return clipPreview(preview)
+}
 
 function resolveAttachmentLabel(message: Message): string | undefined {
   if (message.attachment_type === 'image') {
@@ -27,10 +221,11 @@ export function summarizeLastMessagePreview(lastMessage?: Message): string {
   const attachmentLabel = resolveAttachmentLabel(lastMessage)
 
   if (parsed.kind === 'json_render') {
+    const preview = extractJsonRenderPreview(parsed.jsonRenderSpec) ?? MESSAGE_PREVIEW_JSON_RENDER
     if (attachmentLabel) {
-      return `${attachmentLabel} ${MESSAGE_PREVIEW_JSON_RENDER}`
+      return `${attachmentLabel} ${preview}`
     }
-    return MESSAGE_PREVIEW_JSON_RENDER
+    return preview
   }
 
   const content = parsed.textContent?.trim()

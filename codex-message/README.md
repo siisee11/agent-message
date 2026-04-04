@@ -26,6 +26,7 @@ Example:
 
 ```bash
 codex-message --to jay --model gpt-5.4
+codex-message --to jay --model gpt-5.4 --yolo
 ```
 
 Useful flags:
@@ -35,3 +36,4 @@ Useful flags:
 - `--approval-policy on-request`
 - `--sandbox workspace-write`
 - `--network-access`
+- `--yolo` = `--approval-policy never` + `--sandbox danger-full-access`

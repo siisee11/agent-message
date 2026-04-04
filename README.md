@@ -314,6 +314,7 @@ Typical setup for a Codex user:
 
 ```bash
 codex-message --to jay --model gpt-5.4 --cwd /path/to/worktree
+codex-message --to jay --model gpt-5.4 --cwd /path/to/worktree --yolo
 ```
 
 Build from source:
@@ -343,6 +344,7 @@ Useful flags:
 - `--approval-policy on-request`
 - `--sandbox workspace-write`
 - `--network-access`
+- `--yolo` = `--approval-policy never` + `--sandbox danger-full-access`
 
 ## claude-message
 

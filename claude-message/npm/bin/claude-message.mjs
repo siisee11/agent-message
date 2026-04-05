@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 
-import { accessSync, constants, existsSync } from 'node:fs'
+import { accessSync, constants, existsSync, readFileSync } from 'node:fs'
 import { delimiter, dirname, join, resolve } from 'node:path'
 import process from 'node:process'
 import { spawnSync } from 'node:child_process'
@@ -9,6 +9,16 @@ import { fileURLToPath } from 'node:url'
 const scriptDir = dirname(fileURLToPath(import.meta.url))
 const packageRoot = resolve(scriptDir, '..', '..')
 const runtimeBinDir = resolve(packageRoot, 'npm', 'runtime', 'bin')
+const upgradeCommand = 'upgrade'
+const packageJsonPath = resolve(packageRoot, 'package.json')
+
+if (process.argv[2] === upgradeCommand) {
+  runGlobalUpgrade(['agent-message@latest', 'claude-message@latest'])
+}
+
+if (process.argv[2] === '--version') {
+  printVersion(packageJsonPath)
+}
 
 function resolveBinaryPath() {
   if (process.platform !== 'darwin') {
@@ -46,6 +56,28 @@ function requireCommand(command, installHint) {
   }
   console.error(`${command} was not found on PATH. ${installHint}`)
   process.exit(1)
+}
+
+function runGlobalUpgrade(packages) {
+  const npmCommand = process.platform === 'win32' ? 'npm.cmd' : 'npm'
+  const result = spawnSync(npmCommand, ['install', '-g', ...packages], {
+    stdio: 'inherit',
+    cwd: process.cwd(),
+    env: process.env,
+  })
+
+  if (result.error) {
+    console.error(result.error.message)
+    process.exit(1)
+  }
+
+  process.exit(result.status ?? 1)
+}
+
+function printVersion(path) {
+  const packageJson = JSON.parse(readFileSync(path, 'utf8'))
+  console.log(`${packageJson.name} ${packageJson.version}`)
+  process.exit(0)
 }
 
 const binaryPath = resolveBinaryPath()

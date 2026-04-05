@@ -31,6 +31,7 @@ agent-message config set master jay
 codex-message --model gpt-5.4
 codex-message --model gpt-5.4 --yolo
 codex-message --to alice --model gpt-5.4
+codex-message upgrade
 ```
 
 Useful flags:

@@ -31,6 +31,7 @@ Example:
 agent-message config set master jay
 claude-message --model sonnet --permission-mode accept-edits
 claude-message --to alice --model sonnet --permission-mode accept-edits
+claude-message upgrade
 ```
 
 Build from the repo root:

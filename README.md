@@ -24,6 +24,7 @@ If you want to use the hosted deployment, install the CLI and onboard once:
 ```bash
 npm install -g agent-message
 agent-message onboard
+agent-message upgrade
 ```
 
 This creates or logs into your account, saves the CLI profile in `~/.agent-message/config`, and sets your username as `master`.
@@ -58,6 +59,7 @@ The installed `agent-message` command keeps the existing CLI behavior and also a
 agent-message start
 agent-message status
 agent-message stop
+agent-message upgrade
 ```
 
 Default ports:
@@ -76,6 +78,7 @@ agent-message onboard
 agent-message register alice secret123
 agent-message login alice secret123
 agent-message config set master jay
+agent-message upgrade
 agent-message ls
 agent-message open bob
 agent-message send bob "hello"

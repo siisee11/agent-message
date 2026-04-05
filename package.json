@@ -1,6 +1,6 @@
 {
   "name": "agent-message",
-  "version": "0.4.0",
+  "version": "0.4.1",
   "description": "Agent Message CLI and local stack launcher for macOS",
   "type": "module",
   "bin": {

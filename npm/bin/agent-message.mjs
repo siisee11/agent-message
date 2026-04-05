@@ -33,6 +33,8 @@ const tunnelConfigPath = resolve(packageRoot, 'deploy', 'agent_tunnel_config.yml
 const tunnelName = 'agent-namjaeyoun-com'
 
 const lifecycleCommands = new Set(['start', 'stop', 'status'])
+const upgradeCommand = 'upgrade'
+const packageJsonPath = resolve(packageRoot, 'package.json')
 
 async function main() {
   const [command, ...rest] = process.argv.slice(2)
@@ -43,6 +45,16 @@ async function main() {
 
   if (command === '--help' || command === '-h' || command === 'help') {
     printRootUsage()
+    return
+  }
+
+  if (command === '--version') {
+    printVersion(packageJsonPath)
+    return
+  }
+
+  if (command === upgradeCommand) {
+    runGlobalUpgrade(['agent-message@latest'])
     return
   }
 
@@ -73,7 +85,33 @@ function printRootUsage() {
   agent-message start [--dev] [--with-tunnel] [--runtime-dir <dir>] [--api-host <host>] [--api-port <port>] [--web-host <host>] [--web-port <port>]
   agent-message stop [--dev] [--with-tunnel] [--runtime-dir <dir>]
   agent-message status [--dev] [--runtime-dir <dir>] [--api-host <host>] [--api-port <port>] [--web-host <host>] [--web-port <port>]
+  agent-message upgrade
   agent-message <existing-cli-command> [...args]`)
+}
+
+function runGlobalUpgrade(packages) {
+  const npmCommand = process.platform === 'win32' ? 'npm.cmd' : 'npm'
+  const result = spawnSync(npmCommand, ['install', '-g', ...packages], {
+    stdio: 'inherit',
+    cwd: process.cwd(),
+    env: process.env,
+  })
+
+  if (result.error) {
+    throw result.error
+  }
+
+  if (result.signal) {
+    process.kill(process.pid, result.signal)
+    return
+  }
+
+  process.exit(result.status ?? 1)
+}
+
+function printVersion(path) {
+  const packageJson = JSON.parse(readFileSync(path, 'utf8'))
+  console.log(`${packageJson.name} ${packageJson.version}`)
 }
 
 function parseLifecycleOptions(args) {

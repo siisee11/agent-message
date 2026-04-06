@@ -12,6 +12,13 @@ const READ_REACTION_EMOJI: &str = "👀";
 const COMPLETE_REACTION_EMOJI: &str = "✅";
 const WATCH_RETRY_DELAYS_SECS: [u64; 3] = [1, 2, 5];
 
+fn startup_text(chat_id: &str, username: &str, password: &str, cwd: &std::path::Path) -> String {
+    format!(
+        "claude-message session started\nchat_id: {chat_id}\nusername: {username}\npassword: {password}\nCWD: {}\n\nReply in this DM to run Claude Code.",
+        cwd.display()
+    )
+}
+
 pub(crate) struct App {
     config: Config,
 }
@@ -59,9 +66,7 @@ impl Runtime {
             .context("start agent-message watch stream")?;
         println!("agent-message watch stream ready for {to_username}");
 
-        let startup_text = format!(
-            "claude-message session started\nchat_id: {chat_id}\nusername: {username}\npassword: {password}\n\nReply in this DM to run Claude Code."
-        );
+        let startup_text = startup_text(&chat_id, &username, &password, &config.cwd);
         let startup_message_id = agent_client
             .send_text_message(&to_username, &startup_text)
             .await
@@ -365,5 +370,11 @@ mod tests {
         });
 
         assert_eq!(spec["elements"]["body"]["type"], "Markdown");
+    }
+
+    #[test]
+    fn startup_text_includes_cwd_line() {
+        let text = startup_text("chat-1", "agent-chat-1", "1234", std::path::Path::new("/tmp/demo"));
+        assert!(text.contains("CWD: /tmp/demo"));
     }
 }

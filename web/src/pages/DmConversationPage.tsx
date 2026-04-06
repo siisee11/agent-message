@@ -614,6 +614,10 @@ export function DmConversationPage() {
 
   function handleComposerSubmit(event: React.FormEvent<HTMLFormElement>): void {
     event.preventDefault()
+    submitComposer()
+  }
+
+  function submitComposer(): void {
     setComposerError(null)
 
     const trimmedContent = composerText.trim()
@@ -645,6 +649,15 @@ export function DmConversationPage() {
       content: composerText,
       attachment: selectedFile,
     })
+  }
+
+  function handleComposerKeyDown(event: React.KeyboardEvent<HTMLTextAreaElement>): void {
+    if (event.key !== 'Enter' || event.shiftKey || event.nativeEvent.isComposing) {
+      return
+    }
+
+    event.preventDefault()
+    submitComposer()
   }
 
   function handleComposerChange(event: React.ChangeEvent<HTMLTextAreaElement>): void {
@@ -925,6 +938,7 @@ export function DmConversationPage() {
                   onChange={handleComposerChange}
                   onBlur={() => setIsComposerFocused(false)}
                   onFocus={() => setIsComposerFocused(true)}
+                  onKeyDown={handleComposerKeyDown}
                   placeholder={editingTarget ? 'Edit message...' : 'Message'}
                   ref={composerInputRef}
                   rows={1}

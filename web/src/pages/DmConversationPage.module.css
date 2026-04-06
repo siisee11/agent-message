@@ -404,6 +404,12 @@
   padding-bottom: 0.16rem;
 }
 
+@media (pointer: fine) {
+  .composerFormKeyboardOpen {
+    padding-bottom: max(0.45rem, calc(env(safe-area-inset-bottom) + 0.16rem));
+  }
+}
+
 .editingBanner {
   display: flex;
   align-items: center;

@@ -22,6 +22,7 @@ import {
   canDeleteMessageForUser,
   canEditMessageForUser,
   extractMessageCwd,
+  extractMessageHostname,
   MESSAGE_PREVIEW_DELETED,
   resolveMessageRenderContent,
 } from '../messages/messagePresentation'
@@ -235,6 +236,16 @@ export function DmConversationPage() {
       const cwd = extractMessageCwd(messagesAscending[index].message)
       if (cwd) {
         return cwd
+      }
+    }
+    return null
+  }, [messagesAscending])
+
+  const conversationHostname = useMemo(() => {
+    for (let index = messagesAscending.length - 1; index >= 0; index -= 1) {
+      const hostname = extractMessageHostname(messagesAscending[index].message)
+      if (hostname) {
+        return hostname
       }
     }
     return null
@@ -708,6 +719,11 @@ export function DmConversationPage() {
     : conversationQuery.isError
       ? 'unavailable'
       : conversationCwd ?? 'unavailable'
+  const headerHostnameValue = conversationQuery.isLoading
+    ? 'loading...'
+    : conversationQuery.isError
+      ? 'unavailable'
+      : conversationHostname ?? 'unavailable'
 
   return (
     <section className={styles.page}>
@@ -735,6 +751,9 @@ export function DmConversationPage() {
               </div>
               <p className={styles.headerCwd} title={`cwd: ${headerCwdValue}`}>
                 {`cwd: ${headerCwdValue}`}
+              </p>
+              <p className={styles.headerHostname} title={`hostname: ${headerHostnameValue}`}>
+                {`hostname: ${headerHostnameValue}`}
               </p>
             </div>
           </div>

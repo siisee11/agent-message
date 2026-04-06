@@ -4,6 +4,7 @@ import {
   canDeleteMessageForUser,
   canEditMessageForUser,
   extractMessageCwd,
+  extractMessageHostname,
   MESSAGE_PREVIEW_DELETED,
   MESSAGE_PREVIEW_EMPTY,
   MESSAGE_PREVIEW_JSON_RENDER,
@@ -173,6 +174,26 @@ describe('message presentation helpers', () => {
     expect(extractMessageCwd(message)).toBe('/Users/jay/git/agent-message')
   })
 
+  it('extracts hostname from approval-card details in json render messages', () => {
+    const message = createMessage({
+      kind: 'json_render',
+      json_render_spec: {
+        root: 'approval-1',
+        elements: {
+          'approval-1': {
+            type: 'ApprovalCard',
+            props: {
+              title: 'Command approval requested',
+              details: ['Command: npm test', 'Hostname: devbox.local'],
+            },
+          },
+        },
+      },
+    })
+
+    expect(extractMessageHostname(message)).toBe('devbox.local')
+  })
+
   it('extracts cwd from plain text messages', () => {
     const message = createMessage({
       kind: 'text',
@@ -180,6 +201,15 @@ describe('message presentation helpers', () => {
     })
 
     expect(extractMessageCwd(message)).toBe('/tmp/worktree')
+  })
+
+  it('extracts hostname from plain text messages', () => {
+    const message = createMessage({
+      kind: 'text',
+      content: 'Request received\nCWD: /tmp/worktree\nHostname: devbox.local\nStatus: running',
+    })
+
+    expect(extractMessageHostname(message)).toBe('devbox.local')
   })
 
   it('allows delete but disallows edit for json_render messages', () => {

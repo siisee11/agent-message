@@ -32,10 +32,35 @@ const READ_REACTION_EMOJI: &str = "👀";
 const COMPLETE_REACTION_EMOJI: &str = "✅";
 const WATCH_RETRY_DELAYS_SECS: [u64; 3] = [1, 2, 5];
 
-fn startup_text(chat_id: &str, username: &str, password: &str, cwd: &std::path::Path) -> String {
+fn resolve_hostname() -> String {
+    for key in ["HOSTNAME", "HOST", "COMPUTERNAME"] {
+        if let Ok(value) = std::env::var(key) {
+            let trimmed = value.trim();
+            if !trimmed.is_empty() {
+                return trimmed.to_string();
+            }
+        }
+    }
+
+    std::process::Command::new("hostname")
+        .output()
+        .ok()
+        .and_then(|output| String::from_utf8(output.stdout).ok())
+        .map(|value| value.trim().to_string())
+        .filter(|value| !value.is_empty())
+        .unwrap_or_else(|| "unknown".to_string())
+}
+
+fn startup_text(
+    chat_id: &str,
+    username: &str,
+    password: &str,
+    cwd: &std::path::Path,
+    hostname: &str,
+) -> String {
     format!(
-        "codex-message session started\nchat_id: {chat_id}\nusername: {username}\npassword: {password}\nCWD: {}\n\nReply in this DM to run Codex.",
-        cwd.display()
+        "codex-message session started\nchat_id: {chat_id}\nusername: {username}\npassword: {password}\nCWD: {}\nHostname: {hostname}\n\nReply in this DM to run Codex.",
+        cwd.display(),
     )
 }
 
@@ -87,7 +112,8 @@ impl Runtime {
             .context("start agent-message watch stream")?;
         println!("agent-message watch stream ready for {to_username}");
 
-        let startup_text = startup_text(&chat_id, &username, &password, &config.cwd);
+        let hostname = resolve_hostname();
+        let startup_text = startup_text(&chat_id, &username, &password, &config.cwd, &hostname);
         let startup_message_id = agent_client
             .send_text_message(&to_username, &startup_text)
             .await
@@ -1061,8 +1087,10 @@ mod tests {
             "agent-chat-1",
             "1234",
             std::path::Path::new("/tmp/demo"),
+            "demo-host",
         );
         assert!(text.contains("CWD: /tmp/demo"));
+        assert!(text.contains("Hostname: demo-host"));
     }
 
     #[test]

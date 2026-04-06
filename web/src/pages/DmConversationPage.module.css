@@ -84,6 +84,18 @@
   text-overflow: ellipsis;
 }
 
+.headerHostname {
+  margin: 0;
+  min-width: 0;
+  color: #5b74a3;
+  font-size: 0.74rem;
+  line-height: 1.25;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
 .headerStatusBadge {
   flex-shrink: 0;
   border: 1px solid #c7d9fb;

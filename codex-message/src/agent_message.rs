@@ -1,4 +1,4 @@
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 use std::process::Stdio;
 use std::time::Duration;
 
@@ -11,16 +11,23 @@ use tokio::sync::mpsc;
 
 #[derive(Debug, Clone)]
 pub(crate) struct AgentMessageClient {
-    binary: PathBuf,
+    command: AgentMessageCommand,
     from_profile: Option<String>,
 }
 
+#[derive(Debug, Clone)]
+struct AgentMessageCommand {
+    program: PathBuf,
+    base_args: Vec<String>,
+    cwd: Option<PathBuf>,
+}
+
 impl AgentMessageClient {
-    pub(crate) fn new(binary: PathBuf) -> Self {
-        Self {
-            binary,
+    pub(crate) fn new(binary: PathBuf) -> Result<Self> {
+        Ok(Self {
+            command: resolve_agent_message_command(binary)?,
             from_profile: None,
-        }
+        })
     }
 
     pub(crate) fn set_from_profile(&mut self, profile: String) {
@@ -97,10 +104,7 @@ impl AgentMessageClient {
     }
 
     pub(crate) async fn watch_messages(&self, username: &str) -> Result<MessageWatch> {
-        let mut command = Command::new(&self.binary);
-        if let Some(profile) = &self.from_profile {
-            command.args(["--from", profile]);
-        }
+        let mut command = self.build_command();
         command
             .args(["watch", username, "--json"])
             .stdin(Stdio::null())
@@ -110,7 +114,7 @@ impl AgentMessageClient {
 
         let mut child = command
             .spawn()
-            .with_context(|| format!("spawn `{}`", self.binary.display()))?;
+            .with_context(|| format!("spawn `{}`", self.command.describe()))?;
         let stdout = child
             .stdout
             .take()
@@ -126,11 +130,30 @@ impl AgentMessageClient {
         Ok(MessageWatch { child, messages_rx })
     }
 
-    async fn run(&self, args: &[&str]) -> Result<String> {
-        let mut command = Command::new(&self.binary);
-        if let Some(profile) = &self.from_profile {
-            command.args(["--from", profile]);
+    pub(crate) async fn react_to_message(&self, message: &Message, emoji: &str) -> Result<()> {
+        let output = self
+            .run(&["react", &message.id, emoji])
+            .await
+            .context("run `agent-message react`")?;
+        if !output.contains(&message.id) {
+            bail!("unexpected react output: {output}");
         }
+        Ok(())
+    }
+
+    pub(crate) async fn unreact_to_message(&self, message: &Message, emoji: &str) -> Result<()> {
+        let output = self
+            .run(&["unreact", &message.id, emoji])
+            .await
+            .context("run `agent-message unreact`")?;
+        if !output.contains(&message.id) {
+            bail!("unexpected unreact output: {output}");
+        }
+        Ok(())
+    }
+
+    async fn run(&self, args: &[&str]) -> Result<String> {
+        let mut command = self.build_command();
         command
             .args(args)
             .stdin(Stdio::null())
@@ -139,7 +162,7 @@ impl AgentMessageClient {
 
         let child = command
             .spawn()
-            .with_context(|| format!("spawn `{}`", self.binary.display()))?;
+            .with_context(|| format!("spawn `{}`", self.command.describe()))?;
         let output = tokio::time::timeout(Duration::from_secs(30), child.wait_with_output())
             .await
             .context("agent-message command timed out")?
@@ -156,6 +179,26 @@ impl AgentMessageClient {
             return Err(anyhow!("agent-message command failed: {detail}"));
         }
         Ok(stdout)
+    }
+
+    fn build_command(&self) -> Command {
+        let mut command = Command::new(&self.command.program);
+        if let Some(cwd) = &self.command.cwd {
+            command.current_dir(cwd);
+        }
+        command.args(&self.command.base_args);
+        if let Some(profile) = &self.from_profile {
+            command.args(["--from", profile]);
+        }
+        command
+    }
+}
+
+impl AgentMessageCommand {
+    fn describe(&self) -> String {
+        let mut parts = vec![self.program.display().to_string()];
+        parts.extend(self.base_args.iter().cloned());
+        parts.join(" ")
     }
 }
 
@@ -185,6 +228,36 @@ impl MessageWatch {
         }
         let _ = self.child.wait().await;
         Ok(())
+    }
+}
+
+fn resolve_agent_message_command(binary: PathBuf) -> Result<AgentMessageCommand> {
+    if let Some(cli_dir) = source_cli_dir() {
+        return Ok(AgentMessageCommand {
+            program: PathBuf::from("go"),
+            base_args: vec!["run".to_string(), ".".to_string()],
+            cwd: Some(cli_dir),
+        });
+    }
+
+    if binary.as_os_str().is_empty() {
+        bail!("agent-message binary path is empty");
+    }
+
+    Ok(AgentMessageCommand {
+        program: binary,
+        base_args: Vec::new(),
+        cwd: None,
+    })
+}
+
+fn source_cli_dir() -> Option<PathBuf> {
+    let manifest_dir = Path::new(env!("CARGO_MANIFEST_DIR"));
+    let cli_dir = manifest_dir.parent()?.join("cli");
+    if cli_dir.join("go.mod").is_file() {
+        Some(cli_dir)
+    } else {
+        None
     }
 }
 
@@ -218,30 +291,6 @@ fn parse_watch_event(line: &str) -> Result<Option<Message>> {
         sender_username: message.sender.username.trim().to_string(),
         text: watch_message_text(&message),
     }))
-}
-
-impl AgentMessageClient {
-    pub(crate) async fn react_to_message(&self, message: &Message, emoji: &str) -> Result<()> {
-        let output = self
-            .run(&["react", &message.id, emoji])
-            .await
-            .context("run `agent-message react`")?;
-        if !output.contains(&message.id) {
-            bail!("unexpected react output: {output}");
-        }
-        Ok(())
-    }
-
-    pub(crate) async fn unreact_to_message(&self, message: &Message, emoji: &str) -> Result<()> {
-        let output = self
-            .run(&["unreact", &message.id, emoji])
-            .await
-            .context("run `agent-message unreact`")?;
-        if !output.contains(&message.id) {
-            bail!("unexpected unreact output: {output}");
-        }
-        Ok(())
-    }
 }
 
 #[derive(Debug, Deserialize)]
@@ -373,5 +422,14 @@ mod tests {
         assert_eq!(parsed.id, "m-124");
         assert_eq!(parsed.sender_username, "jay");
         assert_eq!(parsed.text, "[json-render]");
+    }
+
+    #[test]
+    fn prefers_source_cli_when_repo_cli_exists() {
+        let command =
+            resolve_agent_message_command(PathBuf::from("agent-message")).expect("resolve command");
+        assert_eq!(command.program, PathBuf::from("go"));
+        assert_eq!(command.base_args, vec!["run".to_string(), ".".to_string()]);
+        assert!(command.cwd.as_ref().is_some_and(|cwd| cwd.ends_with("cli")));
     }
 }

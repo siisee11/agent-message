@@ -32,6 +32,13 @@ const READ_REACTION_EMOJI: &str = "👀";
 const COMPLETE_REACTION_EMOJI: &str = "✅";
 const WATCH_RETRY_DELAYS_SECS: [u64; 3] = [1, 2, 5];
 
+fn startup_text(chat_id: &str, username: &str, password: &str, cwd: &std::path::Path) -> String {
+    format!(
+        "codex-message session started\nchat_id: {chat_id}\nusername: {username}\npassword: {password}\nCWD: {}\n\nReply in this DM to run Codex.",
+        cwd.display()
+    )
+}
+
 pub(crate) struct App {
     config: Config,
 }
@@ -61,7 +68,7 @@ impl Runtime {
         let chat_id = new_chat_id();
         let username = format!("agent-{chat_id}");
         let password = new_password();
-        let mut agent_client = AgentMessageClient::new(std::path::PathBuf::from("agent-message"));
+        let mut agent_client = AgentMessageClient::new(std::path::PathBuf::from("agent-message"))?;
         let to_username = resolve_target_username(&config, &agent_client).await?;
         let server_url = agent_client
             .server_url()
@@ -70,7 +77,7 @@ impl Runtime {
 
         println!("agent-message server_url: {server_url}");
 
-        register_agent_account(&agent_client, &username, &password).await?;
+        register_agent_account(&mut agent_client, &username, &password).await?;
         agent_client.set_from_profile(username.clone());
         println!("registered agent profile: {username} (chat_id: {chat_id})");
 
@@ -80,9 +87,7 @@ impl Runtime {
             .context("start agent-message watch stream")?;
         println!("agent-message watch stream ready for {to_username}");
 
-        let startup_text = format!(
-            "codex-message session started\nchat_id: {chat_id}\nusername: {username}\npassword: {password}\n\nReply in this DM to run Codex."
-        );
+        let startup_text = startup_text(&chat_id, &username, &password, &config.cwd);
         let startup_message_id = agent_client
             .send_text_message(&to_username, &startup_text)
             .await
@@ -132,6 +137,13 @@ impl Runtime {
                             );
                             if let Some(error_text) = outcome.error_text.as_deref() {
                                 eprintln!("codex turn error: {error_text}");
+                                self.send_turn_failure_notice(&request, error_text).await;
+                            } else if !outcome.status.eq_ignore_ascii_case("completed") {
+                                self.send_turn_failure_notice(
+                                    &request,
+                                    &format!("Turn ended with status {}.", outcome.status),
+                                )
+                                .await;
                             }
                             if should_mark_message_complete(&outcome) {
                                 self.mark_message_complete(&message).await;
@@ -139,6 +151,8 @@ impl Runtime {
                         }
                         Err(error) => {
                             eprintln!("codex request failed for {:?}: {error:#}", request.trim());
+                            self.send_turn_failure_notice(&request, &format!("{error:#}"))
+                                .await;
                         }
                     }
                 }
@@ -590,6 +604,25 @@ impl Runtime {
 
         Ok(())
     }
+
+    async fn send_turn_failure_notice(&self, request: &str, error_text: &str) {
+        let spec = report_spec(
+            "Failed",
+            "Codex request failed",
+            &[
+                format!("Request: {}", request.trim()),
+                format!("Error: {}", error_text.trim()),
+            ],
+            None,
+        );
+        if let Err(error) = self
+            .agent_client
+            .send_json_render_message(&self.to_username, spec)
+            .await
+        {
+            eprintln!("warning: failed to send failure notice: {error:#}");
+        }
+    }
 }
 
 #[derive(Debug)]
@@ -603,7 +636,7 @@ fn should_mark_message_complete(outcome: &TurnOutcome) -> bool {
 }
 
 async fn register_agent_account(
-    client: &AgentMessageClient,
+    client: &mut AgentMessageClient,
     username: &str,
     password: &str,
 ) -> Result<()> {
@@ -1019,6 +1052,17 @@ mod tests {
             }),
             None
         );
+    }
+
+    #[test]
+    fn startup_text_includes_cwd_line() {
+        let text = startup_text(
+            "chat-1",
+            "agent-chat-1",
+            "1234",
+            std::path::Path::new("/tmp/demo"),
+        );
+        assert!(text.contains("CWD: /tmp/demo"));
     }
 
     #[test]

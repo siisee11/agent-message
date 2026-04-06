@@ -270,7 +270,8 @@ func (s *SQLiteStore) ListConversationsByUser(ctx context.Context, params models
 		SELECT
 			c.id, c.participant_a, c.participant_b, c.created_at,
 			ou.id, ou.username, ou.created_at,
-			m.id, m.conversation_id, m.sender_id, m.content, m.kind, m.json_render_spec, m.attachment_url, m.attachment_type, m.edited, m.deleted, m.created_at, m.updated_at
+			m.id, m.conversation_id, m.sender_id, m.content, m.kind, m.json_render_spec, m.attachment_url, m.attachment_type, m.edited, m.deleted, m.created_at, m.updated_at,
+			sm.content
 		FROM conversations c
 		INNER JOIN users ou ON ou.id = CASE WHEN c.participant_a = ? THEN c.participant_b ELSE c.participant_a END
 		LEFT JOIN messages m ON m.id = (
@@ -278,6 +279,13 @@ func (s *SQLiteStore) ListConversationsByUser(ctx context.Context, params models
 			FROM messages m2
 			WHERE m2.conversation_id = c.id
 			ORDER BY m2.created_at DESC, m2.id DESC
+			LIMIT 1
+		)
+		LEFT JOIN messages sm ON sm.id = (
+			SELECT m3.id
+			FROM messages m3
+			WHERE m3.conversation_id = c.id
+			ORDER BY m3.created_at ASC, m3.id ASC
 			LIMIT 1
 		)
 		WHERE c.participant_a = ? OR c.participant_b = ?
@@ -308,6 +316,7 @@ func (s *SQLiteStore) ListConversationsByUser(ctx context.Context, params models
 			messageDeleted            sql.NullInt64
 			messageCreatedAtText      sql.NullString
 			messageUpdatedAtText      sql.NullString
+			sessionContent            sql.NullString
 		)
 
 		var summary models.ConversationSummary
@@ -331,6 +340,7 @@ func (s *SQLiteStore) ListConversationsByUser(ctx context.Context, params models
 			&messageDeleted,
 			&messageCreatedAtText,
 			&messageUpdatedAtText,
+			&sessionContent,
 		); err != nil {
 			return nil, fmt.Errorf("scan listed conversation: %w", err)
 		}
@@ -366,6 +376,9 @@ func (s *SQLiteStore) ListConversationsByUser(ctx context.Context, params models
 				return nil, fmt.Errorf("decode conversation last message: %w", err)
 			}
 			summary.LastMessage = &message
+		}
+		if sessionContent.Valid {
+			populateConversationSessionMetadata(&summary, sessionContent.String)
 		}
 
 		summaries = append(summaries, summary)

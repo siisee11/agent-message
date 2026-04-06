@@ -4,7 +4,7 @@ import { NavLink, useNavigate } from 'react-router-dom'
 import { ApiError, type ConversationSummary, type Message } from '../api'
 import { apiClient } from '../api/runtime'
 import { useAuth } from '../auth'
-import { summarizeLastMessagePreview } from '../messages/messagePresentation'
+import { summarizeConversationLabel, summarizeLastMessagePreview } from '../messages/messagePresentation'
 import {
   disablePushNotifications,
   enablePushNotifications,
@@ -152,6 +152,7 @@ export function ChatShellPage() {
   }
 
   function renderConversationItem(summary: ConversationSummary) {
+    const conversationLabel = summarizeConversationLabel(summary)
     const preview = summarizeLastMessagePreview(summary.last_message)
     const timestamp = formatLastMessageTime(summary.last_message)
     const conversationId = summary.conversation.id
@@ -165,7 +166,7 @@ export function ChatShellPage() {
         to={`/dm/${summary.conversation.id}`}
       >
         <div className={styles.conversationMeta}>
-          <span className={styles.conversationName}>{summary.other_user.username}</span>
+          <span className={styles.conversationName}>{conversationLabel}</span>
           <span className={styles.conversationTime}>{timestamp}</span>
         </div>
         <p className={styles.conversationPreview} title={preview}>

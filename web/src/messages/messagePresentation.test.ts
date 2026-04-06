@@ -9,6 +9,7 @@ import {
   MESSAGE_PREVIEW_EMPTY,
   MESSAGE_PREVIEW_JSON_RENDER,
   resolveMessageRenderContent,
+  summarizeConversationLabel,
   summarizeLastMessagePreview,
 } from './messagePresentation'
 
@@ -261,5 +262,23 @@ describe('message presentation helpers', () => {
       textContent: null,
       jsonRenderSpec: { root: 'r1', elements: {} },
     })
+  })
+
+  it('summarizes conversation labels from session folder and hostname', () => {
+    expect(
+      summarizeConversationLabel({
+        other_user: { id: 'u2', username: 'agent-123', created_at: '2026-03-30T00:00:00.000Z' },
+        session_folder: 'agent-message',
+        session_hostname: 'devbox.local',
+      }),
+    ).toBe('agent-message · devbox.local')
+  })
+
+  it('falls back to other username when session metadata is missing', () => {
+    expect(
+      summarizeConversationLabel({
+        other_user: { id: 'u2', username: 'agent-123', created_at: '2026-03-30T00:00:00.000Z' },
+      }),
+    ).toBe('agent-123')
   })
 })

@@ -209,14 +209,14 @@ func TestSQLiteStorePhase2CoreOperations(t *testing.T) {
 		ID:             "msg-1",
 		ConversationID: conversationAB.ID,
 		SenderID:       alice.ID,
-		Content:        stringPtr("hello"),
+		Content:        stringPtr("agent session started\nCWD: /Users/jay/git/agent-message\nHostname: devbox.local\n"),
 		CreatedAt:      base.Add(7 * time.Second),
 		UpdatedAt:      base.Add(7 * time.Second),
 	})
 	if err != nil {
 		t.Fatalf("CreateMessage(msg1) error = %v", err)
 	}
-	if msg1.ID != "msg-1" || msg1.Content == nil || *msg1.Content != "hello" {
+	if msg1.ID != "msg-1" || msg1.Content == nil || *msg1.Content == "" {
 		t.Fatalf("unexpected msg1: %+v", msg1)
 	}
 
@@ -303,11 +303,20 @@ func TestSQLiteStorePhase2CoreOperations(t *testing.T) {
 	if string(conversations[0].LastMessage.JSONRenderSpec) != string(jsonRenderSpec) {
 		t.Fatalf("expected json_render spec in AB summary, got %+v", conversations[0].LastMessage)
 	}
+	if conversations[0].SessionFolder != "agent-message" {
+		t.Fatalf("expected session folder agent-message, got %+v", conversations[0].SessionFolder)
+	}
+	if conversations[0].SessionHostname != "devbox.local" {
+		t.Fatalf("expected session hostname devbox.local, got %+v", conversations[0].SessionHostname)
+	}
 	if conversations[1].Conversation.ID != conversationAC.ID {
 		t.Fatalf("expected AC second, got %q", conversations[1].Conversation.ID)
 	}
 	if conversations[1].LastMessage != nil {
 		t.Fatalf("expected no last message for AC, got %+v", conversations[1].LastMessage)
+	}
+	if conversations[1].SessionFolder != "" || conversations[1].SessionHostname != "" {
+		t.Fatalf("expected no session metadata for AC, got %+v", conversations[1])
 	}
 
 	firstPage, err := s.ListMessagesByConversation(ctx, models.ListConversationMessagesParams{

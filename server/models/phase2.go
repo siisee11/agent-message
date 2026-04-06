@@ -104,9 +104,11 @@ func (q *ListMessagesQuery) Normalize() error {
 
 // ConversationSummary is a list projection for GET /api/conversations.
 type ConversationSummary struct {
-	Conversation Conversation `json:"conversation"`
-	OtherUser    UserProfile  `json:"other_user"`
-	LastMessage  *Message     `json:"last_message,omitempty"`
+	Conversation    Conversation `json:"conversation"`
+	OtherUser       UserProfile  `json:"other_user"`
+	LastMessage     *Message     `json:"last_message,omitempty"`
+	SessionFolder   string       `json:"session_folder,omitempty"`
+	SessionHostname string       `json:"session_hostname,omitempty"`
 }
 
 // ConversationDetails is the detail projection for GET /api/conversations/:id.

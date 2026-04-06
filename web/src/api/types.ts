@@ -66,6 +66,8 @@ export interface ConversationSummary {
   conversation: Conversation
   other_user: UserProfile
   last_message?: Message
+  session_folder?: string
+  session_hostname?: string
 }
 
 export interface ConversationDetails {

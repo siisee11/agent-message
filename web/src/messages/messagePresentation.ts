@@ -1,4 +1,4 @@
-import { parseMessageContent, type JsonRenderSpec, type Message } from '../api'
+import { parseMessageContent, type ConversationSummary, type JsonRenderSpec, type Message } from '../api'
 
 export const MESSAGE_PREVIEW_EMPTY = 'Start a conversation'
 export const MESSAGE_PREVIEW_DELETED = 'This message was deleted'
@@ -437,6 +437,11 @@ export function extractMessageHostname(message: Message): string | null {
   }
 
   return extractHostnameFromText(parsed.textContent)
+}
+
+export function summarizeConversationLabel(summary: Pick<ConversationSummary, 'other_user' | 'session_folder' | 'session_hostname'>): string {
+  const displayLabel = joinCandidateParts([summary.session_folder, summary.session_hostname], ' · ')
+  return displayLabel ?? summary.other_user.username
 }
 
 export function canDeleteMessageForUser(message: Message, currentUserId: string | undefined): boolean {

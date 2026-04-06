@@ -618,9 +618,11 @@ type ToggleReactionResult struct {
 
 // ConversationSummary is returned by GET /api/conversations.
 type ConversationSummary struct {
-	Conversation Conversation `json:"conversation"`
-	OtherUser    UserProfile  `json:"other_user"`
-	LastMessage  *Message     `json:"last_message,omitempty"`
+	Conversation    Conversation `json:"conversation"`
+	OtherUser       UserProfile  `json:"other_user"`
+	LastMessage     *Message     `json:"last_message,omitempty"`
+	SessionFolder   string       `json:"session_folder,omitempty"`
+	SessionHostname string       `json:"session_hostname,omitempty"`
 }
 
 // ConversationDetails is returned by GET/POST /api/conversations/:id.

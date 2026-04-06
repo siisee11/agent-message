@@ -57,6 +57,16 @@ function readStringProp(props: Record<string, unknown> | undefined, key: string)
   return normalized === '' ? null : normalized
 }
 
+function readVerbatimStringProp(props: Record<string, unknown> | undefined, key: string): string | null {
+  const value = props?.[key]
+  if (typeof value !== 'string') {
+    return null
+  }
+
+  const trimmed = value.trim()
+  return trimmed === '' ? null : trimmed
+}
+
 function joinCandidateParts(parts: Array<string | null | undefined>, separator = ' '): string | null {
   const normalized = parts.filter((part): part is string => typeof part === 'string' && part.trim() !== '')
   if (normalized.length === 0) {
@@ -91,6 +101,36 @@ function summarizeTable(props: Record<string, unknown> | undefined): string | nu
   )
 }
 
+function summarizeGitCommitLog(props: Record<string, unknown> | undefined): { primary?: string; secondary?: string } {
+  if (!props) {
+    return {}
+  }
+
+  let firstCommitSubject: string | null = null
+  if (Array.isArray(props.commits)) {
+    for (const value of props.commits) {
+      if (isObject(value) && typeof value.subject === 'string' && value.subject.trim() !== '') {
+        firstCommitSubject = value.subject
+        break
+      }
+    }
+  }
+
+  return {
+    primary:
+      joinCandidateParts(
+        [
+          readVerbatimStringProp(props, 'title'),
+          readVerbatimStringProp(props, 'repository'),
+          readVerbatimStringProp(props, 'branch'),
+          normalizePreviewText(firstCommitSubject ?? ''),
+        ],
+        ' - ',
+      ) ?? undefined,
+    secondary: readVerbatimStringProp(props, 'description') ?? undefined,
+  }
+}
+
 function summarizeElement(element: BareUIElement): { primary?: string; secondary?: string; fallback?: string } {
   const props = isObject(element.props) ? element.props : undefined
 
@@ -118,6 +158,8 @@ function summarizeElement(element: BareUIElement): { primary?: string; secondary
         primary:
           joinCandidateParts([readStringProp(props, 'title'), readStringProp(props, 'description')]) ?? undefined,
       }
+    case 'GitCommitLog':
+      return summarizeGitCommitLog(props)
     case 'Markdown':
       return { primary: readStringProp(props, 'content') ?? undefined }
     case 'Table':

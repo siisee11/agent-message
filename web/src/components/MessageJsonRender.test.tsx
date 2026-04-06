@@ -191,4 +191,55 @@ describe('MessageJsonRender', () => {
     expect(html).toContain('$1,675')
     expect(html).toContain('<svg')
   })
+
+  it('renders git commit logs as a visual timeline', () => {
+    const html = ReactDOMServer.renderToStaticMarkup(
+      <MessageJsonRender
+        spec={{
+          root: 'commit-log-1',
+          elements: {
+            'commit-log-1': {
+              type: 'GitCommitLog',
+              props: {
+                title: 'Recent history',
+                repository: 'agent-message',
+                branch: 'main',
+                commits: [
+                  {
+                    sha: '5e7f6b8f7c2b9a12f6b0c10b46c2cd884973a001',
+                    subject: 'Add commit log renderer',
+                    body: 'Introduces a dedicated timeline for git history payloads.',
+                    authorName: 'jay',
+                    authoredAt: '2026-04-06T09:12:00Z',
+                    isHead: true,
+                    refs: ['origin/main', 'tag:v0.4.1'],
+                    stats: {
+                      filesChanged: 3,
+                      insertions: 124,
+                      deletions: 9,
+                    },
+                  },
+                  {
+                    sha: '4d6c8e1bb3b9a11ce80c9e5e2f08e10ab6381234',
+                    subject: 'Tighten json-render preview extraction',
+                    authorName: 'jay',
+                    authoredAt: '2026-04-05T18:40:00Z',
+                    isMerge: true,
+                  },
+                ],
+              },
+            },
+          },
+        }}
+      />,
+    )
+
+    expect(html).toContain('Recent history')
+    expect(html).toContain('Add commit log renderer')
+    expect(html).toContain('HEAD')
+    expect(html).toContain('origin/main')
+    expect(html).toContain('3 files changed')
+    expect(html).toContain('+124 insertions')
+    expect(html).toContain('merge')
+  })
 })

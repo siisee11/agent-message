@@ -117,6 +117,33 @@ describe('message presentation helpers', () => {
     expect(summarizeLastMessagePreview(message)).toBe('Step, Status - Build, running')
   })
 
+  it('extracts a useful preview from git commit log json render messages', () => {
+    const message = createMessage({
+      kind: 'json_render',
+      json_render_spec: {
+        root: 'commit-log-1',
+        elements: {
+          'commit-log-1': {
+            type: 'GitCommitLog',
+            props: {
+              title: 'Release history',
+              repository: 'agent-message',
+              branch: 'main',
+              commits: [
+                {
+                  sha: '5e7f6b8f7c2b9a12f6b0c10b46c2cd884973a001',
+                  subject: 'Ship commit log component',
+                },
+              ],
+            },
+          },
+        },
+      },
+    })
+
+    expect(summarizeLastMessagePreview(message)).toBe('Release history - agent-message - main - Ship commit log component')
+  })
+
   it('falls back to placeholder when json render has no extractable text', () => {
     const message = createMessage({
       kind: 'json_render',

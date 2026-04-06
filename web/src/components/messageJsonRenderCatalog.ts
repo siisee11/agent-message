@@ -9,6 +9,24 @@ const graphDatumSchema = z.object({
   value: z.number(),
 })
 
+const gitCommitStatsSchema = z.object({
+  deletions: z.number().int().nonnegative().optional(),
+  filesChanged: z.number().int().nonnegative().optional(),
+  insertions: z.number().int().nonnegative().optional(),
+})
+
+const gitCommitEntrySchema = z.object({
+  authorName: z.string().optional(),
+  authoredAt: z.string().optional(),
+  body: z.string().optional(),
+  isHead: z.boolean().optional(),
+  isMerge: z.boolean().optional(),
+  refs: z.array(z.string()).optional(),
+  sha: z.string(),
+  stats: gitCommitStatsSchema.optional(),
+  subject: z.string(),
+})
+
 export const messageJsonRenderCatalog = defineCatalog(schema, {
   components: {
     ApprovalCard: {
@@ -44,6 +62,16 @@ export const messageJsonRenderCatalog = defineCatalog(schema, {
       }),
     },
     Card: shadcnComponentDefinitions.Card,
+    GitCommitLog: {
+      description: 'Visual git commit timeline with refs, authors, and stat badges',
+      props: z.object({
+        branch: z.string().optional(),
+        commits: z.array(gitCommitEntrySchema),
+        description: z.string().optional(),
+        repository: z.string().optional(),
+        title: z.string().optional(),
+      }),
+    },
     Grid: shadcnComponentDefinitions.Grid,
     Heading: shadcnComponentDefinitions.Heading,
     Image: shadcnComponentDefinitions.Image,

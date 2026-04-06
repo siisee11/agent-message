@@ -489,6 +489,7 @@
   min-height: 2.55rem;
   display: flex;
   align-items: center;
+  cursor: text;
   padding: 0.14rem 0.72rem;
   border-radius: 1.4rem;
   border: 1px solid #c2d2f4;

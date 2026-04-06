@@ -252,7 +252,6 @@ export function DmConversationPage() {
   }, [messagesAscending])
 
   const hasOlderMessages = Boolean(messagePagesQuery.hasNextPage)
-  const isSubmitting = messagePagesQuery.isFetchingNextPage
 
   const handleMessageCreated = useCallback(
     async (createdMessage: Message, options?: { resetComposer?: boolean }) => {
@@ -676,6 +675,14 @@ export function DmConversationPage() {
     setComposerText(event.target.value)
   }
 
+  function handleComposerFieldPointerDown(event: React.PointerEvent<HTMLDivElement>): void {
+    if (event.target instanceof HTMLTextAreaElement || disableComposerActions) {
+      return
+    }
+
+    composerInputRef.current?.focus()
+  }
+
   const handleApprovalAction = useCallback(
     async (value: string) => {
       await approvalResponseMutation.mutateAsync(value)
@@ -702,8 +709,7 @@ export function DmConversationPage() {
     sendMessageMutation.isPending ||
     approvalResponseMutation.isPending ||
     editMessageMutation.isPending ||
-    deleteMessageMutation.isPending ||
-    isSubmitting
+    deleteMessageMutation.isPending
   const headerTitle = conversationQuery.isLoading
     ? 'Loading conversation...'
     : conversationQuery.isError
@@ -950,7 +956,7 @@ export function DmConversationPage() {
                 <PlusIcon />
               </button>
 
-              <div className={styles.composerField}>
+              <div className={styles.composerField} onPointerDown={handleComposerFieldPointerDown}>
                 <textarea
                   className={styles.composerInput}
                   disabled={disableComposerActions}

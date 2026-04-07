@@ -27,6 +27,7 @@ import {
   resolveMessageRenderContent,
 } from '../messages/messagePresentation'
 import { formatRealtimeStatusLabel, useRealtime } from '../realtime'
+import { useDocumentSurface } from '../hooks'
 import {
   fallbackSender,
   prependMessageToPages,
@@ -171,6 +172,8 @@ function groupReactionsByEmoji(
 }
 
 export function DmConversationPage() {
+  useDocumentSurface({ backgroundColor: '#ffffff' })
+
   const navigate = useNavigate()
   const { conversationId } = useParams()
   const { user } = useAuth()

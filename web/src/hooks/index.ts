@@ -1,4 +1,5 @@
 export { useEventStream } from './useEventStream'
+export { useDocumentSurface } from './useDocumentSurface'
 export type {
   EventStreamConnectionStatus,
   ServerEvent,

@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
 import { ApiError } from '../api'
 import { useAuth } from '../auth'
+import { useDocumentSurface } from '../hooks'
 import styles from './LoginPage.module.css'
 
 interface LocationState {
@@ -11,6 +12,8 @@ interface LocationState {
 }
 
 export function LoginPage() {
+  useDocumentSurface({ backgroundColor: '#edf3ff' })
+
   const navigate = useNavigate()
   const location = useLocation()
   const { status, loginWithAutoRegister } = useAuth()

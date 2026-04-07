@@ -4,6 +4,7 @@ import { NavLink, useNavigate } from 'react-router-dom'
 import { ApiError, type ConversationSummary, type Message } from '../api'
 import { apiClient } from '../api/runtime'
 import { useAuth } from '../auth'
+import { useDocumentSurface } from '../hooks'
 import { summarizeConversationLabel, summarizeLastMessagePreview } from '../messages/messagePresentation'
 import {
   disablePushNotifications,
@@ -45,6 +46,8 @@ function formatLastMessageTime(lastMessage?: Message): string {
 }
 
 export function ChatShellPage() {
+  useDocumentSurface({ backgroundColor: '#1f4fbf' })
+
   const navigate = useNavigate()
   const { user, logout } = useAuth()
   const realtime = useRealtime()

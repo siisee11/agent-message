@@ -1,12 +1,18 @@
-use std::cmp::{max, min};
 use std::sync::Mutex;
 
-use ratatui::buffer::Buffer;
-use ratatui::layout::Rect;
-use ratatui::text::{Line, Text};
-use ratatui::widgets::{Block, BorderType, Borders, Paragraph, Widget, Wrap};
-
 static OUTPUT_LOCK: Mutex<()> = Mutex::new(());
+
+const ANSI_RESET: &str = "\x1b[0m";
+const ANSI_BOLD: &str = "\x1b[1m";
+const ANSI_DIM: &str = "\x1b[2m";
+const ANSI_CYAN: &str = "\x1b[36m";
+const ANSI_BLUE: &str = "\x1b[34m";
+const ANSI_GREEN: &str = "\x1b[32m";
+const ANSI_YELLOW: &str = "\x1b[33m";
+const ANSI_RED: &str = "\x1b[31m";
+const ANSI_MAGENTA: &str = "\x1b[35m";
+const ANSI_WHITE: &str = "\x1b[37m";
+const ANSI_BRIGHT_BLACK: &str = "\x1b[90m";
 
 #[derive(Debug, Clone)]
 pub(crate) struct LogUi {
@@ -90,7 +96,7 @@ impl LogUi {
         S: Into<String>,
         I: IntoIterator<Item = S>,
     {
-        let rendered = render_card(
+        let rendered = render_line(
             self.app_name,
             tone,
             title,
@@ -100,7 +106,7 @@ impl LogUi {
             Ok(guard) => guard,
             Err(poisoned) => poisoned.into_inner(),
         };
-        eprintln!("{rendered}\n");
+        eprintln!("{rendered}");
         drop(guard);
     }
 }
@@ -108,79 +114,80 @@ impl LogUi {
 fn collect_lines(lines: impl IntoIterator<Item = String>) -> Vec<String> {
     lines
         .into_iter()
-        .map(|line| line.replace('\t', "  "))
-        .filter(|line| !line.trim().is_empty())
+        .map(|line| compact_whitespace(&line.replace('\t', "  ")))
+        .filter(|line| !line.is_empty())
         .collect()
 }
 
-fn render_card(app_name: &str, tone: LogTone, title: &str, lines: &[String]) -> String {
-    let width = preferred_width();
-    let inner_width = width.saturating_sub(2) as usize;
+fn render_line(app_name: &str, tone: LogTone, title: &str, lines: &[String]) -> String {
+    let color = color_enabled();
+    let separator = paint(" | ", ANSI_BRIGHT_BLACK, color);
 
-    let mut body_lines = vec![Line::from(title.trim().to_string())];
-    if !lines.is_empty() {
-        body_lines.push(Line::from(String::new()));
-        body_lines.extend(lines.iter().map(|line| Line::from(format!("* {line}"))));
-    }
+    let mut parts = vec![
+        paint(app_name, ANSI_CYAN, color),
+        paint(tone.label(), tone.color_code(), color),
+        paint(&compact_whitespace(title), ANSI_BOLD, color),
+    ];
 
-    let content_height = estimate_text_height(&body_lines, inner_width);
-    let area = Rect::new(0, 0, width, content_height.saturating_add(2));
-    let mut buffer = Buffer::empty(area);
-
-    let block = Block::default()
-        .borders(Borders::ALL)
-        .border_type(BorderType::Rounded)
-        .title(format!(" {app_name} | {} ", tone.label()));
-    let inner = block.inner(area);
-    block.render(area, &mut buffer);
-
-    Paragraph::new(Text::from(body_lines))
-        .wrap(Wrap { trim: false })
-        .render(inner, &mut buffer);
-
-    buffer_to_string(&buffer)
+    parts.extend(lines.iter().map(|line| format_detail(line, color)));
+    parts.join(&separator)
 }
 
-fn preferred_width() -> u16 {
-    let env_width = std::env::var("COLUMNS")
-        .ok()
-        .and_then(|value| value.trim().parse::<u16>().ok())
-        .unwrap_or(96);
-    min(max(env_width, 56), 108)
+fn format_detail(line: &str, color: bool) -> String {
+    if let Some((key, value)) = line.split_once(':') {
+        let key = normalize_key(key);
+        let value = quote_if_needed(value.trim());
+        return format!(
+            "{}={}",
+            paint(&key, ANSI_DIM, color),
+            paint(&value, ANSI_WHITE, color)
+        );
+    }
+
+    paint(&quote_if_needed(line), ANSI_WHITE, color)
 }
 
-fn estimate_text_height(lines: &[Line<'_>], inner_width: usize) -> u16 {
-    if inner_width == 0 {
-        return 1;
-    }
-
-    let mut height = 0usize;
-    for line in lines {
-        let text = line.to_string();
-        let logical_width = max(text.chars().count(), 1);
-        height += logical_width.div_ceil(inner_width);
-    }
-
-    max(height, 1) as u16
+fn normalize_key(key: &str) -> String {
+    key.trim()
+        .chars()
+        .map(|ch| match ch {
+            'A'..='Z' => ch.to_ascii_lowercase(),
+            'a'..='z' | '0'..='9' => ch,
+            _ => '_',
+        })
+        .collect::<String>()
+        .trim_matches('_')
+        .to_string()
 }
 
-fn buffer_to_string(buffer: &Buffer) -> String {
-    let area = buffer.area;
-    let mut output = String::new();
-
-    for y in area.y..area.y.saturating_add(area.height) {
-        let mut line = String::new();
-        for x in area.x..area.x.saturating_add(area.width) {
-            line.push_str(buffer[(x, y)].symbol());
-        }
-        let trimmed = line.trim_end_matches(' ');
-        output.push_str(trimmed);
-        if y + 1 < area.y.saturating_add(area.height) {
-            output.push('\n');
-        }
+fn quote_if_needed(value: &str) -> String {
+    let compact = compact_whitespace(value);
+    if compact.is_empty() {
+        return "\"\"".to_string();
+    }
+    if compact.chars().all(|ch| {
+        ch.is_ascii_alphanumeric() || matches!(ch, '@' | '/' | '.' | '-' | '_' | ':' | '#')
+    }) {
+        return compact;
     }
 
-    output
+    format!("\"{}\"", compact.replace('\\', "\\\\").replace('"', "\\\""))
+}
+
+fn compact_whitespace(value: &str) -> String {
+    value.split_whitespace().collect::<Vec<_>>().join(" ")
+}
+
+fn paint(text: &str, code: &str, enabled: bool) -> String {
+    if enabled {
+        format!("{code}{text}{ANSI_RESET}")
+    } else {
+        text.to_string()
+    }
+}
+
+fn color_enabled() -> bool {
+    std::env::var_os("NO_COLOR").is_none()
 }
 
 impl LogTone {
@@ -190,9 +197,21 @@ impl LogTone {
             Self::Request => "REQUEST",
             Self::Turn => "TURN",
             Self::Success => "SUCCESS",
-            Self::Warning => "WARNING",
+            Self::Warning => "WARN",
             Self::Error => "ERROR",
             Self::Child => "CHILD",
+        }
+    }
+
+    fn color_code(self) -> &'static str {
+        match self {
+            Self::System => ANSI_BLUE,
+            Self::Request => ANSI_MAGENTA,
+            Self::Turn => ANSI_CYAN,
+            Self::Success => ANSI_GREEN,
+            Self::Warning => ANSI_YELLOW,
+            Self::Error => ANSI_RED,
+            Self::Child => ANSI_BRIGHT_BLACK,
         }
     }
 }
@@ -202,8 +221,8 @@ mod tests {
     use super::*;
 
     #[test]
-    fn renders_log_card_with_title_and_lines() {
-        let rendered = render_card(
+    fn renders_structured_single_line_log() {
+        let rendered = render_line(
             "codex-message",
             LogTone::Request,
             "User request received",
@@ -213,6 +232,8 @@ mod tests {
         assert!(rendered.contains("codex-message"));
         assert!(rendered.contains("REQUEST"));
         assert!(rendered.contains("User request received"));
-        assert!(rendered.contains("* Text: build it"));
+        assert!(rendered.contains("message="));
+        assert!(rendered.contains("text=\"build it\""));
+        assert!(!rendered.contains('\n'));
     }
 }

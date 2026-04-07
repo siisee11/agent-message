@@ -35,16 +35,37 @@ const tunnelName = 'agent-namjaeyoun-com'
 const lifecycleCommands = new Set(['start', 'stop', 'status'])
 const upgradeCommand = 'upgrade'
 const packageJsonPath = resolve(packageRoot, 'package.json')
+const bundledCliFallbackCommands = [
+  ['catalog', 'Inspect the server json-render catalog metadata'],
+  ['config', 'Inspect and update local CLI configuration'],
+  ['delete', 'Delete a message by explicit message ID or by index from the last read'],
+  ['edit', 'Edit a message by explicit message ID or by index from the last read'],
+  ['login', 'Log in with username and password'],
+  ['logout', 'Log out and clear local token'],
+  ['ls', 'List your direct-message conversations'],
+  ['onboard', 'Interactively log in or create an account, then set that account as master'],
+  ['open', 'Open a conversation with a user'],
+  ['profile', 'Manage saved login profiles'],
+  ['react', 'React to a message by explicit message ID or by index from the last read'],
+  ['read', 'Read recent messages from a conversation'],
+  ['register', 'Register a new account'],
+  ['schema', 'Print machine-readable command schemas resolved from the current CLI binary'],
+  ['send', 'Send a message to a user or your configured master'],
+  ['unreact', 'Remove a reaction by explicit message ID or by index from the last read'],
+  ['wait', 'Wait for the next message in a conversation'],
+  ['watch', 'Watch incoming messages in real time'],
+  ['whoami', 'Print the currently authenticated user'],
+]
 
 async function main() {
   const [command, ...rest] = process.argv.slice(2)
   if (!command) {
-    printRootUsage()
+    await printRootUsage({ stream: process.stderr })
     process.exit(1)
   }
 
   if (command === '--help' || command === '-h' || command === 'help') {
-    printRootUsage()
+    await printRootUsage({ stream: process.stdout })
     return
   }
 
@@ -59,7 +80,7 @@ async function main() {
   }
 
   if (lifecycleCommands.has(command)) {
-    const options = parseLifecycleOptions(rest)
+    const options = await parseLifecycleOptions(rest)
     if (!options.dev) {
       await ensureBundleReady()
     }
@@ -80,13 +101,62 @@ async function main() {
   delegateToBundledCli([command, ...rest])
 }
 
-function printRootUsage() {
-  console.error(`Usage:
+async function printRootUsage({ stream }) {
+  stream.write(`Usage:
   agent-message start [--dev] [--with-tunnel] [--runtime-dir <dir>] [--api-host <host>] [--api-port <port>] [--web-host <host>] [--web-port <port>]
   agent-message stop [--dev] [--with-tunnel] [--runtime-dir <dir>]
   agent-message status [--dev] [--runtime-dir <dir>] [--api-host <host>] [--api-port <port>] [--web-host <host>] [--web-port <port>]
   agent-message upgrade
-  agent-message <existing-cli-command> [...args]`)
+\n`)
+
+  const bundledHelp = await renderBundledCliHelp()
+  if (bundledHelp) {
+    stream.write(`${bundledHelp}${bundledHelp.endsWith('\n') ? '' : '\n'}`)
+    return
+  }
+
+  stream.write(renderBundledCliFallbackHelp())
+}
+
+async function renderBundledCliHelp() {
+  try {
+    await ensureBundleReady()
+  } catch {
+    return null
+  }
+
+  const cliBinary = resolveBinaryPath('agent-message-cli')
+  const result = spawnSync(cliBinary, ['--help'], {
+    encoding: 'utf8',
+    env: process.env,
+  })
+
+  if (result.error || result.status !== 0 || typeof result.stdout !== 'string') {
+    return null
+  }
+
+  return result.stdout.trimEnd()
+}
+
+function renderBundledCliFallbackHelp() {
+  const commands = bundledCliFallbackCommands
+    .map(([name, description]) => `  ${name.padEnd(18)} ${description}`)
+    .join('\n')
+
+  return `CLI client for Agent Message
+
+Usage:
+  agent-message [flags]
+
+Available Commands:
+${commands}
+
+Flags:
+  --config <string>      Path to config file
+  --server-url <string>  Override server URL for this command
+  --from <string>        Use a specific profile for this command without switching the active profile
+  --json                 Output command results as JSON when supported
+`
 }
 
 function runGlobalUpgrade(packages) {
@@ -114,7 +184,7 @@ function printVersion(path) {
   console.log(`${packageJson.name} ${packageJson.version}`)
 }
 
-function parseLifecycleOptions(args) {
+async function parseLifecycleOptions(args) {
   const options = {
     dev: false,
     withTunnel: false,
@@ -128,7 +198,7 @@ function parseLifecycleOptions(args) {
   for (let index = 0; index < args.length; index += 1) {
     const arg = args[index]
     if (arg === '--help' || arg === '-h') {
-      printRootUsage()
+      await printRootUsage({ stream: process.stdout })
       process.exit(0)
     }
 

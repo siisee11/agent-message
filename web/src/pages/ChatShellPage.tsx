@@ -135,6 +135,22 @@ export function ChatShellPage() {
     return 'Enable notifications'
   }
 
+  function resolvePushSummaryLabel(): string {
+    if (pushMutation.isPending || pushLoading) {
+      return 'Checking'
+    }
+    if (pushState.enabled) {
+      return 'On'
+    }
+    if (!pushState.supported || !pushState.configured) {
+      return 'Unavailable'
+    }
+    if (pushState.permission === 'denied') {
+      return 'Blocked'
+    }
+    return 'Off'
+  }
+
   function resolvePushStatusText(): string {
     if (pushState.enabled) {
       return 'Installed device notifications are active.'
@@ -150,6 +166,13 @@ export function ChatShellPage() {
     }
     return 'Enable push alerts for new messages.'
   }
+
+  const isPushToggleDisabled =
+    pushLoading ||
+    pushMutation.isPending ||
+    !pushState.supported ||
+    !pushState.configured ||
+    (pushState.permission === 'denied' && !pushState.enabled)
 
   function renderConversationItem(summary: ConversationSummary) {
     const conversationLabel = summarizeConversationLabel(summary)
@@ -201,22 +224,22 @@ export function ChatShellPage() {
             <p className={styles.currentUser}>{user ? `@${user.username}` : 'Unknown user'}</p>
             <span className={styles.statusBadge}>{formatRealtimeStatusLabel(realtime.status)}</span>
           </div>
-          <div className={styles.headerMeta}>
+          <div className={styles.notificationRow}>
+            <div className={styles.notificationText} title={resolvePushStatusText()}>
+              <p className={styles.notificationLabel}>Notifications</p>
+              <p className={styles.notificationSummary}>{resolvePushSummaryLabel()}</p>
+            </div>
             <button
-              className={styles.logoutButton}
-              disabled={
-                pushLoading ||
-                pushMutation.isPending ||
-                !pushState.supported ||
-                !pushState.configured ||
-                (pushState.permission === 'denied' && !pushState.enabled)
-              }
+              aria-checked={pushState.enabled}
+              aria-label={resolvePushButtonLabel()}
+              className={`${styles.pushSwitch}${pushState.enabled ? ` ${styles.pushSwitchEnabled}` : ''}`}
+              disabled={isPushToggleDisabled}
               onClick={() => pushMutation.mutate()}
+              role="switch"
               type="button"
             >
-              {resolvePushButtonLabel()}
+              <span className={styles.pushSwitchThumb} />
             </button>
-            <p className={styles.currentUser}>{resolvePushStatusText()}</p>
           </div>
           {pageError ? <p className={styles.errorMessage}>{pageError}</p> : null}
           {pushError ? <p className={styles.errorMessage}>{pushError}</p> : null}

@@ -56,6 +56,42 @@
   gap: 0.75rem;
 }
 
+.notificationRow {
+  margin-top: 0.75rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  min-width: 0;
+}
+
+.notificationText {
+  min-width: 0;
+  flex: 1;
+  display: flex;
+  align-items: baseline;
+  gap: 0.55rem;
+  overflow: hidden;
+}
+
+.notificationLabel {
+  margin: 0;
+  font-size: 0.92rem;
+  font-weight: 700;
+  color: #ffffff;
+  white-space: nowrap;
+}
+
+.notificationSummary {
+  margin: 0;
+  min-width: 0;
+  font-size: 0.82rem;
+  color: rgba(255, 255, 255, 0.8);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
 .currentUser {
   margin: 0;
   font-size: 0.92rem;
@@ -89,6 +125,55 @@
 .logoutButton:disabled {
   opacity: 0.65;
   cursor: not-allowed;
+}
+
+.pushSwitch {
+  position: relative;
+  flex: none;
+  width: 2.9rem;
+  height: 1.7rem;
+  padding: 0.16rem;
+  border: 1px solid rgba(255, 255, 255, 0.28);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.18);
+  cursor: pointer;
+  transition:
+    background-color 140ms ease,
+    border-color 140ms ease,
+    opacity 140ms ease;
+}
+
+.pushSwitchEnabled {
+  background: rgba(255, 255, 255, 0.94);
+  border-color: rgba(255, 255, 255, 0.94);
+}
+
+.pushSwitch:disabled {
+  opacity: 0.65;
+  cursor: not-allowed;
+}
+
+.pushSwitch:focus-visible {
+  outline: 2px solid rgba(255, 255, 255, 0.92);
+  outline-offset: 2px;
+}
+
+.pushSwitchThumb {
+  display: block;
+  width: 1.2rem;
+  height: 1.2rem;
+  border-radius: 999px;
+  background: #ffffff;
+  box-shadow: 0 4px 12px -8px rgba(16, 33, 63, 0.55);
+  transform: translateX(0);
+  transition:
+    transform 140ms ease,
+    background-color 140ms ease;
+}
+
+.pushSwitchEnabled .pushSwitchThumb {
+  transform: translateX(1.18rem);
+  background: #2154c7;
 }
 
 .listSection {

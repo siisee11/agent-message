@@ -9,10 +9,13 @@ use tokio::io::{AsyncBufReadExt, BufReader};
 use tokio::process::{Child, ChildStderr, ChildStdout, Command};
 use tokio::sync::mpsc;
 
+use crate::log_ui::LogUi;
+
 #[derive(Debug, Clone)]
 pub(crate) struct AgentMessageClient {
     command: AgentMessageCommand,
     from_profile: Option<String>,
+    logger: LogUi,
 }
 
 #[derive(Debug, Clone)]
@@ -23,10 +26,11 @@ struct AgentMessageCommand {
 }
 
 impl AgentMessageClient {
-    pub(crate) fn new(binary: PathBuf) -> Result<Self> {
+    pub(crate) fn new(binary: PathBuf, logger: LogUi) -> Result<Self> {
         Ok(Self {
             command: resolve_agent_message_command(binary)?,
             from_profile: None,
+            logger,
         })
     }
 
@@ -124,10 +128,14 @@ impl AgentMessageClient {
             .take()
             .context("capture agent-message watch stderr")?;
         let (messages_tx, messages_rx) = mpsc::unbounded_channel();
-        spawn_watch_stdout_pump(stdout, messages_tx);
-        spawn_watch_stderr_pump(stderr);
+        spawn_watch_stdout_pump(stdout, messages_tx, self.logger.clone());
+        spawn_watch_stderr_pump(stderr, self.logger.clone());
 
-        Ok(MessageWatch { child, messages_rx })
+        Ok(MessageWatch {
+            child,
+            messages_rx,
+            logger: self.logger.clone(),
+        })
     }
 
     pub(crate) async fn react_to_message(&self, message: &Message, emoji: &str) -> Result<()> {
@@ -212,6 +220,7 @@ pub(crate) struct Message {
 pub(crate) struct MessageWatch {
     child: Child,
     messages_rx: mpsc::UnboundedReceiver<Message>,
+    logger: LogUi,
 }
 
 impl MessageWatch {
@@ -224,7 +233,10 @@ impl MessageWatch {
 
     pub(crate) async fn shutdown(&mut self) -> Result<()> {
         if let Err(error) = self.child.start_kill() {
-            eprintln!("[agent-message] failed to signal watch shutdown: {error}");
+            self.logger.warning(
+                "Watch shutdown warning",
+                [format!("failed to signal watch shutdown: {error}")],
+            );
         }
         let _ = self.child.wait().await;
         Ok(())
@@ -337,7 +349,11 @@ fn watch_message_text(message: &WatchJSONMessage) -> String {
     String::new()
 }
 
-fn spawn_watch_stdout_pump(stdout: ChildStdout, messages_tx: mpsc::UnboundedSender<Message>) {
+fn spawn_watch_stdout_pump(
+    stdout: ChildStdout,
+    messages_tx: mpsc::UnboundedSender<Message>,
+    logger: LogUi,
+) {
     tokio::spawn(async move {
         let mut lines = BufReader::new(stdout).lines();
         loop {
@@ -346,7 +362,10 @@ fn spawn_watch_stdout_pump(stdout: ChildStdout, messages_tx: mpsc::UnboundedSend
                 Ok(Some(line)) => line,
                 Ok(None) => break,
                 Err(error) => {
-                    eprintln!("[agent-message] failed to read watch stdout: {error}");
+                    logger.warning(
+                        "Watch stream read failed",
+                        [format!("stdout read error: {error}")],
+                    );
                     break;
                 }
             };
@@ -359,22 +378,27 @@ fn spawn_watch_stdout_pump(stdout: ChildStdout, messages_tx: mpsc::UnboundedSend
                 }
                 Ok(None) => {}
                 Err(error) => {
-                    eprintln!("[agent-message] invalid watch event: {error:#}");
+                    logger.warning("Watch event decode failed", [format!("error: {error:#}")]);
                 }
             }
         }
     });
 }
 
-fn spawn_watch_stderr_pump(stderr: ChildStderr) {
+fn spawn_watch_stderr_pump(stderr: ChildStderr, logger: LogUi) {
     tokio::spawn(async move {
         let mut lines = BufReader::new(stderr).lines();
         loop {
             match lines.next_line().await {
-                Ok(Some(line)) => eprintln!("[agent-message] {line}"),
+                Ok(Some(line)) => {
+                    logger.child("agent-message stderr", [line]);
+                }
                 Ok(None) => break,
                 Err(error) => {
-                    eprintln!("[agent-message] failed to read watch stderr: {error}");
+                    logger.warning(
+                        "Watch stderr read failed",
+                        [format!("stderr read error: {error}")],
+                    );
                     break;
                 }
             }

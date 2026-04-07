@@ -6,6 +6,7 @@ use uuid::Uuid;
 use crate::Config;
 use crate::agent_message::{AgentMessageClient, Message, MessageWatch};
 use crate::claude::{ClaudeRunResult, ClaudeRunner};
+use crate::log_ui::LogUi;
 use crate::render::response_spec;
 
 const READ_REACTION_EMOJI: &str = "👀";
@@ -65,31 +66,49 @@ struct Runtime {
     message_watch: MessageWatch,
     claude: ClaudeRunner,
     session_id: Option<String>,
+    logger: LogUi,
 }
 
 impl Runtime {
     async fn bootstrap(config: Config) -> Result<Self> {
+        let logger = LogUi::new("claude-message");
         let chat_id = new_chat_id();
         let username = format!("agent-{chat_id}");
         let password = new_password();
-        let mut agent_client = AgentMessageClient::new(std::path::PathBuf::from("agent-message"));
+        let mut agent_client =
+            AgentMessageClient::new(std::path::PathBuf::from("agent-message"), logger.clone());
         let to_username = resolve_target_username(&config, &agent_client).await?;
         let server_url = agent_client
             .server_url()
             .await
             .context("read agent-message server_url")?;
 
-        println!("agent-message server_url: {server_url}");
+        logger.system(
+            "Bootstrapping session",
+            [
+                format!("Target: @{to_username}"),
+                format!("Chat: {chat_id}"),
+                format!("Agent: {username}"),
+                format!("CWD: {}", config.cwd.display()),
+                format!("Server: {server_url}"),
+            ],
+        );
 
         register_agent_account(&agent_client, &username, &password).await?;
         agent_client.set_from_profile(username.clone());
-        println!("registered agent profile: {username} (chat_id: {chat_id})");
+        logger.success(
+            "Agent profile registered",
+            [format!("Profile: {username}"), format!("Chat: {chat_id}")],
+        );
 
         let message_watch = agent_client
             .watch_messages(&to_username)
             .await
             .context("start agent-message watch stream")?;
-        println!("agent-message watch stream ready for {to_username}");
+        logger.system(
+            "Message watch stream ready",
+            [format!("Watching replies from @{to_username}")],
+        );
 
         let hostname = resolve_hostname();
         let startup_text = startup_text(&chat_id, &username, &password, &config.cwd, &hostname);
@@ -97,10 +116,19 @@ impl Runtime {
             .send_text_message(&to_username, &startup_text)
             .await
             .context("send startup message")?;
-        println!("startup message sent to {to_username}: {startup_message_id}");
+        logger.success(
+            "Startup message sent",
+            [
+                format!("Recipient: @{to_username}"),
+                format!("Message: {startup_message_id}"),
+            ],
+        );
 
         let claude = ClaudeRunner::new(&config);
-        println!("claude-message ready in {}", config.cwd.display());
+        logger.success(
+            "Claude runner ready",
+            [format!("CWD: {}", config.cwd.display())],
+        );
 
         Ok(Self {
             to_username,
@@ -108,6 +136,7 @@ impl Runtime {
             message_watch,
             claude,
             session_id: None,
+            logger,
         })
     }
 
@@ -124,14 +153,44 @@ impl Runtime {
                         continue;
                     };
 
+                    self.logger.request(
+                        "User request received",
+                        [
+                            format!("Message: {}", message.id),
+                            format!("From: @{}", message.sender_username),
+                            format!("Text: {}", request_preview(&request)),
+                        ],
+                    );
+
                     match self.run_turn(&request).await {
                         Ok(outcome) => {
+                            let mut lines = vec![
+                                format!("Request: {}", request_preview(&request)),
+                                format!("Success: {}", outcome.success),
+                            ];
+                            if let Some(session_id) = outcome.session_id.as_deref() {
+                                lines.push(format!("Session: {session_id}"));
+                            }
+                            if let Some(status) = outcome.status.as_deref() {
+                                lines.push(format!("Status: {status}"));
+                            }
+                            if outcome.success {
+                                self.logger.success("Turn finished", lines);
+                            } else {
+                                self.logger.warning("Turn finished", lines);
+                            }
                             if outcome.success {
                                 self.mark_message_complete(&message).await;
                             }
                         }
                         Err(error) => {
-                            eprintln!("claude request failed for {:?}: {error:#}", request.trim());
+                            self.logger.error(
+                                "Claude request failed",
+                                [
+                                    format!("Request: {}", request_preview(&request)),
+                                    format!("Error: {error:#}"),
+                                ],
+                            );
                             let spec = response_spec(
                                 "Failed",
                                 "destructive",
@@ -179,9 +238,12 @@ impl Runtime {
                 .react_to_message(&message, READ_REACTION_EMOJI)
                 .await
             {
-                eprintln!(
-                    "warning: failed to add read reaction to {}: {error}",
-                    message.id
+                self.logger.warning(
+                    "Failed to add read reaction",
+                    [
+                        format!("Message: {}", message.id),
+                        format!("Error: {error}"),
+                    ],
                 );
             }
             return Ok(message);
@@ -194,9 +256,12 @@ impl Runtime {
         error: &anyhow::Error,
     ) -> Result<()> {
         let delay = watch_retry_delay(attempt);
-        eprintln!(
-            "warning: agent-message watch stream failed: {error:#}. retrying in {}s",
-            delay.as_secs()
+        self.logger.warning(
+            "Watch stream disconnected",
+            [
+                format!("Retry in: {}s", delay.as_secs()),
+                format!("Error: {error:#}"),
+            ],
         );
 
         self.message_watch
@@ -210,14 +275,18 @@ impl Runtime {
             .watch_messages(&self.to_username)
             .await
             .context("restart agent-message watch stream")?;
-        eprintln!(
-            "agent-message watch stream reconnected for {}",
-            self.to_username
+        self.logger.success(
+            "Watch stream reconnected",
+            [format!("User: @{}", self.to_username)],
         );
         Ok(())
     }
 
     async fn run_turn(&mut self, request: &str) -> Result<TurnOutcome> {
+        self.logger.turn(
+            "Turn started",
+            [format!("Request: {}", request_preview(request))],
+        );
         let response = self
             .claude
             .run(request.trim(), self.session_id.as_deref())
@@ -235,7 +304,11 @@ impl Runtime {
             .await
             .context("send claude result message")?;
 
-        Ok(TurnOutcome { success })
+        Ok(TurnOutcome {
+            success,
+            session_id: response.session_id.clone(),
+            status: response.subtype.clone(),
+        })
     }
 
     async fn mark_message_complete(&self, message: &Message) {
@@ -244,9 +317,12 @@ impl Runtime {
             .unreact_to_message(message, READ_REACTION_EMOJI)
             .await
         {
-            eprintln!(
-                "warning: failed to remove read reaction from {}: {error}",
-                message.id
+            self.logger.warning(
+                "Failed to remove read reaction",
+                [
+                    format!("Message: {}", message.id),
+                    format!("Error: {error}"),
+                ],
             );
         }
         if let Err(error) = self
@@ -254,9 +330,12 @@ impl Runtime {
             .react_to_message(message, COMPLETE_REACTION_EMOJI)
             .await
         {
-            eprintln!(
-                "warning: failed to add complete reaction to {}: {error}",
-                message.id
+            self.logger.warning(
+                "Failed to add complete reaction",
+                [
+                    format!("Message: {}", message.id),
+                    format!("Error: {error}"),
+                ],
             );
         }
     }
@@ -284,6 +363,8 @@ async fn resolve_target_username(
 #[derive(Debug)]
 struct TurnOutcome {
     success: bool,
+    session_id: Option<String>,
+    status: Option<String>,
 }
 
 fn spec_for_turn(response: &ClaudeRunResult) -> serde_json::Value {
@@ -337,6 +418,17 @@ fn extract_request_text(message: &Message) -> Option<String> {
         return None;
     }
     Some(trimmed.to_string())
+}
+
+fn request_preview(text: &str) -> String {
+    const LIMIT: usize = 160;
+
+    let compact = text.split_whitespace().collect::<Vec<_>>().join(" ");
+    let mut preview = compact.chars().take(LIMIT).collect::<String>();
+    if compact.chars().count() > LIMIT {
+        preview.push_str("...");
+    }
+    preview
 }
 
 fn new_chat_id() -> String {

@@ -10,6 +10,7 @@ use crate::Config;
 use crate::SandboxArg;
 use crate::agent_message::{AgentMessageClient, Message, MessageWatch};
 use crate::codex::{CodexAppServer, IncomingMessage};
+use crate::log_ui::LogUi;
 use crate::render::{ApprovalAction, approval_spec, report_spec};
 
 fn request_suffix(to_username: &str) -> String {
@@ -86,31 +87,49 @@ struct Runtime {
     message_watch: MessageWatch,
     codex: CodexAppServer,
     thread_id: String,
+    logger: LogUi,
 }
 
 impl Runtime {
     async fn bootstrap(config: Config) -> Result<Self> {
+        let logger = LogUi::new("codex-message");
         let chat_id = new_chat_id();
         let username = format!("agent-{chat_id}");
         let password = new_password();
-        let mut agent_client = AgentMessageClient::new(std::path::PathBuf::from("agent-message"))?;
+        let mut agent_client =
+            AgentMessageClient::new(std::path::PathBuf::from("agent-message"), logger.clone())?;
         let to_username = resolve_target_username(&config, &agent_client).await?;
         let server_url = agent_client
             .server_url()
             .await
             .context("read agent-message server_url")?;
 
-        println!("agent-message server_url: {server_url}");
+        logger.system(
+            "Bootstrapping session",
+            [
+                format!("Target: @{to_username}"),
+                format!("Chat: {chat_id}"),
+                format!("Agent: {username}"),
+                format!("CWD: {}", config.cwd.display()),
+                format!("Server: {server_url}"),
+            ],
+        );
 
         register_agent_account(&mut agent_client, &username, &password).await?;
         agent_client.set_from_profile(username.clone());
-        println!("registered agent profile: {username} (chat_id: {chat_id})");
+        logger.success(
+            "Agent profile registered",
+            [format!("Profile: {username}"), format!("Chat: {chat_id}")],
+        );
 
         let message_watch = agent_client
             .watch_messages(&to_username)
             .await
             .context("start agent-message watch stream")?;
-        println!("agent-message watch stream ready for {to_username}");
+        logger.system(
+            "Message watch stream ready",
+            [format!("Watching replies from @{to_username}")],
+        );
 
         let hostname = resolve_hostname();
         let startup_text = startup_text(&chat_id, &username, &password, &config.cwd, &hostname);
@@ -118,9 +137,15 @@ impl Runtime {
             .send_text_message(&to_username, &startup_text)
             .await
             .context("send startup message")?;
-        println!("startup message sent to {to_username}: {startup_message_id}");
+        logger.success(
+            "Startup message sent",
+            [
+                format!("Recipient: @{to_username}"),
+                format!("Message: {startup_message_id}"),
+            ],
+        );
 
-        let codex = CodexAppServer::start(&config.codex_bin, &config.cwd)
+        let codex = CodexAppServer::start(&config.codex_bin, &config.cwd, logger.clone())
             .await
             .context("start codex app-server")?;
         codex
@@ -128,7 +153,7 @@ impl Runtime {
             .await
             .context("initialize codex app-server")?;
         let thread_id = start_thread(&codex, &config).await?;
-        println!("codex app-server ready (thread_id: {thread_id})");
+        logger.success("Codex app-server ready", [format!("Thread: {thread_id}")]);
 
         Ok(Self {
             config,
@@ -137,6 +162,7 @@ impl Runtime {
             message_watch,
             codex,
             thread_id,
+            logger,
         })
     }
 
@@ -154,29 +180,48 @@ impl Runtime {
                         continue;
                     };
 
+                    self.logger.request(
+                        "User request received",
+                        [
+                            format!("Message: {}", message.id),
+                            format!("From: @{}", message.sender_username),
+                            format!("Text: {}", request_preview(&request)),
+                        ],
+                    );
+
                     match self.run_turn(&request).await {
                         Ok(outcome) => {
-                            eprintln!(
-                                "codex turn finished for request {:?} with status {}",
-                                request.trim(),
-                                outcome.status
-                            );
+                            let mut lines = vec![
+                                format!("Turn: {}", outcome.turn_id),
+                                format!("Status: {}", outcome.status),
+                                format!("Request: {}", request_preview(&request)),
+                            ];
                             if let Some(error_text) = outcome.error_text.as_deref() {
-                                eprintln!("codex turn error: {error_text}");
+                                lines.push(format!("Error: {}", request_preview(error_text)));
+                                self.logger.error("Turn finished with error", lines);
                                 self.send_turn_failure_notice(&request, error_text).await;
                             } else if !outcome.status.eq_ignore_ascii_case("completed") {
+                                self.logger.warning("Turn finished", lines.clone());
                                 self.send_turn_failure_notice(
                                     &request,
                                     &format!("Turn ended with status {}.", outcome.status),
                                 )
                                 .await;
+                            } else {
+                                self.logger.success("Turn finished", lines);
                             }
                             if should_mark_message_complete(&outcome) {
                                 self.mark_message_complete(&message).await;
                             }
                         }
                         Err(error) => {
-                            eprintln!("codex request failed for {:?}: {error:#}", request.trim());
+                            self.logger.error(
+                                "Codex request failed",
+                                [
+                                    format!("Request: {}", request_preview(&request)),
+                                    format!("Error: {error:#}"),
+                                ],
+                            );
                             self.send_turn_failure_notice(&request, &format!("{error:#}"))
                                 .await;
                         }
@@ -215,9 +260,12 @@ impl Runtime {
                 .react_to_message(&message, READ_REACTION_EMOJI)
                 .await
             {
-                eprintln!(
-                    "warning: failed to add read reaction to {}: {error}",
-                    message.id
+                self.logger.warning(
+                    "Failed to add read reaction",
+                    [
+                        format!("Message: {}", message.id),
+                        format!("Error: {error}"),
+                    ],
                 );
             }
             return Ok(message);
@@ -230,9 +278,12 @@ impl Runtime {
         error: &anyhow::Error,
     ) -> Result<()> {
         let delay = watch_retry_delay(attempt);
-        eprintln!(
-            "warning: agent-message watch stream failed: {error:#}. retrying in {}s",
-            delay.as_secs()
+        self.logger.warning(
+            "Watch stream disconnected",
+            [
+                format!("Retry in: {}s", delay.as_secs()),
+                format!("Error: {error:#}"),
+            ],
         );
 
         self.message_watch
@@ -246,9 +297,9 @@ impl Runtime {
             .watch_messages(&self.to_username)
             .await
             .context("restart agent-message watch stream")?;
-        eprintln!(
-            "agent-message watch stream reconnected for {}",
-            self.to_username
+        self.logger.success(
+            "Watch stream reconnected",
+            [format!("User: @{}", self.to_username)],
         );
         Ok(())
     }
@@ -268,6 +319,14 @@ impl Runtime {
             .and_then(Value::as_str)
             .map(ToOwned::to_owned)
             .ok_or_else(|| anyhow!("turn/start response missing turn.id"))?;
+
+        self.logger.turn(
+            "Turn started",
+            [
+                format!("Turn: {turn_id}"),
+                format!("Request: {}", request_preview(request)),
+            ],
+        );
 
         let (turn_status, turn_error) = loop {
             match self.codex.next_event().await? {
@@ -307,6 +366,7 @@ impl Runtime {
         };
 
         Ok(TurnOutcome {
+            turn_id,
             status: turn_status,
             error_text: turn_error,
         })
@@ -318,9 +378,12 @@ impl Runtime {
             .unreact_to_message(message, READ_REACTION_EMOJI)
             .await
         {
-            eprintln!(
-                "warning: failed to remove read reaction from {}: {error}",
-                message.id
+            self.logger.warning(
+                "Failed to remove read reaction",
+                [
+                    format!("Message: {}", message.id),
+                    format!("Error: {error}"),
+                ],
             );
         }
         if let Err(error) = self
@@ -328,9 +391,12 @@ impl Runtime {
             .react_to_message(message, COMPLETE_REACTION_EMOJI)
             .await
         {
-            eprintln!(
-                "warning: failed to add complete reaction to {}: {error}",
-                message.id
+            self.logger.warning(
+                "Failed to add complete reaction",
+                [
+                    format!("Message: {}", message.id),
+                    format!("Error: {error}"),
+                ],
             );
         }
     }
@@ -344,6 +410,8 @@ impl Runtime {
         match method {
             "item/commandExecution/requestApproval" => {
                 let details = summarize_command_approval(&params);
+                self.logger
+                    .turn("Command approval requested", details.clone());
                 let spec = approval_spec(
                     "Approval Needed",
                     "Command approval requested",
@@ -401,6 +469,8 @@ impl Runtime {
             }
             "item/fileChange/requestApproval" => {
                 let details = summarize_file_approval(&params);
+                self.logger
+                    .turn("File change approval requested", details.clone());
                 let spec = approval_spec(
                     "Approval Needed",
                     "File change approval requested",
@@ -458,6 +528,8 @@ impl Runtime {
             }
             "item/permissions/requestApproval" => {
                 let details = summarize_permissions_request(&params);
+                self.logger
+                    .turn("Additional permissions requested", details.clone());
                 let requested_permissions = params
                     .get("permissions")
                     .cloned()
@@ -520,6 +592,8 @@ impl Runtime {
                     .cloned()
                     .unwrap_or_default();
                 let details = summarize_tool_questions(&questions);
+                self.logger
+                    .turn("Codex requested user input", details.clone());
                 let mut prompt_lines = details.clone();
                 prompt_lines.push(
                     "Reply: JSON object keyed by question id, or plain text if there is only one question"
@@ -560,6 +634,8 @@ impl Runtime {
             }
             "mcpServer/elicitation/request" => {
                 let details = summarize_mcp_elicitation(&params);
+                self.logger
+                    .turn("MCP elicitation requested", details.clone());
                 let spec = approval_spec(
                     "MCP Input",
                     "An MCP server requested interaction",
@@ -611,6 +687,8 @@ impl Runtime {
                     .context("respond to MCP elicitation")?;
             }
             other => {
+                self.logger
+                    .warning("Unhandled Codex interaction", [format!("Method: {other}")]);
                 let spec = report_spec(
                     "Unsupported",
                     "Unhandled Codex interaction",
@@ -646,19 +724,34 @@ impl Runtime {
             .send_json_render_message(&self.to_username, spec)
             .await
         {
-            eprintln!("warning: failed to send failure notice: {error:#}");
+            self.logger.warning(
+                "Failed to send failure notice",
+                [format!("Error: {error:#}")],
+            );
         }
     }
 }
 
 #[derive(Debug)]
 struct TurnOutcome {
+    turn_id: String,
     status: String,
     error_text: Option<String>,
 }
 
 fn should_mark_message_complete(outcome: &TurnOutcome) -> bool {
     outcome.status.eq_ignore_ascii_case("completed") && outcome.error_text.is_none()
+}
+
+fn request_preview(text: &str) -> String {
+    const LIMIT: usize = 160;
+
+    let compact = text.split_whitespace().collect::<Vec<_>>().join(" ");
+    let mut preview = compact.chars().take(LIMIT).collect::<String>();
+    if compact.chars().count() > LIMIT {
+        preview.push_str("...");
+    }
+    preview
 }
 
 async fn register_agent_account(
@@ -1096,14 +1189,17 @@ mod tests {
     #[test]
     fn marks_message_complete_only_for_successful_completed_turns() {
         assert!(should_mark_message_complete(&TurnOutcome {
+            turn_id: "turn-1".to_string(),
             status: "completed".to_string(),
             error_text: None,
         }));
         assert!(!should_mark_message_complete(&TurnOutcome {
+            turn_id: "turn-2".to_string(),
             status: "failed".to_string(),
             error_text: Some("boom".to_string()),
         }));
         assert!(!should_mark_message_complete(&TurnOutcome {
+            turn_id: "turn-3".to_string(),
             status: "completed".to_string(),
             error_text: Some("boom".to_string()),
         }));

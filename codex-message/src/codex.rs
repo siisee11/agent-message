@@ -10,6 +10,8 @@ use tokio::io::{AsyncBufReadExt, AsyncWriteExt, BufReader};
 use tokio::process::{Child, ChildStdin, ChildStdout, Command};
 use tokio::sync::{Mutex, mpsc, oneshot};
 
+use crate::log_ui::LogUi;
+
 #[derive(Debug)]
 pub(crate) enum IncomingMessage {
     Request {
@@ -46,10 +48,11 @@ pub(crate) struct CodexAppServer {
     next_request_id: AtomicU64,
     pending: Arc<Mutex<HashMap<String, oneshot::Sender<Result<Value, RpcError>>>>>,
     events_rx: mpsc::UnboundedReceiver<IncomingMessage>,
+    logger: LogUi,
 }
 
 impl CodexAppServer {
-    pub(crate) async fn start(codex_bin: &Path, cwd: &Path) -> Result<Self> {
+    pub(crate) async fn start(codex_bin: &Path, cwd: &Path, logger: LogUi) -> Result<Self> {
         let mut child = Command::new(codex_bin)
             .arg("app-server")
             .current_dir(cwd)
@@ -67,8 +70,8 @@ impl CodexAppServer {
         let pending = Arc::new(Mutex::new(HashMap::new()));
         let (events_tx, events_rx) = mpsc::unbounded_channel();
 
-        spawn_stdout_pump(stdout, Arc::clone(&pending), events_tx);
-        spawn_stderr_pump(stderr);
+        spawn_stdout_pump(stdout, Arc::clone(&pending), events_tx, logger.clone());
+        spawn_stderr_pump(stderr, logger.clone());
 
         Ok(Self {
             child,
@@ -76,6 +79,7 @@ impl CodexAppServer {
             next_request_id: AtomicU64::new(1),
             pending,
             events_rx,
+            logger,
         })
     }
 
@@ -139,7 +143,10 @@ impl CodexAppServer {
 
     pub(crate) async fn shutdown(&mut self) -> Result<()> {
         if let Err(error) = self.child.start_kill() {
-            eprintln!("[codex] failed to signal shutdown: {error}");
+            self.logger.warning(
+                "App-server shutdown warning",
+                [format!("failed to signal shutdown: {error}")],
+            );
         }
         let _ = self.child.wait().await;
         Ok(())
@@ -164,6 +171,7 @@ fn spawn_stdout_pump(
     stdout: ChildStdout,
     pending: Arc<Mutex<HashMap<String, oneshot::Sender<Result<Value, RpcError>>>>>,
     events_tx: mpsc::UnboundedSender<IncomingMessage>,
+    logger: LogUi,
 ) {
     tokio::spawn(async move {
         let mut lines = BufReader::new(stdout).lines();
@@ -173,7 +181,10 @@ fn spawn_stdout_pump(
                 Ok(Some(line)) => line,
                 Ok(None) => break,
                 Err(error) => {
-                    eprintln!("[codex] failed to read stdout: {error}");
+                    logger.warning(
+                        "App-server stdout read failed",
+                        [format!("stdout read error: {error}")],
+                    );
                     break;
                 }
             };
@@ -185,7 +196,10 @@ fn spawn_stdout_pump(
             let value: Value = match serde_json::from_str(trimmed) {
                 Ok(value) => value,
                 Err(error) => {
-                    eprintln!("[codex] invalid JSON from app-server: {error}: {trimmed}");
+                    logger.warning(
+                        "Invalid app-server JSON",
+                        [format!("error: {error}"), format!("payload: {trimmed}")],
+                    );
                     continue;
                 }
             };
@@ -193,7 +207,10 @@ fn spawn_stdout_pump(
             if let Some(id) = value.get("id") {
                 if value.get("method").is_some() {
                     let Some(method) = value.get("method").and_then(Value::as_str) else {
-                        eprintln!("[codex] request missing method string: {trimmed}");
+                        logger.warning(
+                            "Malformed app-server request",
+                            [format!("payload: {trimmed}")],
+                        );
                         continue;
                     };
                     let params = value.get("params").cloned().unwrap_or(Value::Null);
@@ -213,13 +230,13 @@ fn spawn_stdout_pump(
                 let key = match id_key(id) {
                     Ok(key) => key,
                     Err(error) => {
-                        eprintln!("[codex] invalid response id: {error:#}");
+                        logger.warning("Invalid response id", [format!("error: {error:#}")]);
                         continue;
                     }
                 };
                 let sender = pending.lock().await.remove(&key);
                 let Some(sender) = sender else {
-                    eprintln!("[codex] dropped response for unknown request id: {trimmed}");
+                    logger.warning("Dropped unknown response", [format!("payload: {trimmed}")]);
                     continue;
                 };
 
@@ -257,15 +274,18 @@ fn spawn_stdout_pump(
     });
 }
 
-fn spawn_stderr_pump(stderr: tokio::process::ChildStderr) {
+fn spawn_stderr_pump(stderr: tokio::process::ChildStderr, logger: LogUi) {
     tokio::spawn(async move {
         let mut lines = BufReader::new(stderr).lines();
         loop {
             match lines.next_line().await {
-                Ok(Some(line)) => eprintln!("[codex] {line}"),
+                Ok(Some(line)) => logger.child("codex app-server stderr", [line]),
                 Ok(None) => break,
                 Err(error) => {
-                    eprintln!("[codex] failed to read stderr: {error}");
+                    logger.warning(
+                        "App-server stderr read failed",
+                        [format!("stderr read error: {error}")],
+                    );
                     break;
                 }
             }

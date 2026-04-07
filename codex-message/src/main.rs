@@ -1,6 +1,7 @@
 mod agent_message;
 mod app;
 mod codex;
+mod log_ui;
 mod render;
 
 use std::path::PathBuf;

@@ -131,6 +131,7 @@ requireCommand('agent-message', 'Install it first with `npm install -g agent-mes
 requireCommand('codex', 'Install the Codex CLI before running codex-message.')
 
 const child = spawnSync(binaryPath, process.argv.slice(2), {
+  argv0: 'codex-message',
   stdio: 'inherit',
   cwd: process.cwd(),
   env: process.env,

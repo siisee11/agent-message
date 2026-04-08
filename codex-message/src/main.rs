@@ -8,7 +8,7 @@ use std::path::PathBuf;
 
 use anyhow::Context;
 use app::App;
-use clap::Parser;
+use clap::{CommandFactory, FromArgMatches, Parser};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, clap::ValueEnum)]
 enum ApprovalPolicyArg {
@@ -37,7 +37,13 @@ enum SandboxArg {
 }
 
 #[derive(Debug, Clone, Parser)]
-#[command(author, version = env!("APP_VERSION"), about)]
+#[command(
+    name = "codex-message",
+    bin_name = "codex-message",
+    author,
+    version = env!("APP_VERSION"),
+    about
+)]
 struct Cli {
     #[arg(
         long = "to",
@@ -118,14 +124,22 @@ fn resolve_execution_mode(value: &Cli) -> (Option<ApprovalPolicyArg>, SandboxArg
 
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
-    let config = Config::try_from(Cli::parse())?;
+    let config = Config::try_from(parse_cli())?;
     App::new(config).run().await
+}
+
+fn cli_command() -> clap::Command {
+    Cli::command().bin_name("codex-message".to_string())
+}
+
+fn parse_cli() -> Cli {
+    let matches = cli_command().get_matches();
+    Cli::from_arg_matches(&matches).expect("clap matches should deserialize into Cli")
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
-    use clap::CommandFactory;
 
     #[test]
     fn to_username_defaults_to_none() {
@@ -168,14 +182,21 @@ mod tests {
 
     #[test]
     fn help_mentions_yolo() {
-        let help = Cli::command().render_long_help().to_string();
+        let help = cli_command().render_long_help().to_string();
         assert!(help.contains("--yolo"));
         assert!(help.contains("danger-full-access"));
     }
 
     #[test]
     fn help_mentions_master_fallback_for_to() {
-        let help = Cli::command().render_long_help().to_string();
+        let help = cli_command().render_long_help().to_string();
         assert!(help.contains("agent-message config get master"));
+    }
+
+    #[test]
+    fn help_uses_stable_binary_name() {
+        let help = cli_command().render_usage().to_string();
+        assert!(help.contains("codex-message"));
+        assert!(!help.contains("codex-message-darwin-arm64"));
     }
 }

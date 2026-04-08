@@ -12,6 +12,7 @@ import (
 	"syscall"
 	"time"
 
+	"agent-message/server/models"
 	"agent-message/server/realtime"
 	"agent-message/server/store"
 )
@@ -65,6 +66,7 @@ func (h *eventStreamHandler) handleEventStream(w http.ResponseWriter, r *http.Re
 
 	client := &realtime.Client{
 		UserID: user.ID,
+		Kind:   eventStreamClientKind(r),
 		Send:   make(chan realtime.Event, realtimeSendBufferSize),
 	}
 	conversationIDs, err := listConversationIDsForUser(r, h.store, user.ID)
@@ -73,13 +75,24 @@ func (h *eventStreamHandler) handleEventStream(w http.ResponseWriter, r *http.Re
 		writeError(w, http.StatusInternalServerError, "failed to list conversations")
 		return
 	}
+	previousWatcherConnections := 0
+	if client.Kind == realtime.ClientKindWatcher {
+		previousWatcherConnections = h.hub.ConnectionsForUserKind(user.ID, realtime.ClientKindWatcher)
+	}
+
 	if err := h.hub.Register(client, conversationIDs); err != nil {
 		log.Printf("sse register failed user=%s conversations=%d: %v", user.ID, len(conversationIDs), err)
 		writeError(w, http.StatusInternalServerError, "failed to start event stream")
 		return
 	}
+	if client.Kind == realtime.ClientKindWatcher && previousWatcherConnections == 0 {
+		h.broadcastWatcherPresence(conversationIDs, user.ID, true)
+	}
 	defer func() {
 		h.hub.Unregister(client)
+		if client.Kind == realtime.ClientKindWatcher && h.hub.ConnectionsForUserKind(user.ID, realtime.ClientKindWatcher) == 0 {
+			h.broadcastWatcherPresence(conversationIDs, user.ID, false)
+		}
 	}()
 
 	w.Header().Set("Content-Type", "text/event-stream")
@@ -117,6 +130,44 @@ func (h *eventStreamHandler) handleEventStream(w http.ResponseWriter, r *http.Re
 				return
 			}
 			flusher.Flush()
+		}
+	}
+}
+
+func eventStreamClientKind(r *http.Request) string {
+	clientKind := strings.TrimSpace(r.URL.Query().Get("client_kind"))
+	if clientKind == "" {
+		return realtime.ClientKindWeb
+	}
+	return realtime.NormalizeClientKind(clientKind)
+}
+
+func (h *eventStreamHandler) broadcastWatcherPresence(conversationIDs []string, userID string, online bool) {
+	if h.hub == nil {
+		return
+	}
+
+	seen := make(map[string]struct{}, len(conversationIDs))
+	for _, rawConversationID := range conversationIDs {
+		conversationID := strings.TrimSpace(rawConversationID)
+		if conversationID == "" {
+			continue
+		}
+		if _, ok := seen[conversationID]; ok {
+			continue
+		}
+		seen[conversationID] = struct{}{}
+
+		if _, err := h.hub.BroadcastToConversation(conversationID, realtime.Event{
+			Type: realtime.EventTypePresenceUpdated,
+			Data: models.WatcherPresenceEvent{
+				ConversationID: conversationID,
+				UserID:         strings.TrimSpace(userID),
+				ClientKind:     realtime.ClientKindWatcher,
+				Online:         online,
+			},
+		}); err != nil {
+			log.Printf("presence broadcast failed conversation=%s user=%s online=%t: %v", conversationID, userID, online, err)
 		}
 	}
 }

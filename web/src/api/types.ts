@@ -70,10 +70,23 @@ export interface ConversationSummary {
   session_hostname?: string
 }
 
+export type EventStreamClientKind = 'web' | 'watcher' | 'unknown'
+
+export interface WatcherPresence {
+  user_id: string
+  client_kind: EventStreamClientKind
+  online: boolean
+}
+
+export interface WatcherPresenceEvent extends WatcherPresence {
+  conversation_id: string
+}
+
 export interface ConversationDetails {
   conversation: Conversation
   participant_a: UserProfile
   participant_b: UserProfile
+  watcher_presence?: WatcherPresence
 }
 
 export interface MessageDetails {

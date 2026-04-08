@@ -114,6 +114,30 @@
   color: #8c1d33;
 }
 
+.watcherStatusBadge {
+  flex-shrink: 0;
+  border: 1px solid #d6deef;
+  border-radius: 999px;
+  background: #f4f7fc;
+  color: #47617f;
+  font-size: 0.75rem;
+  font-weight: 700;
+  line-height: 1;
+  padding: 0.34rem 0.52rem;
+}
+
+.watcherStatusBadgeOnline {
+  border-color: #b8dfcb;
+  background: #eefaf2;
+  color: #17653f;
+}
+
+.watcherStatusBadgeOffline {
+  border-color: #d6deef;
+  background: #f4f7fc;
+  color: #47617f;
+}
+
 .muted {
   margin: 0.42rem 0 0;
   color: #486293;

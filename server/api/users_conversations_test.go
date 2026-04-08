@@ -2,12 +2,16 @@ package api
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
+	"path/filepath"
 	"testing"
 
 	"agent-message/server/models"
+	"agent-message/server/realtime"
+	"agent-message/server/store"
 )
 
 func TestUsersEndpoints(t *testing.T) {
@@ -223,6 +227,78 @@ func TestConversationsEndpoints(t *testing.T) {
 	router.ServeHTTP(respNotFound, reqNotFound)
 	if respNotFound.Code != http.StatusNotFound {
 		t.Fatalf("expected not found status %d, got %d", http.StatusNotFound, respNotFound.Code)
+	}
+}
+
+func TestConversationDetailsIncludesWatcherPresence(t *testing.T) {
+	hub := realtime.NewHub()
+	dbPath := filepath.Join(t.TempDir(), "presence.sqlite")
+	sqliteStore, err := store.NewSQLiteStore(context.Background(), dbPath)
+	if err != nil {
+		t.Fatalf("new sqlite store: %v", err)
+	}
+	t.Cleanup(func() {
+		_ = sqliteStore.Close()
+	})
+
+	router := NewRouter(Dependencies{
+		Store:     sqliteStore,
+		Hub:       hub,
+		UploadDir: filepath.Join(t.TempDir(), "uploads"),
+	})
+
+	alice := registerAndLoginUser(t, router, "alice", "1234")
+	bob := registerAndLoginUser(t, router, "bob", "1234")
+
+	reqStart := httptest.NewRequest(http.MethodPost, "/api/conversations", bytes.NewBufferString(`{"username":"bob"}`))
+	reqStart.Header.Set("Authorization", "Bearer "+alice.Token)
+	reqStart.Header.Set("Content-Type", "application/json")
+	respStart := httptest.NewRecorder()
+	router.ServeHTTP(respStart, reqStart)
+	if respStart.Code != http.StatusCreated {
+		t.Fatalf("expected start conversation status %d, got %d body=%s", http.StatusCreated, respStart.Code, respStart.Body.String())
+	}
+
+	var created models.ConversationDetails
+	if err := json.NewDecoder(respStart.Body).Decode(&created); err != nil {
+		t.Fatalf("decode created conversation: %v", err)
+	}
+	if created.WatcherPresence == nil || created.WatcherPresence.Online {
+		t.Fatalf("expected offline watcher presence in start response, got %+v", created.WatcherPresence)
+	}
+
+	watcherClient := &realtime.Client{
+		UserID: bob.User.ID,
+		Kind:   realtime.ClientKindWatcher,
+		Send:   make(chan realtime.Event, 1),
+	}
+	if err := hub.Register(watcherClient, []string{created.Conversation.ID}); err != nil {
+		t.Fatalf("register watcher client: %v", err)
+	}
+
+	reqGet := httptest.NewRequest(http.MethodGet, "/api/conversations/"+created.Conversation.ID, nil)
+	reqGet.Header.Set("Authorization", "Bearer "+alice.Token)
+	respGet := httptest.NewRecorder()
+	router.ServeHTTP(respGet, reqGet)
+	if respGet.Code != http.StatusOK {
+		t.Fatalf("expected get conversation status %d, got %d body=%s", http.StatusOK, respGet.Code, respGet.Body.String())
+	}
+
+	var details models.ConversationDetails
+	if err := json.NewDecoder(respGet.Body).Decode(&details); err != nil {
+		t.Fatalf("decode conversation details: %v", err)
+	}
+	if details.WatcherPresence == nil {
+		t.Fatalf("expected watcher presence in conversation details")
+	}
+	if got, want := details.WatcherPresence.UserID, bob.User.ID; got != want {
+		t.Fatalf("watcher presence user mismatch: got %q want %q", got, want)
+	}
+	if got, want := details.WatcherPresence.ClientKind, realtime.ClientKindWatcher; got != want {
+		t.Fatalf("watcher presence kind mismatch: got %q want %q", got, want)
+	}
+	if !details.WatcherPresence.Online {
+		t.Fatalf("expected watcher presence online, got %+v", details.WatcherPresence)
 	}
 }
 

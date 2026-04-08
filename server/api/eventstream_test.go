@@ -105,6 +105,59 @@ func TestEventStreamReceivesNewConversationEventsAfterBootstrap(t *testing.T) {
 	}
 }
 
+func TestEventStreamBroadcastsWatcherPresenceTransitions(t *testing.T) {
+	server, _ := newEventStreamTestServer(t)
+	alice := registerAndLoginUser(t, server.Config.Handler, "alice", "1234")
+	bob := registerAndLoginUser(t, server.Config.Handler, "bob", "1234")
+	conversationID := mustStartConversation(t, server.Config.Handler, alice.Token, "bob")
+
+	aliceResp := mustOpenEventStream(t, server.URL, alice.Token, "")
+	defer aliceResp.Body.Close()
+
+	watcherResp := mustOpenEventStream(t, server.URL, bob.Token, "watcher")
+
+	onlineEvent, err := readSSEEventWithin(aliceResp.Body, 2*time.Second)
+	if err != nil {
+		t.Fatalf("read online presence event: %v", err)
+	}
+	if onlineEvent.Type != realtime.EventTypePresenceUpdated {
+		t.Fatalf("expected event type %q, got %q", realtime.EventTypePresenceUpdated, onlineEvent.Type)
+	}
+	onlineData, ok := onlineEvent.Data.(map[string]any)
+	if !ok {
+		t.Fatalf("expected online event data map, got %T", onlineEvent.Data)
+	}
+	if got, _ := onlineData["conversation_id"].(string); got != conversationID {
+		t.Fatalf("conversation id mismatch: got %v want %q", onlineData["conversation_id"], conversationID)
+	}
+	if got, _ := onlineData["user_id"].(string); got != bob.User.ID {
+		t.Fatalf("user id mismatch: got %v want %q", onlineData["user_id"], bob.User.ID)
+	}
+	if got, _ := onlineData["client_kind"].(string); got != realtime.ClientKindWatcher {
+		t.Fatalf("client kind mismatch: got %v want %q", onlineData["client_kind"], realtime.ClientKindWatcher)
+	}
+	if got, _ := onlineData["online"].(bool); !got {
+		t.Fatalf("expected online=true, got %v", onlineData["online"])
+	}
+
+	_ = watcherResp.Body.Close()
+
+	offlineEvent, err := readSSEEventWithin(aliceResp.Body, 2*time.Second)
+	if err != nil {
+		t.Fatalf("read offline presence event: %v", err)
+	}
+	if offlineEvent.Type != realtime.EventTypePresenceUpdated {
+		t.Fatalf("expected event type %q, got %q", realtime.EventTypePresenceUpdated, offlineEvent.Type)
+	}
+	offlineData, ok := offlineEvent.Data.(map[string]any)
+	if !ok {
+		t.Fatalf("expected offline event data map, got %T", offlineEvent.Data)
+	}
+	if got, _ := offlineData["online"].(bool); got {
+		t.Fatalf("expected online=false, got %v", offlineData["online"])
+	}
+}
+
 func newEventStreamTestServer(t *testing.T) (*httptest.Server, *realtime.Hub) {
 	t.Helper()
 
@@ -126,6 +179,27 @@ func newEventStreamTestServer(t *testing.T) (*httptest.Server, *realtime.Hub) {
 	server := httptest.NewServer(router)
 	t.Cleanup(server.Close)
 	return server, hub
+}
+
+func mustOpenEventStream(t *testing.T, serverURL, token, clientKind string) *http.Response {
+	t.Helper()
+
+	requestURL := serverURL + "/api/events?token=" + token
+	if strings.TrimSpace(clientKind) != "" {
+		requestURL += "&client_kind=" + clientKind
+	}
+	req, err := http.NewRequest(http.MethodGet, requestURL, nil)
+	if err != nil {
+		t.Fatalf("new event stream request: %v", err)
+	}
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		t.Fatalf("connect event stream: %v", err)
+	}
+	if resp.StatusCode != http.StatusOK {
+		t.Fatalf("expected event stream status %d, got %d", http.StatusOK, resp.StatusCode)
+	}
+	return resp
 }
 
 func readSSEEventWithin(bodyReader io.Reader, timeout time.Duration) (realtime.Event, error) {

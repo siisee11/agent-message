@@ -154,6 +154,7 @@ func (h *conversationsHandler) handleConversationDetail(w http.ResponseWriter, r
 		return
 	}
 
+	h.decorateWatcherPresence(&details, user.ID)
 	writeJSON(w, http.StatusOK, details)
 }
 
@@ -261,7 +262,27 @@ func (h *conversationsHandler) handleStartConversation(w http.ResponseWriter, r 
 		conversation.ID == newConversationID,
 	)
 	h.subscribeConversationParticipants(conversation)
+	h.decorateWatcherPresence(&details, user.ID)
 	writeJSON(w, status, details)
+}
+
+func (h *conversationsHandler) decorateWatcherPresence(details *models.ConversationDetails, currentUserID string) {
+	if details == nil {
+		return
+	}
+
+	otherParticipant := details.ParticipantA
+	if otherParticipant.ID == currentUserID {
+		otherParticipant = details.ParticipantB
+	} else if details.ParticipantB.ID != currentUserID {
+		otherParticipant = details.ParticipantA
+	}
+
+	details.WatcherPresence = &models.WatcherPresence{
+		UserID:     otherParticipant.ID,
+		ClientKind: realtime.ClientKindWatcher,
+		Online:     h.hub != nil && h.hub.ConnectionsForUserKind(otherParticipant.ID, realtime.ClientKindWatcher) > 0,
+	}
 }
 
 func (h *conversationsHandler) subscribeConversationParticipants(conversation models.Conversation) {

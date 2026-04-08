@@ -54,7 +54,7 @@ func TestRunWatchStreamsOnlyTargetConversationMessageNewEvents(t *testing.T) {
 	if got, want := strings.TrimSpace(stdout.String()), "m-target u2: hello"; got != want {
 		t.Fatalf("stdout mismatch: got %q want %q", got, want)
 	}
-	if got, want := capturedURL, "http://example.test/api/events?token=tok-watch"; got != want {
+	if got, want := capturedURL, "http://example.test/api/events?client_kind=watcher&token=tok-watch"; got != want {
 		t.Fatalf("event stream URL mismatch: got %q want %q", got, want)
 	}
 }

@@ -471,7 +471,7 @@ func (c *Client) RemoveReaction(ctx context.Context, messageID, emoji string) (R
 	return out, err
 }
 
-func (c *Client) EventStreamURL() (string, error) {
+func (c *Client) EventStreamURL(clientKind string) (string, error) {
 	if c.baseURL == nil {
 		return "", errors.New("server URL is not configured")
 	}
@@ -485,6 +485,9 @@ func (c *Client) EventStreamURL() (string, error) {
 	query := streamURL.Query()
 	if c.token != "" {
 		query.Set("token", c.token)
+	}
+	if strings.TrimSpace(clientKind) != "" {
+		query.Set("client_kind", strings.TrimSpace(clientKind))
 	}
 	streamURL.RawQuery = query.Encode()
 	return streamURL.String(), nil

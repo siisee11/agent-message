@@ -114,7 +114,7 @@ func runWatchWithOptions(rt *Runtime, username string, options watchOptions) err
 	}
 	conversation := newWatchConversation(details)
 
-	streamURL, err := rt.Client.EventStreamURL()
+	streamURL, err := rt.Client.EventStreamURL("watcher")
 	if err != nil {
 		return err
 	}

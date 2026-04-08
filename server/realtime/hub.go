@@ -13,6 +13,11 @@ const (
 	EventTypeMessageDeleted  = "message.deleted"
 	EventTypeReactionAdded   = "reaction.added"
 	EventTypeReactionRemoved = "reaction.removed"
+	EventTypePresenceUpdated = "presence.updated"
+
+	ClientKindUnknown = "unknown"
+	ClientKindWeb     = "web"
+	ClientKindWatcher = "watcher"
 )
 
 var (
@@ -36,11 +41,13 @@ type BroadcastResult struct {
 
 type Client struct {
 	UserID string
+	Kind   string
 	Send   chan Event
 }
 
 type clientState struct {
 	userID        string
+	kind          string
 	conversations map[string]struct{}
 }
 
@@ -70,6 +77,7 @@ func (h *Hub) Register(client *Client, conversationIDs []string) error {
 	if userID == "" {
 		return ErrClientUserIDRequired
 	}
+	clientKind := NormalizeClientKind(client.Kind)
 
 	conversationSet := normalizeConversationSet(conversationIDs)
 
@@ -82,6 +90,7 @@ func (h *Hub) Register(client *Client, conversationIDs []string) error {
 
 	state := clientState{
 		userID:        userID,
+		kind:          clientKind,
 		conversations: conversationSet,
 	}
 	h.clients[client] = state
@@ -175,6 +184,29 @@ func (h *Hub) ConnectionsForUser(userID string) int {
 	return len(h.userClients[userID])
 }
 
+func (h *Hub) ConnectionsForUserKind(userID, clientKind string) int {
+	userID = strings.TrimSpace(userID)
+	if userID == "" {
+		return 0
+	}
+	clientKind = NormalizeClientKind(clientKind)
+
+	h.mu.RLock()
+	defer h.mu.RUnlock()
+
+	count := 0
+	for client := range h.userClients[userID] {
+		state, ok := h.clients[client]
+		if !ok {
+			continue
+		}
+		if state.kind == clientKind {
+			count++
+		}
+	}
+	return count
+}
+
 func (h *Hub) ConnectionCount() int {
 	h.mu.RLock()
 	defer h.mu.RUnlock()
@@ -244,6 +276,17 @@ func normalizeConversationSet(conversationIDs []string) map[string]struct{} {
 		conversationSet[conversationID] = struct{}{}
 	}
 	return conversationSet
+}
+
+func NormalizeClientKind(clientKind string) string {
+	switch strings.TrimSpace(clientKind) {
+	case ClientKindWeb:
+		return ClientKindWeb
+	case ClientKindWatcher:
+		return ClientKindWatcher
+	default:
+		return ClientKindUnknown
+	}
 }
 
 func (h *Hub) ConversationIDs(client *Client) ([]string, error) {

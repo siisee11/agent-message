@@ -113,9 +113,25 @@ type ConversationSummary struct {
 
 // ConversationDetails is the detail projection for GET /api/conversations/:id.
 type ConversationDetails struct {
-	Conversation Conversation `json:"conversation"`
-	ParticipantA UserProfile  `json:"participant_a"`
-	ParticipantB UserProfile  `json:"participant_b"`
+	Conversation    Conversation     `json:"conversation"`
+	ParticipantA    UserProfile      `json:"participant_a"`
+	ParticipantB    UserProfile      `json:"participant_b"`
+	WatcherPresence *WatcherPresence `json:"watcher_presence,omitempty"`
+}
+
+// WatcherPresence reports whether the other participant currently has an active watcher connection.
+type WatcherPresence struct {
+	UserID     string `json:"user_id"`
+	ClientKind string `json:"client_kind"`
+	Online     bool   `json:"online"`
+}
+
+// WatcherPresenceEvent is broadcast to conversation subscribers when watcher presence changes.
+type WatcherPresenceEvent struct {
+	ConversationID string `json:"conversation_id"`
+	UserID         string `json:"user_id"`
+	ClientKind     string `json:"client_kind"`
+	Online         bool   `json:"online"`
 }
 
 // MessageDetails enriches messages with sender profile information.

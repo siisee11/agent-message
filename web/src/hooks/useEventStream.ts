@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { normalizeMessageProtocol } from '../api'
-import type { Message, Reaction } from '../api'
+import type { Message, Reaction, WatcherPresenceEvent } from '../api'
 
 const DEFAULT_SSE_URL = resolveDefaultSSEURL()
 
@@ -12,6 +12,7 @@ type KnownEventType =
   | 'message.deleted'
   | 'reaction.added'
   | 'reaction.removed'
+  | 'presence.updated'
 
 interface EventEnvelope<TType extends string, TData> {
   type: TType
@@ -26,6 +27,7 @@ export type ReactionRemovedEvent = EventEnvelope<
   'reaction.removed',
   { message_id: string; emoji: string; user_id: string }
 >
+export type PresenceUpdatedEvent = EventEnvelope<'presence.updated', WatcherPresenceEvent>
 export type UnknownServerEvent = EventEnvelope<string, unknown>
 
 export type KnownServerEvent =
@@ -34,6 +36,7 @@ export type KnownServerEvent =
   | MessageDeletedEvent
   | ReactionAddedEvent
   | ReactionRemovedEvent
+  | PresenceUpdatedEvent
 
 export type ServerEvent = KnownServerEvent | UnknownServerEvent
 
@@ -49,6 +52,8 @@ export interface UseEventStreamOptions {
   onMessageDeleted?: (event: MessageDeletedEvent) => void
   onReactionAdded?: (event: ReactionAddedEvent) => void
   onReactionRemoved?: (event: ReactionRemovedEvent) => void
+  onPresenceUpdated?: (event: PresenceUpdatedEvent) => void
+  clientKind?: 'web' | 'watcher'
 }
 
 export interface UseEventStreamResult {
@@ -80,7 +85,8 @@ function isKnownEventType(type: string): type is KnownEventType {
     type === 'message.edited' ||
     type === 'message.deleted' ||
     type === 'reaction.added' ||
-    type === 'reaction.removed'
+    type === 'reaction.removed' ||
+    type === 'presence.updated'
   )
 }
 
@@ -120,6 +126,11 @@ function parseServerEvent(rawData: string): ServerEvent | null {
         type,
         data: data as { message_id: string; emoji: string; user_id: string },
       }
+    case 'presence.updated':
+      return {
+        type,
+        data: data as WatcherPresenceEvent,
+      }
   }
 }
 
@@ -136,6 +147,8 @@ export function useEventStream(options: UseEventStreamOptions): UseEventStreamRe
     onMessageDeleted,
     onReactionAdded,
     onReactionRemoved,
+    onPresenceUpdated,
+    clientKind = 'web',
   } = options
 
   const [status, setStatus] = useState<EventStreamConnectionStatus>('idle')
@@ -158,9 +171,12 @@ export function useEventStream(options: UseEventStreamOptions): UseEventStreamRe
       return
     }
 
+    const params = new URLSearchParams()
+    params.set('token', normalizedToken)
+    params.set('client_kind', clientKind)
     const normalizedURL = eventURL.includes('?')
-      ? `${eventURL}&token=${encodeURIComponent(normalizedToken)}`
-      : `${eventURL}?token=${encodeURIComponent(normalizedToken)}`
+      ? `${eventURL}&${params.toString()}`
+      : `${eventURL}?${params.toString()}`
 
     setStatus('connecting')
     const source = new EventSource(normalizedURL)
@@ -204,6 +220,7 @@ export function useEventStream(options: UseEventStreamOptions): UseEventStreamRe
     source.addEventListener('message.deleted', handleKnownEvent(onMessageDeleted))
     source.addEventListener('reaction.added', handleKnownEvent(onReactionAdded))
     source.addEventListener('reaction.removed', handleKnownEvent(onReactionRemoved))
+    source.addEventListener('presence.updated', handleKnownEvent(onPresenceUpdated))
 
     return () => {
       source.onopen = null
@@ -222,9 +239,11 @@ export function useEventStream(options: UseEventStreamOptions): UseEventStreamRe
     onMessageEdited,
     onMessageNew,
     onOpen,
+    onPresenceUpdated,
     onReactionAdded,
     onReactionRemoved,
     token,
+    clientKind,
   ])
 
   return useMemo(

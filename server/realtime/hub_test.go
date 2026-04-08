@@ -148,6 +148,33 @@ func TestHubConversationIDs(t *testing.T) {
 	}
 }
 
+func TestHubConnectionsForUserKind(t *testing.T) {
+	hub := NewHub()
+	webClient := &Client{UserID: "u1", Kind: ClientKindWeb, Send: make(chan Event, 1)}
+	watcherA := &Client{UserID: "u1", Kind: ClientKindWatcher, Send: make(chan Event, 1)}
+	watcherB := &Client{UserID: "u1", Kind: ClientKindWatcher, Send: make(chan Event, 1)}
+
+	if err := hub.Register(webClient, nil); err != nil {
+		t.Fatalf("register web client: %v", err)
+	}
+	if err := hub.Register(watcherA, nil); err != nil {
+		t.Fatalf("register watcherA: %v", err)
+	}
+	if err := hub.Register(watcherB, nil); err != nil {
+		t.Fatalf("register watcherB: %v", err)
+	}
+
+	if got, want := hub.ConnectionsForUser("u1"), 3; got != want {
+		t.Fatalf("connections for user mismatch: got %d want %d", got, want)
+	}
+	if got, want := hub.ConnectionsForUserKind("u1", ClientKindWatcher), 2; got != want {
+		t.Fatalf("watcher connections mismatch: got %d want %d", got, want)
+	}
+	if got, want := hub.ConnectionsForUserKind("u1", ClientKindWeb), 1; got != want {
+		t.Fatalf("web connections mismatch: got %d want %d", got, want)
+	}
+}
+
 func assertEvent(t *testing.T, ch <-chan Event, eventType string) {
 	t.Helper()
 	select {

@@ -723,6 +723,13 @@ export function DmConversationPage() {
   const headerStatus = conversationQuery.isError
     ? resolveErrorMessage(conversationQuery.error, 'Failed to load conversation.')
     : formatRealtimeStatusLabel(realtime.status)
+  const watcherPresence = conversationQuery.data?.watcher_presence
+  const watcherStatusLabel =
+    conversationQuery.isError || !watcherPresence
+      ? null
+      : watcherPresence.online
+        ? 'Watcher online'
+        : 'Watcher offline'
   const headerCwdValue = conversationQuery.isLoading
     ? 'loading...'
     : conversationQuery.isError
@@ -757,6 +764,15 @@ export function DmConversationPage() {
                 >
                   {headerStatus}
                 </span>
+                {watcherStatusLabel ? (
+                  <span
+                    className={`${styles.watcherStatusBadge} ${
+                      watcherPresence?.online ? styles.watcherStatusBadgeOnline : styles.watcherStatusBadgeOffline
+                    }`}
+                  >
+                    {watcherStatusLabel}
+                  </span>
+                ) : null}
               </div>
               <p className={styles.headerCwd} title={`cwd: ${headerCwdValue}`}>
                 {`cwd: ${headerCwdValue}`}

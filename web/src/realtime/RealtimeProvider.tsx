@@ -6,7 +6,14 @@ import {
   useMemo,
   type PropsWithChildren,
 } from 'react'
-import type { ConversationDetails, Message, MessageDetails, Reaction } from '../api'
+import type {
+  ConversationDetails,
+  Message,
+  MessageDetails,
+  Reaction,
+  WatcherPresence,
+  WatcherPresenceEvent,
+} from '../api'
 import { useAuth } from '../auth'
 import { useEventStream, type EventStreamConnectionStatus } from '../hooks'
 import {
@@ -122,6 +129,49 @@ export function RealtimeProvider({ children }: PropsWithChildren) {
     [applyReactionRemoved],
   )
 
+  const handlePresenceUpdated = useCallback(
+    (presence: WatcherPresenceEvent) => {
+      queryClient.setQueryData<ConversationDetails>(['conversation', presence.conversation_id], (current) => {
+        if (!current) {
+          return current
+        }
+
+        const otherParticipant =
+          current.participant_a.id === user?.id ? current.participant_b : current.participant_a
+        if (otherParticipant.id !== presence.user_id || presence.client_kind !== 'watcher') {
+          return current
+        }
+
+        const nextWatcherPresence: WatcherPresence = {
+          user_id: presence.user_id,
+          client_kind: presence.client_kind,
+          online: presence.online,
+        }
+
+        if (
+          current.watcher_presence?.user_id === nextWatcherPresence.user_id &&
+          current.watcher_presence?.client_kind === nextWatcherPresence.client_kind &&
+          current.watcher_presence?.online === nextWatcherPresence.online
+        ) {
+          return current
+        }
+
+        return {
+          ...current,
+          watcher_presence: nextWatcherPresence,
+        }
+      })
+    },
+    [queryClient, user],
+  )
+
+  const handlePresenceUpdatedEvent = useCallback(
+    ({ data }: { data: WatcherPresenceEvent }) => {
+      handlePresenceUpdated(data)
+    },
+    [handlePresenceUpdated],
+  )
+
   const eventStream = useEventStream({
     token,
     enabled: Boolean(isAuthenticated && token),
@@ -130,6 +180,7 @@ export function RealtimeProvider({ children }: PropsWithChildren) {
     onMessageDeleted: handleMessageDeletedEvent,
     onReactionAdded: handleReactionAddedEvent,
     onReactionRemoved: handleReactionRemovedEvent,
+    onPresenceUpdated: handlePresenceUpdatedEvent,
   })
 
   const value = useMemo<RealtimeContextValue>(

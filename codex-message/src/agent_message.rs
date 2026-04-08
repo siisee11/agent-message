@@ -11,6 +11,8 @@ use tokio::sync::mpsc;
 
 use crate::log_ui::LogUi;
 
+const AGENT_MESSAGE_MODE_ENV: &str = "CODEX_MESSAGE_AGENT_MESSAGE_MODE";
+
 #[derive(Debug, Clone)]
 pub(crate) struct AgentMessageClient {
     command: AgentMessageCommand,
@@ -23,6 +25,12 @@ struct AgentMessageCommand {
     program: PathBuf,
     base_args: Vec<String>,
     cwd: Option<PathBuf>,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum AgentMessageMode {
+    Installed,
+    Source,
 }
 
 impl AgentMessageClient {
@@ -244,23 +252,46 @@ impl MessageWatch {
 }
 
 fn resolve_agent_message_command(binary: PathBuf) -> Result<AgentMessageCommand> {
-    if let Some(cli_dir) = source_cli_dir() {
-        return Ok(AgentMessageCommand {
-            program: PathBuf::from("go"),
-            base_args: vec!["run".to_string(), ".".to_string()],
-            cwd: Some(cli_dir),
-        });
-    }
+    match resolve_agent_message_mode()? {
+        AgentMessageMode::Installed => {
+            if binary.as_os_str().is_empty() {
+                bail!("agent-message binary path is empty");
+            }
 
-    if binary.as_os_str().is_empty() {
-        bail!("agent-message binary path is empty");
-    }
+            Ok(AgentMessageCommand {
+                program: binary,
+                base_args: Vec::new(),
+                cwd: None,
+            })
+        }
+        AgentMessageMode::Source => {
+            let Some(cli_dir) = source_cli_dir() else {
+                bail!(
+                    "{AGENT_MESSAGE_MODE_ENV}=source requires the repo CLI at ../cli relative to the codex-message sources"
+                );
+            };
 
-    Ok(AgentMessageCommand {
-        program: binary,
-        base_args: Vec::new(),
-        cwd: None,
-    })
+            Ok(AgentMessageCommand {
+                program: PathBuf::from("go"),
+                base_args: vec!["run".to_string(), ".".to_string()],
+                cwd: Some(cli_dir),
+            })
+        }
+    }
+}
+
+fn resolve_agent_message_mode() -> Result<AgentMessageMode> {
+    resolve_agent_message_mode_from_env(std::env::var(AGENT_MESSAGE_MODE_ENV).ok().as_deref())
+}
+
+fn resolve_agent_message_mode_from_env(value: Option<&str>) -> Result<AgentMessageMode> {
+    match value.map(str::trim).filter(|value| !value.is_empty()) {
+        None | Some("installed") => Ok(AgentMessageMode::Installed),
+        Some("source") => Ok(AgentMessageMode::Source),
+        Some(other) => bail!(
+            "invalid {AGENT_MESSAGE_MODE_ENV} value {other:?}; expected \"installed\" or \"source\""
+        ),
+    }
 }
 
 fn source_cli_dir() -> Option<PathBuf> {
@@ -449,11 +480,77 @@ mod tests {
     }
 
     #[test]
-    fn prefers_source_cli_when_repo_cli_exists() {
-        let command =
-            resolve_agent_message_command(PathBuf::from("agent-message")).expect("resolve command");
+    fn defaults_to_installed_agent_message_binary() {
+        let command = resolve_agent_message_command_with_mode(
+            PathBuf::from("agent-message"),
+            AgentMessageMode::Installed,
+        )
+        .expect("resolve command");
+        assert_eq!(command.program, PathBuf::from("agent-message"));
+        assert!(command.base_args.is_empty());
+        assert!(command.cwd.is_none());
+    }
+
+    #[test]
+    fn source_mode_uses_repo_cli_when_available() {
+        let command = resolve_agent_message_command_with_mode(
+            PathBuf::from("agent-message"),
+            AgentMessageMode::Source,
+        )
+        .expect("resolve command");
         assert_eq!(command.program, PathBuf::from("go"));
         assert_eq!(command.base_args, vec!["run".to_string(), ".".to_string()]);
         assert!(command.cwd.as_ref().is_some_and(|cwd| cwd.ends_with("cli")));
+    }
+
+    #[test]
+    fn parses_agent_message_mode_from_env() {
+        assert_eq!(
+            resolve_agent_message_mode_from_env(None).expect("default mode"),
+            AgentMessageMode::Installed
+        );
+        assert_eq!(
+            resolve_agent_message_mode_from_env(Some("installed")).expect("installed mode"),
+            AgentMessageMode::Installed
+        );
+        assert_eq!(
+            resolve_agent_message_mode_from_env(Some("source")).expect("source mode"),
+            AgentMessageMode::Source
+        );
+        let error = resolve_agent_message_mode_from_env(Some("weird")).expect_err("invalid mode");
+        assert!(
+            error
+                .to_string()
+                .contains("expected \"installed\" or \"source\"")
+        );
+    }
+
+    fn resolve_agent_message_command_with_mode(
+        binary: PathBuf,
+        mode: AgentMessageMode,
+    ) -> Result<AgentMessageCommand> {
+        match mode {
+            AgentMessageMode::Installed => {
+                if binary.as_os_str().is_empty() {
+                    bail!("agent-message binary path is empty");
+                }
+
+                Ok(AgentMessageCommand {
+                    program: binary,
+                    base_args: Vec::new(),
+                    cwd: None,
+                })
+            }
+            AgentMessageMode::Source => {
+                let Some(cli_dir) = source_cli_dir() else {
+                    bail!("missing repo cli")
+                };
+                Ok(AgentMessageCommand {
+                    program: PathBuf::from("go"),
+                    base_args: vec!["run".to_string(), ".".to_string()],
+                    cwd: Some(cli_dir),
+                })
+            }
+        }
     }
 }

@@ -13,6 +13,10 @@ npm install -g agent-message codex-message
 `codex-message` expects both `agent-message` and the `codex` CLI to already be
 available on your `PATH`.
 
+By default `codex-message` always uses the installed `agent-message` on `PATH`.
+If you explicitly want to run the repo checkout's CLI with `go run .`, set
+`CODEX_MESSAGE_AGENT_MESSAGE_MODE=source`.
+
 Behavior:
 
 1. Starts a fresh `agent-{chatId}` account with a generated password.
@@ -42,3 +46,4 @@ Useful flags:
 - `--sandbox workspace-write`
 - `--network-access`
 - `--yolo` = `--approval-policy never` + `--sandbox danger-full-access`
+- `CODEX_MESSAGE_AGENT_MESSAGE_MODE=source` opts into using the repo checkout's `agent-message` CLI instead of the installed binary

@@ -4,8 +4,11 @@ import (
 	"encoding/json"
 	"io"
 	"net/http"
+	"net/url"
 	"strings"
+	"sync"
 	"testing"
+	"time"
 )
 
 func TestRunWatchStreamsOnlyTargetConversationMessageNewEvents(t *testing.T) {
@@ -210,6 +213,110 @@ func TestRunWaitReturnsAfterFirstMatchingEvent(t *testing.T) {
 	}
 }
 
+func TestRunWaitReconnectsWhenHeartbeatLosesWatcherSession(t *testing.T) {
+	originalHeartbeatInterval := watcherHeartbeatInterval
+	watcherHeartbeatInterval = time.Millisecond
+	t.Cleanup(func() {
+		watcherHeartbeatInterval = originalHeartbeatInterval
+	})
+
+	var (
+		mu              sync.Mutex
+		firstSessionID  string
+		secondSessionID string
+	)
+
+	rt, stdout, stderr := newTestRuntime(t, "http://example.test", "tok-wait", func(req *http.Request, body []byte) (*http.Response, error) {
+		switch {
+		case req.Method == http.MethodPost && req.URL.Path == "/api/conversations":
+			return jsonResponse(http.StatusOK, `{
+				"conversation":{"id":"c-target","participant_a":"u1","participant_b":"u2","created_at":"2026-01-01T00:00:00Z"},
+				"participant_a":{"id":"u1","username":"alice","created_at":"2026-01-01T00:00:00Z"},
+				"participant_b":{"id":"u2","username":"bob","created_at":"2026-01-01T00:00:00Z"}
+			}`), nil
+		case req.Method == http.MethodPost && req.URL.Path == "/api/watchers/heartbeat":
+			var payload struct {
+				SessionID string `json:"session_id"`
+			}
+			if err := json.Unmarshal(body, &payload); err != nil {
+				t.Fatalf("decode heartbeat payload: %v", err)
+			}
+			mu.Lock()
+			firstID := firstSessionID
+			secondID := secondSessionID
+			mu.Unlock()
+			switch payload.SessionID {
+			case firstID:
+				return jsonResponse(http.StatusNotFound, `{"error":"watcher session not found"}`), nil
+			case secondID:
+				return jsonResponse(http.StatusNoContent, ``), nil
+			default:
+				t.Fatalf("unexpected heartbeat session id: %q", payload.SessionID)
+				return nil, nil
+			}
+		case req.Method == http.MethodDelete && strings.HasPrefix(req.URL.Path, "/api/watchers/sessions/"):
+			return jsonResponse(http.StatusNoContent, ``), nil
+		default:
+			t.Fatalf("unexpected request: %s %s", req.Method, req.URL.Path)
+			return nil, nil
+		}
+	})
+
+	originalConnect := connectWatchStream
+	connectWatchStream = func(rawURL string) (watchStream, error) {
+		parsed, err := url.Parse(rawURL)
+		if err != nil {
+			t.Fatalf("parse watch stream URL: %v", err)
+		}
+		sessionID := parsed.Query().Get("watcher_session_id")
+		if sessionID == "" {
+			t.Fatalf("watch stream URL missing watcher_session_id: %q", rawURL)
+		}
+
+		mu.Lock()
+		defer mu.Unlock()
+		if firstSessionID == "" {
+			firstSessionID = sessionID
+			return &blockingWatchStream{closed: make(chan struct{})}, nil
+		}
+		if secondSessionID == "" {
+			secondSessionID = sessionID
+			return &fakeWatchStream{
+				events: []streamEvent{
+					{Type: "message.new", Data: json.RawMessage(`{"id":"m-reconnected","conversation_id":"c-target","sender_id":"u2","content":"after reconnect","edited":false,"deleted":false,"created_at":"2026-01-01T00:00:00Z","updated_at":"2026-01-01T00:00:00Z"}`)},
+				},
+			}, nil
+		}
+
+		t.Fatalf("unexpected extra watch stream connection: %q", rawURL)
+		return nil, nil
+	}
+	t.Cleanup(func() {
+		connectWatchStream = originalConnect
+	})
+
+	if err := runWait(rt, "bob"); err != nil {
+		t.Fatalf("runWait: %v", err)
+	}
+
+	mu.Lock()
+	gotFirst := firstSessionID
+	gotSecond := secondSessionID
+	mu.Unlock()
+	if gotFirst == "" || gotSecond == "" {
+		t.Fatalf("expected two watcher sessions, got first=%q second=%q", gotFirst, gotSecond)
+	}
+	if gotFirst == gotSecond {
+		t.Fatalf("expected reconnect to use a new watcher session id, got %q", gotFirst)
+	}
+	if got := strings.TrimSpace(stderr.String()); got != "" {
+		t.Fatalf("expected empty stderr, got %q", got)
+	}
+	if got, want := strings.TrimSpace(stdout.String()), "m-reconnected u2: after reconnect"; got != want {
+		t.Fatalf("stdout mismatch: got %q want %q", got, want)
+	}
+}
+
 type fakeWatchStream struct {
 	events []streamEvent
 	index  int
@@ -225,5 +332,22 @@ func (f *fakeWatchStream) ReadEvent() (streamEvent, error) {
 }
 
 func (f *fakeWatchStream) Close() error {
+	return nil
+}
+
+type blockingWatchStream struct {
+	closed chan struct{}
+	once   sync.Once
+}
+
+func (b *blockingWatchStream) ReadEvent() (streamEvent, error) {
+	<-b.closed
+	return streamEvent{}, io.EOF
+}
+
+func (b *blockingWatchStream) Close() error {
+	b.once.Do(func() {
+		close(b.closed)
+	})
 	return nil
 }

@@ -30,12 +30,12 @@ type watchStream interface {
 
 var connectWatchStream = connectSSEWatchStream
 
+var watcherHeartbeatInterval = 10 * time.Second
+
 type watchOptions struct {
 	jsonOutput bool
 	once       bool
 }
-
-const watcherHeartbeatInterval = 10 * time.Second
 
 type watchConversation struct {
 	conversationID string
@@ -117,29 +117,26 @@ func runWatchWithOptions(rt *Runtime, username string, options watchOptions) err
 		return err
 	}
 	conversation := newWatchConversation(details)
-	watcherSessionID, err := newWatcherSessionID()
+	session, err := openWatchSession(rt)
 	if err != nil {
 		return err
 	}
-
-	streamURL, err := rt.Client.EventStreamURLWithWatcherSession("watcher", watcherSessionID)
-	if err != nil {
-		return err
-	}
-
-	stream, err := connectWatchStream(streamURL)
-	if err != nil {
-		return err
-	}
-	heartbeatCtx, cancelHeartbeat := context.WithCancel(context.Background())
-	go runWatcherHeartbeats(heartbeatCtx, rt, watcherSessionID)
-	defer cancelHeartbeat()
-	defer stream.Close()
-	defer unregisterWatcherSession(rt, watcherSessionID)
+	defer func() {
+		closeWatchSession(rt, session, false)
+	}()
 
 	for {
-		event, err := stream.ReadEvent()
+		event, err := session.stream.ReadEvent()
 		if err != nil {
+			reconnect := session.reconnectRequested()
+			closeWatchSession(rt, session, reconnect)
+			if reconnect {
+				session, err = openWatchSession(rt)
+				if err != nil {
+					return fmt.Errorf("reconnect watch stream: %w", err)
+				}
+				continue
+			}
 			if errors.Is(err, io.EOF) {
 				return nil
 			}
@@ -180,7 +177,75 @@ func newWatcherSessionID() (string, error) {
 	return hex.EncodeToString(bytes[:]), nil
 }
 
-func runWatcherHeartbeats(ctx context.Context, rt *Runtime, watcherSessionID string) {
+type watchSession struct {
+	watcherSessionID string
+	stream           watchStream
+	cancelHeartbeat  context.CancelFunc
+	reconnectCh      <-chan struct{}
+}
+
+func openWatchSession(rt *Runtime) (*watchSession, error) {
+	watcherSessionID, err := newWatcherSessionID()
+	if err != nil {
+		return nil, err
+	}
+
+	streamURL, err := rt.Client.EventStreamURLWithWatcherSession("watcher", watcherSessionID)
+	if err != nil {
+		return nil, err
+	}
+
+	stream, err := connectWatchStream(streamURL)
+	if err != nil {
+		return nil, err
+	}
+
+	heartbeatCtx, cancelHeartbeat := context.WithCancel(context.Background())
+	reconnectCh := make(chan struct{})
+	go runWatcherHeartbeats(heartbeatCtx, rt, watcherSessionID, stream, reconnectCh)
+
+	return &watchSession{
+		watcherSessionID: watcherSessionID,
+		stream:           stream,
+		cancelHeartbeat:  cancelHeartbeat,
+		reconnectCh:      reconnectCh,
+	}, nil
+}
+
+func closeWatchSession(rt *Runtime, session *watchSession, skipUnregister bool) {
+	if session == nil {
+		return
+	}
+	if session.cancelHeartbeat != nil {
+		session.cancelHeartbeat()
+	}
+	if session.stream != nil {
+		_ = session.stream.Close()
+	}
+	if !skipUnregister {
+		unregisterWatcherSession(rt, session.watcherSessionID)
+	}
+}
+
+func (s *watchSession) reconnectRequested() bool {
+	if s == nil || s.reconnectCh == nil {
+		return false
+	}
+	select {
+	case <-s.reconnectCh:
+		return true
+	default:
+		return false
+	}
+}
+
+func runWatcherHeartbeats(
+	ctx context.Context,
+	rt *Runtime,
+	watcherSessionID string,
+	stream watchStream,
+	reconnectCh chan<- struct{},
+) {
 	ticker := time.NewTicker(watcherHeartbeatInterval)
 	defer ticker.Stop()
 
@@ -195,9 +260,23 @@ func runWatcherHeartbeats(ctx context.Context, rt *Runtime, watcherSessionID str
 			if err == nil || errors.Is(err, context.Canceled) {
 				continue
 			}
+			if isWatcherSessionNotFound(err) {
+				close(reconnectCh)
+				_ = stream.Close()
+				return
+			}
 			_, _ = fmt.Fprintf(rt.Stderr, "warning: watcher heartbeat failed: %v\n", err)
 		}
 	}
+}
+
+func isWatcherSessionNotFound(err error) bool {
+	var apiErr *api.APIError
+	if !errors.As(err, &apiErr) {
+		return false
+	}
+	return apiErr.StatusCode == http.StatusNotFound &&
+		strings.EqualFold(strings.TrimSpace(apiErr.Message), "watcher session not found")
 }
 
 func unregisterWatcherSession(rt *Runtime, watcherSessionID string) {

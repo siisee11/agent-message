@@ -13,6 +13,7 @@ import {
   type PushState,
 } from '../notifications/push'
 import { formatRealtimeStatusLabel, useRealtime } from '../realtime'
+import { useTheme } from '../theme'
 import styles from './ChatShellPage.module.css'
 
 const DATE_FORMATTER = new Intl.DateTimeFormat('en-US', {
@@ -46,7 +47,12 @@ function formatLastMessageTime(lastMessage?: Message): string {
 }
 
 export function ChatShellPage() {
-  useDocumentSurface({ backgroundColor: '#1f2228' })
+  const { resolvedTheme } = useTheme()
+
+  useDocumentSurface({
+    backgroundColor: 'var(--app-surface-background)',
+    themeColor: resolvedTheme === 'dark' ? '#1f2228' : '#f3efe7',
+  })
 
   const navigate = useNavigate()
   const { user, logout } = useAuth()

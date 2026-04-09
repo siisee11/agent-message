@@ -11,6 +11,7 @@ import '@fontsource/geist-mono/500.css'
 import { App } from './App'
 import { AuthProvider } from './auth'
 import './styles/global.css'
+import { ThemeProvider } from './theme'
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -39,11 +40,13 @@ registerSW({
 ReactDOM.createRoot(document.getElementById('root')!).render(
   <React.StrictMode>
     <QueryClientProvider client={queryClient}>
-      <AuthProvider>
-        <BrowserRouter>
-          <App />
-        </BrowserRouter>
-      </AuthProvider>
+      <ThemeProvider>
+        <AuthProvider>
+          <BrowserRouter>
+            <App />
+          </BrowserRouter>
+        </AuthProvider>
+      </ThemeProvider>
     </QueryClientProvider>
   </React.StrictMode>,
 )

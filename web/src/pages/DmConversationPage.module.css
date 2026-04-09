@@ -4,8 +4,8 @@
   width: 100%;
   min-height: 0;
   padding: 0;
-  background: #1f2228;
-  color: #ffffff;
+  background: var(--app-surface-background);
+  color: var(--text-primary);
   overflow: hidden;
   overscroll-behavior: none;
 }
@@ -22,9 +22,9 @@
   position: sticky;
   top: 0;
   z-index: 5;
-  padding: max(1rem, calc(env(safe-area-inset-top) + 1rem)) 1rem 1rem;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-  background: rgba(31, 34, 40, 0.96);
+  padding: max(1rem, calc(env(safe-area-inset-top) + 1rem)) 5rem 1rem 1rem;
+  border-bottom: 1px solid var(--border);
+  background: color-mix(in srgb, var(--app-surface-background) 96%, transparent);
   backdrop-filter: blur(12px);
 }
 
@@ -54,9 +54,9 @@
   min-width: 44px;
   min-height: 44px;
   padding: 0.6rem 0.75rem;
-  border: 1px solid rgba(255, 255, 255, 0.2);
+  border: 1px solid var(--border-strong);
   background: transparent;
-  color: #ffffff;
+  color: var(--text-primary);
   font-family: var(--font-display);
   font-size: 0.875rem;
   letter-spacing: 0.12em;
@@ -71,7 +71,7 @@
 .contextMenuAction:hover:not(:disabled),
 .fileAttachmentLink:hover,
 .unreadBanner:hover {
-  background: rgba(255, 255, 255, 0.05);
+  background: var(--surface-emphasis);
 }
 
 .backButton:focus-visible,
@@ -82,7 +82,7 @@
 .editingCancelButton:focus-visible,
 .contextMenuAction:focus-visible,
 .unreadBanner:focus-visible {
-  outline: 2px solid rgba(59, 130, 246, 0.5);
+  outline: 2px solid var(--ring);
   outline-offset: 2px;
 }
 
@@ -90,7 +90,7 @@
   margin: 0;
   min-width: 0;
   flex: 1;
-  color: #ffffff;
+  color: var(--text-primary);
   font-size: 1.1rem;
   font-weight: 500;
   white-space: nowrap;
@@ -102,7 +102,7 @@
 .headerHostname {
   margin: 0;
   min-width: 0;
-  color: rgba(255, 255, 255, 0.5);
+  color: var(--text-tertiary);
   font-family: var(--font-display);
   font-size: 0.75rem;
   letter-spacing: 0.04em;
@@ -117,9 +117,9 @@
   align-items: center;
   min-height: 30px;
   padding: 0.3rem 0.55rem;
-  border: 1px solid rgba(255, 255, 255, 0.2);
+  border: 1px solid var(--border-strong);
   background: transparent;
-  color: #ffffff;
+  color: var(--text-primary);
   font-family: var(--font-display);
   font-size: 0.72rem;
   letter-spacing: 0.12em;
@@ -129,20 +129,20 @@
 .headerStatusBadgeError,
 .watcherStatusBadgeOffline,
 .watcherStatusBadgeOnline {
-  border-color: rgba(255, 255, 255, 0.2);
+  border-color: var(--border-strong);
   background: transparent;
-  color: #ffffff;
+  color: var(--text-primary);
 }
 
 .muted,
 .error {
   margin: 0;
   padding: 0.75rem 1rem 0;
-  color: rgba(255, 255, 255, 0.7);
+  color: var(--text-secondary);
 }
 
 .error {
-  color: rgba(255, 255, 255, 0.82);
+  color: var(--text-primary);
 }
 
 .timelineSection {
@@ -150,7 +150,7 @@
   display: grid;
   grid-template-rows: minmax(0, 1fr) auto;
   overflow: hidden;
-  background: #1f2228;
+  background: var(--app-surface-background);
 }
 
 .timelineViewport {
@@ -160,7 +160,7 @@
   overflow-x: hidden;
   overscroll-behavior: contain;
   -webkit-overflow-scrolling: touch;
-  background: #1f2228;
+  background: var(--app-surface-background);
 }
 
 .timelineContent {
@@ -171,7 +171,7 @@
 .timelinePullStatus {
   margin: 0;
   padding: 0.75rem 1rem 0;
-  color: rgba(255, 255, 255, 0.5);
+  color: var(--text-tertiary);
   font-family: var(--font-display);
   font-size: 0.75rem;
   letter-spacing: 0.08em;
@@ -205,7 +205,7 @@
 .messageBubble {
   width: 100%;
   min-width: 0;
-  border-top: 1px solid rgba(255, 255, 255, 0.1);
+  border-top: 1px solid var(--border);
   background: transparent;
   padding: 0;
 }
@@ -217,11 +217,11 @@
 }
 
 .messageBubbleOwnFull {
-  background: rgba(255, 255, 255, 0.05);
+  background: var(--surface-emphasis);
 }
 
 .messageBubbleAgent {
-  background: rgba(255, 255, 255, 0.03);
+  background: var(--surface-elevated);
 }
 
 .timelineMeta {
@@ -235,7 +235,7 @@
 .timelineMetaOwn {
   margin-bottom: 0.65rem;
   padding-bottom: 0.45rem;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  border-bottom: 1px solid var(--border);
 }
 
 .timelineMetaRight {
@@ -247,7 +247,7 @@
 }
 
 .sender {
-  color: #ffffff;
+  color: var(--text-primary);
   font-family: var(--font-display);
   font-size: 0.75rem;
   letter-spacing: 0.14em;
@@ -256,7 +256,7 @@
 
 .timestamp,
 .editedBadge {
-  color: rgba(255, 255, 255, 0.5);
+  color: var(--text-tertiary);
   font-family: var(--font-display);
   font-size: 0.72rem;
   letter-spacing: 0.08em;
@@ -264,9 +264,9 @@
 }
 
 .messageActionsTrigger {
-  border: 1px solid rgba(255, 255, 255, 0.2);
+  border: 1px solid var(--border-strong);
   background: transparent;
-  color: rgba(255, 255, 255, 0.7);
+  color: var(--text-secondary);
   font-size: 1rem;
   line-height: 1;
   padding: 0.12rem 0.38rem;
@@ -274,12 +274,12 @@
 }
 
 .messageActionsTrigger:hover:not(:disabled) {
-  background: rgba(255, 255, 255, 0.05);
+  background: var(--surface-emphasis);
 }
 
 .messageText {
   margin: 0;
-  color: rgba(255, 255, 255, 0.84);
+  color: var(--text-primary);
   white-space: pre-wrap;
   word-break: break-word;
 }
@@ -292,7 +292,7 @@
 }
 
 .messageTextDeleted {
-  color: rgba(255, 255, 255, 0.5);
+  color: var(--text-tertiary);
   font-style: italic;
 }
 
@@ -304,7 +304,7 @@
 .imageAttachment {
   max-width: min(100%, 20rem);
   max-height: 16rem;
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  border: 1px solid var(--border);
   object-fit: cover;
   display: block;
 }
@@ -315,9 +315,9 @@
   align-items: center;
   min-height: 40px;
   padding: 0.5rem 0.75rem;
-  border: 1px solid rgba(255, 255, 255, 0.2);
+  border: 1px solid var(--border-strong);
   background: transparent;
-  color: #ffffff;
+  color: var(--text-primary);
   font-family: var(--font-display);
   font-size: 0.75rem;
   letter-spacing: 0.1em;
@@ -344,17 +344,17 @@
   align-items: center;
   gap: 0.24rem;
   padding: 0.2rem 0.48rem;
-  border: 1px solid rgba(255, 255, 255, 0.2);
+  border: 1px solid var(--border-strong);
   background: transparent;
-  color: rgba(255, 255, 255, 0.7);
+  color: var(--text-secondary);
   font-family: var(--font-display);
   font-size: 0.72rem;
   letter-spacing: 0.08em;
 }
 
 .reactionChipOwn {
-  color: #ffffff;
-  background: rgba(255, 255, 255, 0.08);
+  color: var(--text-primary);
+  background: var(--surface-hover);
 }
 
 .unreadBanner {
@@ -365,9 +365,9 @@
   z-index: 8;
   min-height: 40px;
   padding: 0.5rem 0.85rem;
-  border: 1px solid rgba(255, 255, 255, 0.2);
-  background: #1f2228;
-  color: #ffffff;
+  border: 1px solid var(--border-strong);
+  background: var(--app-surface-background);
+  color: var(--text-primary);
   font-family: var(--font-display);
   font-size: 0.75rem;
   letter-spacing: 0.08em;
@@ -390,8 +390,8 @@
 
 .composerForm {
   position: relative;
-  border-top: 1px solid rgba(255, 255, 255, 0.1);
-  background: rgba(255, 255, 255, 0.03);
+  border-top: 1px solid var(--border);
+  background: var(--surface-elevated);
   padding: 0.75rem 1rem max(0.75rem, calc(env(safe-area-inset-bottom) + 0.4rem));
   display: grid;
   gap: 0.6rem;
@@ -412,7 +412,7 @@
   align-items: center;
   justify-content: space-between;
   gap: 0.7rem;
-  color: rgba(255, 255, 255, 0.7);
+  color: var(--text-secondary);
   font-family: var(--font-display);
   font-size: 0.75rem;
   letter-spacing: 0.08em;
@@ -422,9 +422,9 @@
 .editingCancelButton {
   min-height: 36px;
   padding: 0.35rem 0.55rem;
-  border: 1px solid rgba(255, 255, 255, 0.2);
+  border: 1px solid var(--border-strong);
   background: transparent;
-  color: #ffffff;
+  color: var(--text-primary);
   font-family: var(--font-display);
   font-size: 0.72rem;
   letter-spacing: 0.08em;
@@ -442,9 +442,9 @@
 .iconButton {
   width: 2.75rem;
   height: 2.75rem;
-  border: 1px solid rgba(255, 255, 255, 0.2);
+  border: 1px solid var(--border-strong);
   background: transparent;
-  color: #ffffff;
+  color: var(--text-primary);
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -468,13 +468,13 @@
   align-items: center;
   cursor: text;
   padding: 0.2rem 0.75rem;
-  border: 1px solid rgba(255, 255, 255, 0.2);
-  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid var(--input);
+  background: var(--surface-elevated);
 }
 
 .composerField:focus-within {
-  border-color: rgba(255, 255, 255, 0.2);
-  outline: 2px solid rgba(59, 130, 246, 0.5);
+  border-color: var(--input);
+  outline: 2px solid var(--ring);
   outline-offset: 2px;
 }
 
@@ -483,7 +483,7 @@
   border: 0;
   padding: 0.18rem 0;
   background: transparent;
-  color: #ffffff;
+  color: var(--text-primary);
   resize: none;
   min-height: 0;
   max-height: 6.6rem;
@@ -495,7 +495,7 @@
 }
 
 .composerInput::placeholder {
-  color: rgba(255, 255, 255, 0.3);
+  color: var(--text-quaternary);
 }
 
 .composerInput:focus {
@@ -513,14 +513,14 @@
   width: fit-content;
   max-width: 100%;
   padding: 0.3rem 0.4rem 0.3rem 0.55rem;
-  border: 1px solid rgba(255, 255, 255, 0.2);
-  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid var(--border-strong);
+  background: var(--surface-elevated);
 }
 
 .attachmentName {
   max-width: min(16rem, calc(100vw - 10rem));
   overflow: hidden;
-  color: rgba(255, 255, 255, 0.7);
+  color: var(--text-secondary);
   font-family: var(--font-display);
   font-size: 0.75rem;
   letter-spacing: 0.06em;
@@ -532,9 +532,9 @@
 .attachmentRemove {
   min-height: 32px;
   padding: 0.2rem 0.45rem;
-  border: 1px solid rgba(255, 255, 255, 0.2);
+  border: 1px solid var(--border-strong);
   background: transparent;
-  color: #ffffff;
+  color: var(--text-primary);
   font-family: var(--font-display);
   font-size: 0.72rem;
   letter-spacing: 0.08em;
@@ -545,9 +545,9 @@
 .submitButton {
   width: 2.75rem;
   height: 2.75rem;
-  border: 1px solid #ffffff;
-  background: #ffffff;
-  color: #1f2228;
+  border: 1px solid var(--button-primary-bg);
+  background: var(--button-primary-bg);
+  color: var(--button-primary-fg);
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -566,15 +566,15 @@
   gap: 0.3rem;
   min-width: 11rem;
   padding: 0.4rem;
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  background: #1f2228;
+  border: 1px solid var(--border);
+  background: var(--app-surface-background);
 }
 
 .contextMenuAction {
   min-height: 40px;
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  background: rgba(255, 255, 255, 0.03);
-  color: #ffffff;
+  border: 1px solid var(--border);
+  background: var(--surface-elevated);
+  color: var(--text-primary);
   text-align: left;
   padding: 0.5rem 0.6rem;
   font-family: var(--font-display);
@@ -585,15 +585,15 @@
 }
 
 .contextMenuActionDanger {
-  border-color: rgba(255, 255, 255, 0.2);
+  border-color: var(--border-strong);
 }
 
 .card {
   width: min(100%, 38rem);
   margin: 1rem auto;
   padding: 1.2rem;
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid var(--border);
+  background: var(--surface-elevated);
 }
 
 @media (min-width: 768px) {
@@ -605,15 +605,16 @@
     max-width: 72rem;
     margin: 0 auto;
     min-height: calc(100vh - 2rem);
-    border: 1px solid rgba(255, 255, 255, 0.1);
-    background: rgba(255, 255, 255, 0.02);
+    border: 1px solid var(--border);
+    background: color-mix(in srgb, var(--surface-elevated) 70%, transparent);
   }
 
   .header {
     padding:
       max(1.25rem, calc(env(safe-area-inset-top) + 1.25rem))
-      1.5rem
-      1.25rem;
+      6rem
+      1.25rem
+      1.5rem;
   }
 
   .messageBubbleOwnFull,

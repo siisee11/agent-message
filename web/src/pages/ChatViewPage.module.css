@@ -8,14 +8,14 @@
 .card {
   width: min(100%, 620px);
   padding: 1.2rem;
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  border: 1px solid var(--border);
   border-radius: 0;
-  background: rgba(255, 255, 255, 0.03);
+  background: var(--surface-elevated);
 }
 
 .title {
   margin: 0;
-  color: #ffffff;
+  color: var(--text-primary);
   font-family: var(--font-display);
   font-weight: 400;
   letter-spacing: 0.08em;
@@ -24,11 +24,11 @@
 
 .copy {
   margin: 0.65rem 0 0;
-  color: rgba(255, 255, 255, 0.7);
+  color: var(--text-secondary);
 }
 
 .hint {
   margin: 0.8rem 0 0;
   font-size: 0.9rem;
-  color: rgba(255, 255, 255, 0.5);
+  color: var(--text-tertiary);
 }

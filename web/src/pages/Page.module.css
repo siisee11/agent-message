@@ -2,9 +2,9 @@
   width: min(100%, 680px);
   margin: 4rem auto;
   padding: 1.5rem;
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  border: 1px solid var(--border);
   border-radius: 0;
-  background: rgba(255, 255, 255, 0.03);
+  background: var(--surface-elevated);
 }
 
 .card h2 {
@@ -20,11 +20,11 @@
   margin-top: 0;
   margin-bottom: 1rem;
   line-height: 1.5;
-  color: rgba(255, 255, 255, 0.7);
+  color: var(--text-secondary);
 }
 
 .link {
-  color: #ffffff;
+  color: var(--text-primary);
   text-decoration: none;
   font-family: var(--font-display);
   font-size: 0.875rem;
@@ -33,5 +33,5 @@
 }
 
 .link:hover {
-  color: rgba(255, 255, 255, 0.5);
+  color: var(--text-tertiary);
 }

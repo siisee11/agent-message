@@ -3,6 +3,7 @@ import { useLocation, useNavigate } from 'react-router-dom'
 import { ApiError } from '../api'
 import { useAuth } from '../auth'
 import { useDocumentSurface } from '../hooks'
+import { useTheme } from '../theme'
 import styles from './LoginPage.module.css'
 
 interface LocationState {
@@ -12,7 +13,12 @@ interface LocationState {
 }
 
 export function LoginPage() {
-  useDocumentSurface({ backgroundColor: '#1f2228' })
+  const { resolvedTheme } = useTheme()
+
+  useDocumentSurface({
+    backgroundColor: 'var(--app-surface-background)',
+    themeColor: resolvedTheme === 'dark' ? '#1f2228' : '#f3efe7',
+  })
 
   const navigate = useNavigate()
   const location = useLocation()

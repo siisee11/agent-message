@@ -27,6 +27,7 @@ import {
   resolveMessageRenderContent,
 } from '../messages/messagePresentation'
 import { formatRealtimeStatusLabel, useRealtime } from '../realtime'
+import { useTheme } from '../theme'
 import { useDocumentSurface } from '../hooks'
 import {
   fallbackSender,
@@ -172,7 +173,12 @@ function groupReactionsByEmoji(
 }
 
 export function DmConversationPage() {
-  useDocumentSurface({ backgroundColor: '#1f2228' })
+  const { resolvedTheme } = useTheme()
+
+  useDocumentSurface({
+    backgroundColor: 'var(--app-surface-background)',
+    themeColor: resolvedTheme === 'dark' ? '#1f2228' : '#f3efe7',
+  })
 
   const navigate = useNavigate()
   const { conversationId } = useParams()

@@ -5,7 +5,11 @@ import { accessSync, constants, existsSync, readFileSync } from 'node:fs'
 import { delimiter, dirname, join, resolve } from 'node:path'
 import process from 'node:process'
 import { fileURLToPath } from 'node:url'
-import spinners from 'unicode-animations'
+
+const upgradeSpinner = {
+  frames: ['⠃', '⠉', '⠘', '⠰', '⢠', '⣀', '⡄', '⠆'],
+  interval: 100,
+}
 
 const scriptDir = dirname(fileURLToPath(import.meta.url))
 const packageRoot = resolve(scriptDir, '..', '..')
@@ -166,7 +170,7 @@ function formatVersion(version) {
 }
 
 function createStepSpinner(message) {
-  const spinner = spinners.orbit
+  const spinner = upgradeSpinner
   const supportsAnimation = Boolean(process.stdout.isTTY && spinner?.frames?.length)
   let frameIndex = 0
   let timer = null

@@ -17,7 +17,8 @@ fn request_suffix(to_username: &str, from_username: &str) -> String {
     format!(
         r#"
 
-Operational requirements from the claude-message wrapper:
+How to send me a message:
+- Use 'agent-message-cli' skill
 - Before composing the final user-facing result, run `agent-message catalog prompt` and use that output as the authoritative json-render catalog guidance.
 - Use sender account `{from_username}` for direct outbound messages.
 - Send the final user-facing result yourself by invoking the `agent-message` CLI.
@@ -25,7 +26,6 @@ Operational requirements from the claude-message wrapper:
 - Always pass `--from {from_username}` when invoking `agent-message send`.
 - Prefer a visually readable `agent-message send {to_username} ... --kind json_render --from {from_username}` payload when appropriate.
 - For final result messages, avoid wrapping the entire payload in a `Card` unless a card is clearly necessary; prefer a direct content-first layout such as `Stack`.
-- Do not rely on the wrapper to forward your final assistant message as the primary user-facing result.
 - After sending the direct result, keep your final assistant message minimal because the wrapper may still emit status metadata.
 - If you need clarification, ask clearly and briefly in the conversation.
 "#

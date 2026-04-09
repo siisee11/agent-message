@@ -46,7 +46,7 @@ function formatLastMessageTime(lastMessage?: Message): string {
 }
 
 export function ChatShellPage() {
-  useDocumentSurface({ backgroundColor: '#1f4fbf' })
+  useDocumentSurface({ backgroundColor: '#1f2228' })
 
   const navigate = useNavigate()
   const { user, logout } = useAuth()

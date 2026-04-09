@@ -12,7 +12,7 @@ interface LocationState {
 }
 
 export function LoginPage() {
-  useDocumentSurface({ backgroundColor: '#edf3ff' })
+  useDocumentSurface({ backgroundColor: '#1f2228' })
 
   const navigate = useNavigate()
   const location = useLocation()

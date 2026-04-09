@@ -2,30 +2,33 @@
   min-height: 100%;
   display: grid;
   place-items: center;
-  padding: 1rem;
+  padding: 1.5rem;
 }
 
 .card {
   width: min(100%, 620px);
   padding: 1.2rem;
-  border: 1px solid #d4e2fb;
-  border-radius: 14px;
-  background: #ffffff;
-  box-shadow: 0 14px 28px -24px #103579;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 0;
+  background: rgba(255, 255, 255, 0.03);
 }
 
 .title {
   margin: 0;
-  color: #13284d;
+  color: #ffffff;
+  font-family: var(--font-display);
+  font-weight: 400;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
 }
 
 .copy {
   margin: 0.65rem 0 0;
-  color: #354e7d;
+  color: rgba(255, 255, 255, 0.7);
 }
 
 .hint {
   margin: 0.8rem 0 0;
   font-size: 0.9rem;
-  color: #4a6697;
+  color: rgba(255, 255, 255, 0.5);
 }

@@ -1,29 +1,37 @@
 .card {
   width: min(100%, 680px);
+  margin: 4rem auto;
   padding: 1.5rem;
-  border: 1px solid #d6dff4;
-  border-radius: 14px;
-  background: #ffffff;
-  box-shadow: 0 12px 30px -24px #1d3e8a;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 0;
+  background: rgba(255, 255, 255, 0.03);
 }
 
 .card h2 {
   margin-top: 0;
   margin-bottom: 0.6rem;
+  font-family: var(--font-display);
+  font-weight: 400;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
 }
 
 .card p {
   margin-top: 0;
   margin-bottom: 1rem;
   line-height: 1.5;
+  color: rgba(255, 255, 255, 0.7);
 }
 
 .link {
-  color: #2454d6;
+  color: #ffffff;
   text-decoration: none;
-  font-weight: 600;
+  font-family: var(--font-display);
+  font-size: 0.875rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
 }
 
 .link:hover {
-  text-decoration: underline;
+  color: rgba(255, 255, 255, 0.5);
 }

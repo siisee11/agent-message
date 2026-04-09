@@ -95,16 +95,18 @@ func (h *usersHandler) handleMe(w http.ResponseWriter, r *http.Request) {
 }
 
 type conversationsHandler struct {
-	store store.Store
-	hub   *realtime.Hub
-	nowFn func() time.Time
+	store           store.Store
+	hub             *realtime.Hub
+	watcherPresence *realtime.WatcherPresence
+	nowFn           func() time.Time
 }
 
-func newConversationsHandler(s store.Store, hub *realtime.Hub) *conversationsHandler {
+func newConversationsHandler(s store.Store, hub *realtime.Hub, watcherPresence *realtime.WatcherPresence) *conversationsHandler {
 	return &conversationsHandler{
-		store: s,
-		hub:   hub,
-		nowFn: time.Now,
+		store:           s,
+		hub:             hub,
+		watcherPresence: watcherPresence,
+		nowFn:           time.Now,
 	}
 }
 
@@ -281,7 +283,7 @@ func (h *conversationsHandler) decorateWatcherPresence(details *models.Conversat
 	details.WatcherPresence = &models.WatcherPresence{
 		UserID:     otherParticipant.ID,
 		ClientKind: realtime.ClientKindWatcher,
-		Online:     h.hub != nil && h.hub.ConnectionsForUserKind(otherParticipant.ID, realtime.ClientKindWatcher) > 0,
+		Online:     h.watcherPresence != nil && h.watcherPresence.IsOnline(otherParticipant.ID),
 	}
 }
 
@@ -295,10 +297,20 @@ func (h *conversationsHandler) subscribeConversationParticipants(conversation mo
 	} else {
 		log.Printf("conversation subscribed user=%s conversation=%s source=create", conversation.ParticipantA, conversation.ID)
 	}
+	if h.watcherPresence != nil {
+		if err := h.watcherPresence.SubscribeUser(conversation.ParticipantA, conversation.ID); err != nil {
+			log.Printf("watcher presence subscribe failed user=%s conversation=%s: %v", conversation.ParticipantA, conversation.ID, err)
+		}
+	}
 	if err := h.hub.SubscribeUser(conversation.ParticipantB, conversation.ID); err != nil {
 		log.Printf("conversation subscribe failed user=%s conversation=%s: %v", conversation.ParticipantB, conversation.ID, err)
 	} else {
 		log.Printf("conversation subscribed user=%s conversation=%s source=create", conversation.ParticipantB, conversation.ID)
+	}
+	if h.watcherPresence != nil {
+		if err := h.watcherPresence.SubscribeUser(conversation.ParticipantB, conversation.ID); err != nil {
+			log.Printf("watcher presence subscribe failed user=%s conversation=%s: %v", conversation.ParticipantB, conversation.ID, err)
+		}
 	}
 }
 

@@ -15,23 +15,30 @@ import (
 	"agent-message/server/models"
 	"agent-message/server/realtime"
 	"agent-message/server/store"
+
+	"github.com/google/uuid"
 )
 
 type eventStreamHandler struct {
-	store store.Store
-	hub   *realtime.Hub
+	store           store.Store
+	hub             *realtime.Hub
+	watcherPresence *realtime.WatcherPresence
 }
 
 const eventStreamHeartbeatInterval = 25 * time.Second
 
-func newEventStreamHandler(s store.Store, hub *realtime.Hub) *eventStreamHandler {
+func newEventStreamHandler(s store.Store, hub *realtime.Hub, watcherPresence *realtime.WatcherPresence) *eventStreamHandler {
 	if hub == nil {
 		hub = realtime.NewHub()
 	}
+	if watcherPresence == nil {
+		watcherPresence = realtime.NewWatcherPresence(realtime.DefaultWatcherPresenceTTL)
+	}
 
 	return &eventStreamHandler{
-		store: s,
-		hub:   hub,
+		store:           s,
+		hub:             hub,
+		watcherPresence: watcherPresence,
 	}
 }
 
@@ -75,23 +82,30 @@ func (h *eventStreamHandler) handleEventStream(w http.ResponseWriter, r *http.Re
 		writeError(w, http.StatusInternalServerError, "failed to list conversations")
 		return
 	}
-	previousWatcherConnections := 0
-	if client.Kind == realtime.ClientKindWatcher {
-		previousWatcherConnections = h.hub.ConnectionsForUserKind(user.ID, realtime.ClientKindWatcher)
-	}
-
 	if err := h.hub.Register(client, conversationIDs); err != nil {
 		log.Printf("sse register failed user=%s conversations=%d: %v", user.ID, len(conversationIDs), err)
 		writeError(w, http.StatusInternalServerError, "failed to start event stream")
 		return
 	}
-	if client.Kind == realtime.ClientKindWatcher && previousWatcherConnections == 0 {
-		h.broadcastWatcherPresence(conversationIDs, user.ID, true)
+	watcherSessionID := ""
+	if client.Kind == realtime.ClientKindWatcher {
+		watcherSessionID = watcherSessionIDFromRequest(r)
+		if watcherSessionID == "" {
+			watcherSessionID = uuid.NewString()
+		}
+		transition, err := h.watcherPresence.Register(user.ID, watcherSessionID, conversationIDs)
+		if err != nil {
+			h.hub.Unregister(client)
+			log.Printf("watcher presence register failed user=%s session=%s: %v", user.ID, watcherSessionID, err)
+			writeError(w, http.StatusBadRequest, "invalid watcher session")
+			return
+		}
+		h.broadcastWatcherTransition(transition)
 	}
 	defer func() {
 		h.hub.Unregister(client)
-		if client.Kind == realtime.ClientKindWatcher && h.hub.ConnectionsForUserKind(user.ID, realtime.ClientKindWatcher) == 0 {
-			h.broadcastWatcherPresence(conversationIDs, user.ID, false)
+		if client.Kind == realtime.ClientKindWatcher {
+			h.broadcastWatcherTransition(h.watcherPresence.Unregister(user.ID, watcherSessionID))
 		}
 	}()
 
@@ -115,6 +129,7 @@ func (h *eventStreamHandler) handleEventStream(w http.ResponseWriter, r *http.Re
 		case <-r.Context().Done():
 			return
 		case <-heartbeatTicker.C:
+			h.broadcastWatcherTransitions(h.watcherPresence.Expire())
 			if err := writeSSEComment(w, "keep-alive"); err != nil {
 				if !isExpectedSSEDisconnect(err) {
 					log.Printf("sse heartbeat failed user=%s: %v", user.ID, err)
@@ -132,6 +147,10 @@ func (h *eventStreamHandler) handleEventStream(w http.ResponseWriter, r *http.Re
 			flusher.Flush()
 		}
 	}
+}
+
+func watcherSessionIDFromRequest(r *http.Request) string {
+	return strings.TrimSpace(r.URL.Query().Get("watcher_session_id"))
 }
 
 func eventStreamClientKind(r *http.Request) string {
@@ -169,6 +188,20 @@ func (h *eventStreamHandler) broadcastWatcherPresence(conversationIDs []string, 
 		}); err != nil {
 			log.Printf("presence broadcast failed conversation=%s user=%s online=%t: %v", conversationID, userID, online, err)
 		}
+	}
+}
+
+func (h *eventStreamHandler) broadcastWatcherTransition(transition *realtime.WatcherPresenceTransition) {
+	if transition == nil {
+		return
+	}
+	h.broadcastWatcherPresence(transition.ConversationIDs, transition.UserID, transition.Online)
+}
+
+func (h *eventStreamHandler) broadcastWatcherTransitions(transitions []realtime.WatcherPresenceTransition) {
+	for index := range transitions {
+		transition := transitions[index]
+		h.broadcastWatcherPresence(transition.ConversationIDs, transition.UserID, transition.Online)
 	}
 }
 

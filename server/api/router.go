@@ -13,6 +13,7 @@ import (
 type Dependencies struct {
 	Store              store.Store
 	Hub                *realtime.Hub
+	WatcherPresence    *realtime.WatcherPresence
 	Push               *push.Service
 	CORSAllowedOrigins []string
 	UploadDir          string
@@ -31,14 +32,19 @@ func NewRouter(deps Dependencies) http.Handler {
 	if hub == nil {
 		hub = realtime.NewHub()
 	}
+	watcherPresence := deps.WatcherPresence
+	if watcherPresence == nil {
+		watcherPresence = realtime.NewWatcherPresence(realtime.DefaultWatcherPresenceTTL)
+	}
 
 	authHandler := newAuthHandler(deps.Store)
 	catalogHandler := newCatalogHandler()
 	usersHandler := newUsersHandler(deps.Store)
-	conversationsHandler := newConversationsHandler(deps.Store, hub)
+	conversationsHandler := newConversationsHandler(deps.Store, hub, watcherPresence)
 	messagesHandler := newMessagesHandler(deps.Store, hub)
 	messagesHandler.notifier = deps.Push
-	eventStreamHandler := newEventStreamHandler(deps.Store, hub)
+	eventStreamHandler := newEventStreamHandler(deps.Store, hub, watcherPresence)
+	watcherPresenceHandler := newWatcherPresenceHandler(watcherPresence, hub)
 	pushHandler := newPushHandler(deps.Store, deps.Push)
 	messagesHandler.uploadDir = uploadDir
 	uploadHandler := newUploadHandler(uploadDir)
@@ -53,6 +59,8 @@ func NewRouter(deps Dependencies) http.Handler {
 	mux.Handle("/api/users/me", authRequired(http.HandlerFunc(usersHandler.handleMe)))
 	mux.Handle("/api/push/config", authRequired(http.HandlerFunc(pushHandler.handleConfig)))
 	mux.Handle("/api/push/subscriptions", authRequired(http.HandlerFunc(pushHandler.handleSubscriptions)))
+	mux.Handle("/api/watchers/heartbeat", authRequired(http.HandlerFunc(watcherPresenceHandler.handleHeartbeat)))
+	mux.Handle("/api/watchers/sessions/", authRequired(http.HandlerFunc(watcherPresenceHandler.handleSessionByID)))
 
 	mux.Handle("/api/conversations", authRequired(http.HandlerFunc(conversationsHandler.handleConversationsCollection)))
 	mux.Handle("/api/conversations/", authRequired(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {

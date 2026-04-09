@@ -472,6 +472,10 @@ func (c *Client) RemoveReaction(ctx context.Context, messageID, emoji string) (R
 }
 
 func (c *Client) EventStreamURL(clientKind string) (string, error) {
+	return c.EventStreamURLWithWatcherSession(clientKind, "")
+}
+
+func (c *Client) EventStreamURLWithWatcherSession(clientKind, watcherSessionID string) (string, error) {
 	if c.baseURL == nil {
 		return "", errors.New("server URL is not configured")
 	}
@@ -489,8 +493,33 @@ func (c *Client) EventStreamURL(clientKind string) (string, error) {
 	if strings.TrimSpace(clientKind) != "" {
 		query.Set("client_kind", strings.TrimSpace(clientKind))
 	}
+	if strings.TrimSpace(watcherSessionID) != "" {
+		query.Set("watcher_session_id", strings.TrimSpace(watcherSessionID))
+	}
 	streamURL.RawQuery = query.Encode()
 	return streamURL.String(), nil
+}
+
+type WatcherHeartbeatRequest struct {
+	SessionID string `json:"session_id"`
+}
+
+func (c *Client) WatcherHeartbeat(ctx context.Context, sessionID string) error {
+	normalizedSessionID, err := validateWatcherSessionID(sessionID)
+	if err != nil {
+		return err
+	}
+	return c.doJSON(ctx, http.MethodPost, "/api/watchers/heartbeat", WatcherHeartbeatRequest{
+		SessionID: normalizedSessionID,
+	}, nil)
+}
+
+func (c *Client) UnregisterWatcherSession(ctx context.Context, sessionID string) error {
+	normalizedSessionID, err := validateWatcherSessionID(sessionID)
+	if err != nil {
+		return err
+	}
+	return c.doJSON(ctx, http.MethodDelete, "/api/watchers/sessions/"+url.PathEscape(normalizedSessionID), nil, nil)
 }
 
 func (c *Client) doJSON(ctx context.Context, method, requestPath string, in, out any) error {

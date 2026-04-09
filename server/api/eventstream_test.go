@@ -12,6 +12,7 @@ import (
 	"testing"
 	"time"
 
+	"agent-message/server/models"
 	"agent-message/server/realtime"
 	"agent-message/server/store"
 )
@@ -158,7 +159,79 @@ func TestEventStreamBroadcastsWatcherPresenceTransitions(t *testing.T) {
 	}
 }
 
+func TestWatcherPresenceLeaseExtendsOnHeartbeatAndExpiresInConversationDetail(t *testing.T) {
+	now := time.Date(2026, time.January, 1, 0, 0, 0, 0, time.UTC)
+	watcherPresence := realtime.NewWatcherPresence(30 * time.Second)
+	watcherPresence.SetNowFnForTests(func() time.Time { return now })
+
+	server, _ := newEventStreamTestServerWithWatcherPresence(t, watcherPresence)
+	alice := registerAndLoginUser(t, server.Config.Handler, "alice", "1234")
+	bob := registerAndLoginUser(t, server.Config.Handler, "bob", "1234")
+	conversationID := mustStartConversation(t, server.Config.Handler, alice.Token, "bob")
+
+	watcherResp := mustOpenEventStreamWithSession(t, server.URL, bob.Token, "watcher", "session-1")
+	defer watcherResp.Body.Close()
+
+	now = now.Add(20 * time.Second)
+	heartbeatReq := httptest.NewRequest(http.MethodPost, "/api/watchers/heartbeat", strings.NewReader(`{"session_id":"session-1"}`))
+	heartbeatReq.Header.Set("Authorization", "Bearer "+bob.Token)
+	heartbeatReq.Header.Set("Content-Type", "application/json")
+	heartbeatResp := httptest.NewRecorder()
+	server.Config.Handler.ServeHTTP(heartbeatResp, heartbeatReq)
+	if heartbeatResp.Code != http.StatusNoContent {
+		t.Fatalf("heartbeat expected %d, got %d body=%s", http.StatusNoContent, heartbeatResp.Code, heartbeatResp.Body.String())
+	}
+
+	now = now.Add(15 * time.Second)
+	details := mustGetConversationDetails(t, server.Config.Handler, alice.Token, conversationID)
+	if details.WatcherPresence == nil || !details.WatcherPresence.Online {
+		t.Fatalf("expected watcher to stay online after heartbeat, got %+v", details.WatcherPresence)
+	}
+
+	now = now.Add(20 * time.Second)
+	details = mustGetConversationDetails(t, server.Config.Handler, alice.Token, conversationID)
+	if details.WatcherPresence == nil || details.WatcherPresence.Online {
+		t.Fatalf("expected watcher to expire offline in conversation detail, got %+v", details.WatcherPresence)
+	}
+}
+
+func TestWatcherPresenceSessionDeleteTurnsConversationOfflineImmediately(t *testing.T) {
+	now := time.Date(2026, time.January, 1, 0, 0, 0, 0, time.UTC)
+	watcherPresence := realtime.NewWatcherPresence(30 * time.Second)
+	watcherPresence.SetNowFnForTests(func() time.Time { return now })
+
+	server, _ := newEventStreamTestServerWithWatcherPresence(t, watcherPresence)
+	alice := registerAndLoginUser(t, server.Config.Handler, "alice", "1234")
+	bob := registerAndLoginUser(t, server.Config.Handler, "bob", "1234")
+	conversationID := mustStartConversation(t, server.Config.Handler, alice.Token, "bob")
+
+	watcherResp := mustOpenEventStreamWithSession(t, server.URL, bob.Token, "watcher", "session-delete")
+	defer watcherResp.Body.Close()
+
+	details := mustGetConversationDetails(t, server.Config.Handler, alice.Token, conversationID)
+	if details.WatcherPresence == nil || !details.WatcherPresence.Online {
+		t.Fatalf("expected watcher to be online before delete, got %+v", details.WatcherPresence)
+	}
+
+	deleteReq := httptest.NewRequest(http.MethodDelete, "/api/watchers/sessions/session-delete", nil)
+	deleteReq.Header.Set("Authorization", "Bearer "+bob.Token)
+	deleteResp := httptest.NewRecorder()
+	server.Config.Handler.ServeHTTP(deleteResp, deleteReq)
+	if deleteResp.Code != http.StatusNoContent {
+		t.Fatalf("delete expected %d, got %d body=%s", http.StatusNoContent, deleteResp.Code, deleteResp.Body.String())
+	}
+
+	details = mustGetConversationDetails(t, server.Config.Handler, alice.Token, conversationID)
+	if details.WatcherPresence == nil || details.WatcherPresence.Online {
+		t.Fatalf("expected watcher to be offline after delete, got %+v", details.WatcherPresence)
+	}
+}
+
 func newEventStreamTestServer(t *testing.T) (*httptest.Server, *realtime.Hub) {
+	return newEventStreamTestServerWithWatcherPresence(t, nil)
+}
+
+func newEventStreamTestServerWithWatcherPresence(t *testing.T, watcherPresence *realtime.WatcherPresence) (*httptest.Server, *realtime.Hub) {
 	t.Helper()
 
 	dbPath := filepath.Join(t.TempDir(), "events_api.sqlite")
@@ -172,9 +245,10 @@ func newEventStreamTestServer(t *testing.T) (*httptest.Server, *realtime.Hub) {
 
 	hub := realtime.NewHub()
 	router := NewRouter(Dependencies{
-		Store:     sqliteStore,
-		Hub:       hub,
-		UploadDir: filepath.Join(t.TempDir(), "uploads"),
+		Store:           sqliteStore,
+		Hub:             hub,
+		WatcherPresence: watcherPresence,
+		UploadDir:       filepath.Join(t.TempDir(), "uploads"),
 	})
 	server := httptest.NewServer(router)
 	t.Cleanup(server.Close)
@@ -182,11 +256,18 @@ func newEventStreamTestServer(t *testing.T) (*httptest.Server, *realtime.Hub) {
 }
 
 func mustOpenEventStream(t *testing.T, serverURL, token, clientKind string) *http.Response {
+	return mustOpenEventStreamWithSession(t, serverURL, token, clientKind, "")
+}
+
+func mustOpenEventStreamWithSession(t *testing.T, serverURL, token, clientKind, watcherSessionID string) *http.Response {
 	t.Helper()
 
 	requestURL := serverURL + "/api/events?token=" + token
 	if strings.TrimSpace(clientKind) != "" {
 		requestURL += "&client_kind=" + clientKind
+	}
+	if strings.TrimSpace(watcherSessionID) != "" {
+		requestURL += "&watcher_session_id=" + watcherSessionID
 	}
 	req, err := http.NewRequest(http.MethodGet, requestURL, nil)
 	if err != nil {
@@ -200,6 +281,25 @@ func mustOpenEventStream(t *testing.T, serverURL, token, clientKind string) *htt
 		t.Fatalf("expected event stream status %d, got %d", http.StatusOK, resp.StatusCode)
 	}
 	return resp
+}
+
+func mustGetConversationDetails(t *testing.T, router http.Handler, token, conversationID string) models.ConversationDetails {
+	t.Helper()
+
+	req := httptest.NewRequest(http.MethodGet, "/api/conversations/"+conversationID, nil)
+	req.Header.Set("Authorization", "Bearer "+token)
+	resp := httptest.NewRecorder()
+	router.ServeHTTP(resp, req)
+
+	if resp.Code != http.StatusOK {
+		t.Fatalf("get conversation expected %d, got %d body=%s", http.StatusOK, resp.Code, resp.Body.String())
+	}
+
+	var details models.ConversationDetails
+	if err := json.NewDecoder(resp.Body).Decode(&details); err != nil {
+		t.Fatalf("decode conversation details: %v", err)
+	}
+	return details
 }
 
 func readSSEEventWithin(bodyReader io.Reader, timeout time.Duration) (realtime.Event, error) {

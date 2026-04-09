@@ -3,6 +3,8 @@ package cmd
 import (
 	"bufio"
 	"context"
+	"crypto/rand"
+	"encoding/hex"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -32,6 +34,8 @@ type watchOptions struct {
 	jsonOutput bool
 	once       bool
 }
+
+const watcherHeartbeatInterval = 10 * time.Second
 
 type watchConversation struct {
 	conversationID string
@@ -113,8 +117,12 @@ func runWatchWithOptions(rt *Runtime, username string, options watchOptions) err
 		return err
 	}
 	conversation := newWatchConversation(details)
+	watcherSessionID, err := newWatcherSessionID()
+	if err != nil {
+		return err
+	}
 
-	streamURL, err := rt.Client.EventStreamURL("watcher")
+	streamURL, err := rt.Client.EventStreamURLWithWatcherSession("watcher", watcherSessionID)
 	if err != nil {
 		return err
 	}
@@ -123,7 +131,11 @@ func runWatchWithOptions(rt *Runtime, username string, options watchOptions) err
 	if err != nil {
 		return err
 	}
+	heartbeatCtx, cancelHeartbeat := context.WithCancel(context.Background())
+	go runWatcherHeartbeats(heartbeatCtx, rt, watcherSessionID)
+	defer cancelHeartbeat()
 	defer stream.Close()
+	defer unregisterWatcherSession(rt, watcherSessionID)
 
 	for {
 		event, err := stream.ReadEvent()
@@ -157,6 +169,42 @@ func runWatchWithOptions(rt *Runtime, username string, options watchOptions) err
 		if options.once {
 			return nil
 		}
+	}
+}
+
+func newWatcherSessionID() (string, error) {
+	var bytes [16]byte
+	if _, err := rand.Read(bytes[:]); err != nil {
+		return "", fmt.Errorf("generate watcher session id: %w", err)
+	}
+	return hex.EncodeToString(bytes[:]), nil
+}
+
+func runWatcherHeartbeats(ctx context.Context, rt *Runtime, watcherSessionID string) {
+	ticker := time.NewTicker(watcherHeartbeatInterval)
+	defer ticker.Stop()
+
+	for {
+		select {
+		case <-ctx.Done():
+			return
+		case <-ticker.C:
+			heartbeatCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+			err := rt.Client.WatcherHeartbeat(heartbeatCtx, watcherSessionID)
+			cancel()
+			if err == nil || errors.Is(err, context.Canceled) {
+				continue
+			}
+			_, _ = fmt.Fprintf(rt.Stderr, "warning: watcher heartbeat failed: %v\n", err)
+		}
+	}
+}
+
+func unregisterWatcherSession(rt *Runtime, watcherSessionID string) {
+	unregisterCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+	if err := rt.Client.UnregisterWatcherSession(unregisterCtx, watcherSessionID); err != nil {
+		_, _ = fmt.Fprintf(rt.Stderr, "warning: watcher session cleanup failed: %v\n", err)
 	}
 }
 

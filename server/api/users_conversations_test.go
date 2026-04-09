@@ -267,14 +267,10 @@ func TestConversationDetailsIncludesWatcherPresence(t *testing.T) {
 		t.Fatalf("expected offline watcher presence in start response, got %+v", created.WatcherPresence)
 	}
 
-	watcherClient := &realtime.Client{
-		UserID: bob.User.ID,
-		Kind:   realtime.ClientKindWatcher,
-		Send:   make(chan realtime.Event, 1),
-	}
-	if err := hub.Register(watcherClient, []string{created.Conversation.ID}); err != nil {
-		t.Fatalf("register watcher client: %v", err)
-	}
+	server := httptest.NewServer(router)
+	defer server.Close()
+	watcherResp := mustOpenEventStreamWithSession(t, server.URL, bob.Token, "watcher", "session-users-conv")
+	defer watcherResp.Body.Close()
 
 	reqGet := httptest.NewRequest(http.MethodGet, "/api/conversations/"+created.Conversation.ID, nil)
 	reqGet.Header.Set("Authorization", "Bearer "+alice.Token)

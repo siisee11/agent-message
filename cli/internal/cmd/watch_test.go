@@ -10,22 +10,27 @@ import (
 
 func TestRunWatchStreamsOnlyTargetConversationMessageNewEvents(t *testing.T) {
 	rt, stdout, stderr := newTestRuntime(t, "http://example.test", "tok-watch", func(req *http.Request, body []byte) (*http.Response, error) {
-		if req.Method != http.MethodPost || req.URL.Path != "/api/conversations" {
-			t.Fatalf("unexpected request: %s %s", req.Method, req.URL.Path)
-		}
-		var payload map[string]string
-		if err := json.Unmarshal(body, &payload); err != nil {
-			t.Fatalf("decode open payload: %v", err)
-		}
-		if got, want := payload["username"], "bob"; got != want {
-			t.Fatalf("open username mismatch: got %q want %q", got, want)
-		}
+		switch {
+		case req.Method == http.MethodPost && req.URL.Path == "/api/conversations":
+			var payload map[string]string
+			if err := json.Unmarshal(body, &payload); err != nil {
+				t.Fatalf("decode open payload: %v", err)
+			}
+			if got, want := payload["username"], "bob"; got != want {
+				t.Fatalf("open username mismatch: got %q want %q", got, want)
+			}
 
-		return jsonResponse(http.StatusOK, `{
-			"conversation":{"id":"c-target","participant_a":"u1","participant_b":"u2","created_at":"2026-01-01T00:00:00Z"},
-			"participant_a":{"id":"u1","username":"alice","created_at":"2026-01-01T00:00:00Z"},
-			"participant_b":{"id":"u2","username":"bob","created_at":"2026-01-01T00:00:00Z"}
-		}`), nil
+			return jsonResponse(http.StatusOK, `{
+				"conversation":{"id":"c-target","participant_a":"u1","participant_b":"u2","created_at":"2026-01-01T00:00:00Z"},
+				"participant_a":{"id":"u1","username":"alice","created_at":"2026-01-01T00:00:00Z"},
+				"participant_b":{"id":"u2","username":"bob","created_at":"2026-01-01T00:00:00Z"}
+			}`), nil
+		case req.Method == http.MethodDelete && strings.HasPrefix(req.URL.Path, "/api/watchers/sessions/"):
+			return jsonResponse(http.StatusNoContent, ``), nil
+		default:
+			t.Fatalf("unexpected request: %s %s", req.Method, req.URL.Path)
+			return nil, nil
+		}
 	})
 
 	var capturedURL string
@@ -54,8 +59,17 @@ func TestRunWatchStreamsOnlyTargetConversationMessageNewEvents(t *testing.T) {
 	if got, want := strings.TrimSpace(stdout.String()), "m-target u2: hello"; got != want {
 		t.Fatalf("stdout mismatch: got %q want %q", got, want)
 	}
-	if got, want := capturedURL, "http://example.test/api/events?client_kind=watcher&token=tok-watch"; got != want {
-		t.Fatalf("event stream URL mismatch: got %q want %q", got, want)
+	if !strings.HasPrefix(capturedURL, "http://example.test/api/events?") {
+		t.Fatalf("unexpected event stream URL: %q", capturedURL)
+	}
+	if !strings.Contains(capturedURL, "client_kind=watcher") {
+		t.Fatalf("expected watcher client kind in URL, got %q", capturedURL)
+	}
+	if !strings.Contains(capturedURL, "token=tok-watch") {
+		t.Fatalf("expected token in URL, got %q", capturedURL)
+	}
+	if !strings.Contains(capturedURL, "watcher_session_id=") {
+		t.Fatalf("expected watcher session id in URL, got %q", capturedURL)
 	}
 }
 
@@ -78,22 +92,27 @@ func TestRunWatchRequiresLogin(t *testing.T) {
 
 func TestRunWatchJSONWritesStructuredNDJSON(t *testing.T) {
 	rt, stdout, stderr := newTestRuntime(t, "http://example.test", "tok-watch", func(req *http.Request, body []byte) (*http.Response, error) {
-		if req.Method != http.MethodPost || req.URL.Path != "/api/conversations" {
-			t.Fatalf("unexpected request: %s %s", req.Method, req.URL.Path)
-		}
-		var payload map[string]string
-		if err := json.Unmarshal(body, &payload); err != nil {
-			t.Fatalf("decode open payload: %v", err)
-		}
-		if got, want := payload["username"], "bob"; got != want {
-			t.Fatalf("open username mismatch: got %q want %q", got, want)
-		}
+		switch {
+		case req.Method == http.MethodPost && req.URL.Path == "/api/conversations":
+			var payload map[string]string
+			if err := json.Unmarshal(body, &payload); err != nil {
+				t.Fatalf("decode open payload: %v", err)
+			}
+			if got, want := payload["username"], "bob"; got != want {
+				t.Fatalf("open username mismatch: got %q want %q", got, want)
+			}
 
-		return jsonResponse(http.StatusOK, `{
-			"conversation":{"id":"c-target","participant_a":"u1","participant_b":"u2","created_at":"2026-01-01T00:00:00Z"},
-			"participant_a":{"id":"u1","username":"alice","created_at":"2026-01-01T00:00:00Z"},
-			"participant_b":{"id":"u2","username":"bob","created_at":"2026-01-01T00:00:00Z"}
-		}`), nil
+			return jsonResponse(http.StatusOK, `{
+				"conversation":{"id":"c-target","participant_a":"u1","participant_b":"u2","created_at":"2026-01-01T00:00:00Z"},
+				"participant_a":{"id":"u1","username":"alice","created_at":"2026-01-01T00:00:00Z"},
+				"participant_b":{"id":"u2","username":"bob","created_at":"2026-01-01T00:00:00Z"}
+			}`), nil
+		case req.Method == http.MethodDelete && strings.HasPrefix(req.URL.Path, "/api/watchers/sessions/"):
+			return jsonResponse(http.StatusNoContent, ``), nil
+		default:
+			t.Fatalf("unexpected request: %s %s", req.Method, req.URL.Path)
+			return nil, nil
+		}
 	})
 
 	originalConnect := connectWatchStream
@@ -142,22 +161,27 @@ func TestRunWatchJSONWritesStructuredNDJSON(t *testing.T) {
 
 func TestRunWaitReturnsAfterFirstMatchingEvent(t *testing.T) {
 	rt, stdout, stderr := newTestRuntime(t, "http://example.test", "tok-wait", func(req *http.Request, body []byte) (*http.Response, error) {
-		if req.Method != http.MethodPost || req.URL.Path != "/api/conversations" {
-			t.Fatalf("unexpected request: %s %s", req.Method, req.URL.Path)
-		}
-		var payload map[string]string
-		if err := json.Unmarshal(body, &payload); err != nil {
-			t.Fatalf("decode open payload: %v", err)
-		}
-		if got, want := payload["username"], "bob"; got != want {
-			t.Fatalf("open username mismatch: got %q want %q", got, want)
-		}
+		switch {
+		case req.Method == http.MethodPost && req.URL.Path == "/api/conversations":
+			var payload map[string]string
+			if err := json.Unmarshal(body, &payload); err != nil {
+				t.Fatalf("decode open payload: %v", err)
+			}
+			if got, want := payload["username"], "bob"; got != want {
+				t.Fatalf("open username mismatch: got %q want %q", got, want)
+			}
 
-		return jsonResponse(http.StatusOK, `{
-			"conversation":{"id":"c-target","participant_a":"u1","participant_b":"u2","created_at":"2026-01-01T00:00:00Z"},
-			"participant_a":{"id":"u1","username":"alice","created_at":"2026-01-01T00:00:00Z"},
-			"participant_b":{"id":"u2","username":"bob","created_at":"2026-01-01T00:00:00Z"}
-		}`), nil
+			return jsonResponse(http.StatusOK, `{
+				"conversation":{"id":"c-target","participant_a":"u1","participant_b":"u2","created_at":"2026-01-01T00:00:00Z"},
+				"participant_a":{"id":"u1","username":"alice","created_at":"2026-01-01T00:00:00Z"},
+				"participant_b":{"id":"u2","username":"bob","created_at":"2026-01-01T00:00:00Z"}
+			}`), nil
+		case req.Method == http.MethodDelete && strings.HasPrefix(req.URL.Path, "/api/watchers/sessions/"):
+			return jsonResponse(http.StatusNoContent, ``), nil
+		default:
+			t.Fatalf("unexpected request: %s %s", req.Method, req.URL.Path)
+			return nil, nil
+		}
 	})
 
 	originalConnect := connectWatchStream

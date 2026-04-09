@@ -56,6 +56,10 @@ func validateResourceID(label, value string) (string, error) {
 	return trimmed, nil
 }
 
+func validateWatcherSessionID(value string) (string, error) {
+	return validateResourceID("watcher session id", value)
+}
+
 func validateAttachmentPath(path string) (string, error) {
 	trimmed := strings.TrimSpace(path)
 	if trimmed == "" {

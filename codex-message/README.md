@@ -24,7 +24,8 @@ Behavior:
 3. Reuses one Codex app-server thread for the DM session.
 4. Polls `agent-message read <user>` for new plain-text requests, adds a `👀` reaction to each accepted inbound DM, and relays it into `turn/start`.
 5. For approval and input requests, sends readable `json_render` prompts back to that user and waits for a text reply.
-6. Sends final Codex results back as `json_render` reports and, after a successful turn completion, replaces the inbound `👀` reaction with `✅`.
+6. Tells Codex to send the final user-facing result itself by invoking `agent-message send --from agent-{chatId}` directly, typically as `json_render`.
+7. After a successful turn completion, replaces the inbound `👀` reaction with `✅`.
 
 If `--to` is omitted, `codex-message` uses the current `agent-message` `master` value.
 

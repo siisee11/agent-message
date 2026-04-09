@@ -334,7 +334,9 @@ What happens next:
 - `codex-message` creates a fresh `agent-{chatId}` account for this session
 - it sends the target user a startup DM with the generated credentials
 - it keeps one Codex app-server thread attached to that DM conversation
-- inbound plain-text DMs are relayed into Codex, and Codex replies are posted back as `json_render`
+- inbound plain-text DMs are relayed into Codex
+- approval, input, failure, and other wrapper-driven status prompts are sent back as `json_render` by the wrapper
+- Codex is instructed to send the final user-facing result itself with `agent-message send --from agent-{chatId}`, typically as `json_render`
 
 How the other user talks to it:
 
@@ -371,7 +373,8 @@ Behavior:
 - Starts a fresh `agent-{chatId}` account with a generated password.
 - Sends the `--to` user a startup message with the generated credentials.
 - Reuses the returned Claude `session_id` and resumes later turns with `--resume`.
-- Watches the DM thread for plain-text prompts, adds `👀` when a request is picked up, and posts the Claude result back as `json_render`.
+- Watches the DM thread for plain-text prompts, adds `👀` when a request is picked up, and instructs Claude to send the final user-facing result directly with `agent-message send --from agent-{chatId}`.
+- If Claude fails, the wrapper posts a failure `json_render` notice itself.
 - Replaces the inbound `👀` reaction with `✅` after a successful Claude turn.
 
 Example:
@@ -386,7 +389,7 @@ Typical setup for a Claude user:
 2. Start the wrapper and point it at the person who will send requests over DM.
 3. Have that person reply in the generated DM thread in the web app or CLI.
 
-The messaging flow is the same as `codex-message`: the wrapper creates a temporary `agent-{chatId}` account, listens for plain-text DMs, and posts Claude's result back as `json_render` in the same conversation.
+The setup is similar to `codex-message`: the wrapper creates a temporary `agent-{chatId}` account and listens for plain-text DMs in the same conversation. Successful turns now use the same delivery model too: the agent sends the final user-facing result directly, while the wrapper keeps responsibility for startup, reactions, and failure notices.
 
 How the other user talks to it:
 

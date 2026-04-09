@@ -1,10 +1,10 @@
 {
   "name": "codex-message",
-  "version": "0.6.1",
+  "version": "0.6.3",
   "description": "Codex wrapper for agent-message on macOS",
   "type": "module",
   "bin": {
-    "codex-message": "./npm/bin/codex-message.mjs"
+    "codex-message": "npm/bin/codex-message.mjs"
   },
   "files": [
     "README.md",
@@ -28,7 +28,7 @@
   ],
   "repository": {
     "type": "git",
-    "url": "https://github.com/siisee11/agent-message.git",
+    "url": "git+https://github.com/siisee11/agent-message.git",
     "directory": "codex-message"
   }
 }

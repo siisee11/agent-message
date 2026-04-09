@@ -13,6 +13,25 @@ const READ_REACTION_EMOJI: &str = "👀";
 const COMPLETE_REACTION_EMOJI: &str = "✅";
 const WATCH_RETRY_DELAYS_SECS: [u64; 3] = [1, 2, 5];
 
+fn request_suffix(to_username: &str, from_username: &str) -> String {
+    format!(
+        r#"
+
+Operational requirements from the claude-message wrapper:
+- Before composing the final user-facing result, run `agent-message catalog prompt` and use that output as the authoritative json-render catalog guidance.
+- Use sender account `{from_username}` for direct outbound messages.
+- Send the final user-facing result yourself by invoking the `agent-message` CLI.
+- Deliver that result directly to the user `{to_username}`.
+- Always pass `--from {from_username}` when invoking `agent-message send`.
+- Prefer a visually readable `agent-message send {to_username} ... --kind json_render --from {from_username}` payload when appropriate.
+- For final result messages, avoid wrapping the entire payload in a `Card` unless a card is clearly necessary; prefer a direct content-first layout such as `Stack`.
+- Do not rely on the wrapper to forward your final assistant message as the primary user-facing result.
+- After sending the direct result, keep your final assistant message minimal because the wrapper may still emit status metadata.
+- If you need clarification, ask clearly and briefly in the conversation.
+"#
+    )
+}
+
 fn resolve_hostname() -> String {
     for key in ["HOSTNAME", "HOST", "COMPUTERNAME"] {
         if let Ok(value) = std::env::var(key) {
@@ -283,13 +302,18 @@ impl Runtime {
     }
 
     async fn run_turn(&mut self, request: &str) -> Result<TurnOutcome> {
+        let composed_request = format!(
+            "{}\n{}",
+            request.trim(),
+            request_suffix(&self.to_username, &self.agent_client.sender_label())
+        );
         self.logger.turn(
             "Turn started",
             [format!("Request: {}", request_preview(request))],
         );
         let response = self
             .claude
-            .run(request.trim(), self.session_id.as_deref())
+            .run(&composed_request, self.session_id.as_deref())
             .await
             .context("run claude turn")?;
 
@@ -298,11 +322,13 @@ impl Runtime {
         }
 
         let success = response.is_success();
-        let spec = spec_for_turn(&response);
-        self.agent_client
-            .send_json_render_message(&self.to_username, spec)
-            .await
-            .context("send claude result message")?;
+        if !success {
+            let spec = failure_spec_for_turn(&response);
+            self.agent_client
+                .send_json_render_message(&self.to_username, spec)
+                .await
+                .context("send claude failure message")?;
+        }
 
         Ok(TurnOutcome {
             success,
@@ -367,30 +393,13 @@ struct TurnOutcome {
     status: Option<String>,
 }
 
-fn spec_for_turn(response: &ClaudeRunResult) -> serde_json::Value {
-    let error_body = response.error_text();
-    let (badge_text, badge_variant, title, body) = if response.is_success() {
-        (
-            "Completed",
-            "default",
-            "Claude finished the request",
-            Some(response.result_text.as_str()),
-        )
-    } else {
-        (
-            "Failed",
-            "destructive",
-            "Claude could not complete the request",
-            error_body.as_deref(),
-        )
-    };
-
+fn failure_spec_for_turn(response: &ClaudeRunResult) -> serde_json::Value {
     response_spec(
-        badge_text,
-        badge_variant,
-        title,
+        "Failed",
+        "destructive",
+        "Claude could not complete the request",
         &response.summary_lines(),
-        body,
+        response.error_text().as_deref(),
     )
 }
 
@@ -451,8 +460,6 @@ fn watch_retry_delay(attempt: usize) -> Duration {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::claude::ClaudeUsage;
-
     #[test]
     fn watch_retry_delay_caps_at_last_value() {
         assert_eq!(watch_retry_delay(0), Duration::from_secs(1));
@@ -474,17 +481,13 @@ mod tests {
     }
 
     #[test]
-    fn spec_for_turn_uses_markdown_body_on_success() {
-        let spec = spec_for_turn(&ClaudeRunResult {
+    fn failure_spec_for_turn_uses_markdown_body_for_errors() {
+        let spec = failure_spec_for_turn(&ClaudeRunResult {
             session_id: Some("sess-1".to_string()),
-            subtype: Some("success".to_string()),
-            result_text: "## Done".to_string(),
-            errors: Vec::new(),
-            usage: Some(ClaudeUsage {
-                input_tokens: Some(1),
-                output_tokens: Some(2),
-                total_cost_usd: Some(0.01),
-            }),
+            subtype: Some("error".to_string()),
+            result_text: String::new(),
+            errors: vec!["boom".to_string()],
+            usage: None,
         });
 
         assert_eq!(spec["elements"]["body"]["type"], "Markdown");
@@ -501,5 +504,15 @@ mod tests {
         );
         assert!(text.contains("CWD: /tmp/demo"));
         assert!(text.contains("Hostname: demo-host"));
+    }
+
+    #[test]
+    fn request_suffix_includes_sender_and_from_flag() {
+        let suffix = request_suffix("jay", "agent-123");
+        assert!(suffix.contains("run `agent-message catalog prompt`"));
+        assert!(suffix.contains("sender account `agent-123`"));
+        assert!(suffix.contains("Always pass `--from agent-123`"));
+        assert!(suffix.contains("Deliver that result directly to the user `jay`"));
+        assert!(suffix.contains("Do not rely on the wrapper"));
     }
 }

@@ -99,7 +99,18 @@ impl AgentMessageClient {
             .run(&["send", username, text])
             .await
             .context("run `agent-message send`")?;
-        parse_sent_message_id(&output)
+        let message_id = parse_sent_message_id(&output)?;
+        self.logger.send(
+            "Message sent",
+            [
+                format!("From: {}", self.sender_label()),
+                format!("To: {}", format_username(username)),
+                "Kind: text".to_string(),
+                format!("Message: {message_id}"),
+                format!("Text: {}", preview_text(text)),
+            ],
+        );
+        Ok(message_id)
     }
 
     pub(crate) async fn send_json_render_message(
@@ -112,7 +123,18 @@ impl AgentMessageClient {
             .run(&["send", username, &payload, "--kind", "json_render"])
             .await
             .context("run `agent-message send --kind json_render`")?;
-        parse_sent_message_id(&output)
+        let message_id = parse_sent_message_id(&output)?;
+        self.logger.send(
+            "Message sent",
+            [
+                format!("From: {}", self.sender_label()),
+                format!("To: {}", format_username(username)),
+                "Kind: json_render".to_string(),
+                format!("Message: {message_id}"),
+                format!("Payload bytes: {}", payload.len()),
+            ],
+        );
+        Ok(message_id)
     }
 
     pub(crate) async fn watch_messages(&self, username: &str) -> Result<MessageWatch> {
@@ -208,6 +230,13 @@ impl AgentMessageClient {
         }
         command
     }
+
+    pub(crate) fn sender_label(&self) -> String {
+        self.from_profile
+            .as_deref()
+            .map(format_username)
+            .unwrap_or_else(|| "<active-profile>".to_string())
+    }
 }
 
 impl AgentMessageCommand {
@@ -218,10 +247,31 @@ impl AgentMessageCommand {
     }
 }
 
+fn format_username(username: &str) -> String {
+    let trimmed = username.trim();
+    if trimmed.is_empty() {
+        "<empty>".to_string()
+    } else {
+        format!("@{trimmed}")
+    }
+}
+
+fn preview_text(text: &str) -> String {
+    const LIMIT: usize = 120;
+
+    let compact = text.split_whitespace().collect::<Vec<_>>().join(" ");
+    let mut preview = compact.chars().take(LIMIT).collect::<String>();
+    if compact.chars().count() > LIMIT {
+        preview.push_str("...");
+    }
+    preview
+}
+
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub(crate) struct Message {
     pub(crate) id: String,
     pub(crate) sender_username: String,
+    pub(crate) kind: String,
     pub(crate) text: String,
 }
 
@@ -332,6 +382,7 @@ fn parse_watch_event(line: &str) -> Result<Option<Message>> {
     Ok(Some(Message {
         id: message.id.trim().to_string(),
         sender_username: message.sender.username.trim().to_string(),
+        kind: message.kind.trim().to_string(),
         text: watch_message_text(&message),
     }))
 }
@@ -453,6 +504,7 @@ mod tests {
             Message {
                 id: "m-123".to_string(),
                 sender_username: "jay".to_string(),
+                kind: "text".to_string(),
                 text: "hello world".to_string(),
             }
         );
@@ -467,6 +519,19 @@ mod tests {
     }
 
     #[test]
+    fn formats_usernames_for_logs() {
+        assert_eq!(format_username("jay"), "@jay");
+        assert_eq!(format_username("  jay  "), "@jay");
+        assert_eq!(format_username("   "), "<empty>");
+    }
+
+    #[test]
+    fn previews_text_for_logs() {
+        assert_eq!(preview_text("hello   world"), "hello world");
+        assert!(preview_text(&"a".repeat(130)).ends_with("..."));
+    }
+
+    #[test]
     fn parses_watch_json_render_message() {
         let parsed = parse_watch_event(
             r#"{"type":"message.new","conversation_id":"c-1","message":{"id":"m-124","conversation_id":"c-1","sender":{"id":"u-1","username":"jay"},"kind":"json_render","deleted":false,"created_at":"2026-01-01T00:00:00Z","updated_at":"2026-01-01T00:00:00Z"}}"#,
@@ -476,6 +541,7 @@ mod tests {
 
         assert_eq!(parsed.id, "m-124");
         assert_eq!(parsed.sender_username, "jay");
+        assert_eq!(parsed.kind, "json_render");
         assert_eq!(parsed.text, "[json-render]");
     }
 

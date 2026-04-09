@@ -22,8 +22,10 @@ pub(crate) struct LogUi {
 #[derive(Debug, Clone, Copy)]
 enum LogTone {
     System,
+    Receive,
     Request,
     Turn,
+    Send,
     Success,
     Warning,
     Error,
@@ -51,12 +53,28 @@ impl LogUi {
         self.print(LogTone::Request, title, lines);
     }
 
+    pub(crate) fn recv<S, I>(&self, title: &str, lines: I)
+    where
+        S: Into<String>,
+        I: IntoIterator<Item = S>,
+    {
+        self.print(LogTone::Receive, title, lines);
+    }
+
     pub(crate) fn turn<S, I>(&self, title: &str, lines: I)
     where
         S: Into<String>,
         I: IntoIterator<Item = S>,
     {
         self.print(LogTone::Turn, title, lines);
+    }
+
+    pub(crate) fn send<S, I>(&self, title: &str, lines: I)
+    where
+        S: Into<String>,
+        I: IntoIterator<Item = S>,
+    {
+        self.print(LogTone::Send, title, lines);
     }
 
     pub(crate) fn success<S, I>(&self, title: &str, lines: I)
@@ -194,8 +212,10 @@ impl LogTone {
     fn label(self) -> &'static str {
         match self {
             Self::System => "SYSTEM",
+            Self::Receive => "RECV",
             Self::Request => "REQUEST",
             Self::Turn => "TURN",
+            Self::Send => "SEND",
             Self::Success => "SUCCESS",
             Self::Warning => "WARN",
             Self::Error => "ERROR",
@@ -206,8 +226,10 @@ impl LogTone {
     fn color_code(self) -> &'static str {
         match self {
             Self::System => ANSI_BLUE,
+            Self::Receive => ANSI_MAGENTA,
             Self::Request => ANSI_MAGENTA,
             Self::Turn => ANSI_CYAN,
+            Self::Send => ANSI_GREEN,
             Self::Success => ANSI_GREEN,
             Self::Warning => ANSI_YELLOW,
             Self::Error => ANSI_RED,
@@ -235,5 +257,43 @@ mod tests {
         assert!(rendered.contains("message="));
         assert!(rendered.contains("text=\"build it\""));
         assert!(!rendered.contains('\n'));
+    }
+
+    #[test]
+    fn renders_send_log_tone() {
+        let rendered = render_line(
+            "codex-message",
+            LogTone::Send,
+            "Message sent",
+            &[
+                "From: @agent-123".to_string(),
+                "To: @jay".to_string(),
+                "Kind: text".to_string(),
+            ],
+        );
+
+        assert!(rendered.contains("SEND"));
+        assert!(rendered.contains("from=@agent-123"));
+        assert!(rendered.contains("to=@jay"));
+        assert!(rendered.contains("kind=text"));
+    }
+
+    #[test]
+    fn renders_recv_log_tone() {
+        let rendered = render_line(
+            "codex-message",
+            LogTone::Receive,
+            "Message received",
+            &[
+                "From: @jay".to_string(),
+                "To: @agent-123".to_string(),
+                "Kind: text".to_string(),
+            ],
+        );
+
+        assert!(rendered.contains("RECV"));
+        assert!(rendered.contains("from=@jay"));
+        assert!(rendered.contains("to=@agent-123"));
+        assert!(rendered.contains("kind=text"));
     }
 }

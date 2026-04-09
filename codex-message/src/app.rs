@@ -13,15 +13,17 @@ use crate::codex::{CodexAppServer, IncomingMessage};
 use crate::log_ui::LogUi;
 use crate::render::{ApprovalAction, approval_spec, report_spec};
 
-fn request_suffix(to_username: &str) -> String {
+fn request_suffix(to_username: &str, from_username: &str) -> String {
     format!(
         r#"
 
 Operational requirements from the codex-message wrapper:
 - Before composing the final user-facing result, run `agent-message catalog prompt` and use that output as the authoritative json-render catalog guidance.
+- Use sender account `{from_username}` for direct outbound messages.
 - Send the final user-facing result yourself by invoking the `agent-message` CLI.
 - Deliver that result directly to the user `{to_username}`.
-- Prefer a visually readable `agent-message send {to_username} ... --kind json_render` payload when appropriate.
+- Always pass `--from {from_username}` when invoking `agent-message send`.
+- Prefer a visually readable `agent-message send {to_username} ... --kind json_render --from {from_username}` payload when appropriate.
 - For final result messages, avoid wrapping the entire payload in a `Card` unless a card is clearly necessary; prefer a direct content-first layout such as `Stack`.
 - Do not rely on the wrapper to forward your final assistant message as the primary user-facing result.
 - After sending the direct result, keep your final assistant message minimal because the wrapper may still emit status metadata.
@@ -255,6 +257,16 @@ impl Runtime {
             if extract_request_text(&message).is_none() {
                 continue;
             }
+            self.logger.recv(
+                "Message received",
+                [
+                    format!("Message: {}", message.id),
+                    format!("From: @{}", message.sender_username),
+                    format!("To: {}", self.agent_client.sender_label()),
+                    format!("Kind: {}", message.kind),
+                    format!("Text: {}", request_preview(&message.text)),
+                ],
+            );
             if let Err(error) = self
                 .agent_client
                 .react_to_message(&message, READ_REACTION_EMOJI)
@@ -305,7 +317,11 @@ impl Runtime {
     }
 
     async fn run_turn(&mut self, request: &str) -> Result<TurnOutcome> {
-        let composed_request = format!("{}\n{}", request.trim(), request_suffix(&self.to_username));
+        let composed_request = format!(
+            "{}\n{}",
+            request.trim(),
+            request_suffix(&self.to_username, &self.agent_client.sender_label())
+        );
         let turn_params =
             build_turn_start_params(&self.config, &self.thread_id, &composed_request)?;
         let response = self
@@ -1167,6 +1183,7 @@ mod tests {
             extract_request_text(&Message {
                 id: "m1".to_string(),
                 sender_username: "jay".to_string(),
+                kind: "json_render".to_string(),
                 text: "[json-render]".to_string(),
             }),
             None
@@ -1207,8 +1224,10 @@ mod tests {
 
     #[test]
     fn request_suffix_discourages_wrapping_final_results_in_card() {
-        let suffix = request_suffix("jay");
+        let suffix = request_suffix("jay", "agent-123");
         assert!(suffix.contains("avoid wrapping the entire payload in a `Card`"));
         assert!(suffix.contains("prefer a direct content-first layout such as `Stack`"));
+        assert!(suffix.contains("Use sender account `agent-123`"));
+        assert!(suffix.contains("Always pass `--from agent-123`"));
     }
 }

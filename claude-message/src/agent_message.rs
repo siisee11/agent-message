@@ -31,6 +31,12 @@ impl AgentMessageClient {
         self.from_profile = Some(profile);
     }
 
+    pub(crate) fn sender_label(&self) -> String {
+        self.from_profile
+            .clone()
+            .unwrap_or_else(|| "<active-profile>".to_string())
+    }
+
     pub(crate) async fn server_url(&self) -> Result<String> {
         let output = self
             .run(&["config", "get", "server_url"])

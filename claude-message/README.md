@@ -20,10 +20,16 @@ Behavior:
 2. Sends the `--to` user a startup message with the generated credentials.
 3. Reuses the Claude `session_id` for the DM session and resumes later turns.
 4. Watches `agent-message` DMs for plain-text requests, adds a `👀` reaction to
-   each accepted inbound DM, and posts Claude's JSON result back as
-   `json_render`.
-5. After a successful turn completion, replaces the inbound `👀` reaction with
+   each accepted inbound DM, and passes the request to Claude with explicit
+   instructions to send the final user-facing result directly with
+   `agent-message send --from agent-{chatId}`.
+5. If Claude fails, the wrapper sends a failure `json_render` notice itself.
+6. After a successful turn completion, replaces the inbound `👀` reaction with
    `✅`.
+
+`claude-message` now follows the same delivery model as `codex-message` for
+successful turns: the agent is expected to send the final result itself. The
+wrapper still handles startup, reactions, and failure notices.
 
 Example:
 

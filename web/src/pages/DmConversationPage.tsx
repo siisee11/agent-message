@@ -106,6 +106,20 @@ function inferAttachmentType(file: File): 'image' | 'file' {
   return file.type.startsWith('image/') ? 'image' : 'file'
 }
 
+function getRealtimeStatusBadgeClass(status: ReturnType<typeof useRealtime>['status']): string {
+  if (status === 'open') {
+    return styles.headerStatusBadgeLive
+  }
+  if (status === 'connecting') {
+    return styles.headerStatusBadgeConnecting
+  }
+  return styles.headerStatusBadgeOffline
+}
+
+function getWatcherStatusBadgeClass(online: boolean): string {
+  return online ? styles.watcherStatusBadgeOnline : styles.watcherStatusBadgeOffline
+}
+
 function PlusIcon() {
   return (
     <svg aria-hidden="true" fill="none" height="14" viewBox="0 0 22 22" width="14">
@@ -735,8 +749,13 @@ export function DmConversationPage() {
     conversationQuery.isError || !watcherPresence
       ? null
       : watcherPresence.online
-        ? 'Watcher online'
-        : 'Watcher offline'
+        ? 'Online'
+        : 'Offline'
+  const realtimeStatusBadgeClassName = `${styles.headerStatusBadge} ${
+    conversationQuery.isError
+      ? styles.headerStatusBadgeError
+      : getRealtimeStatusBadgeClass(realtime.status)
+  }`
   const headerCwdValue = conversationQuery.isLoading
     ? 'loading...'
     : conversationQuery.isError
@@ -764,18 +783,10 @@ export function DmConversationPage() {
             <div className={styles.headerCopy}>
               <div className={styles.headerTitleRow}>
                 <h2 className={styles.title}>{headerTitle}</h2>
-                <span
-                  className={`${styles.headerStatusBadge}${
-                    conversationQuery.isError ? ` ${styles.headerStatusBadgeError}` : ''
-                  }`}
-                >
-                  {headerStatus}
-                </span>
+                <span className={realtimeStatusBadgeClassName}>{headerStatus}</span>
                 {watcherStatusLabel ? (
                   <span
-                    className={`${styles.watcherStatusBadge} ${
-                      watcherPresence?.online ? styles.watcherStatusBadgeOnline : styles.watcherStatusBadgeOffline
-                    }`}
+                    className={`${styles.watcherStatusBadge} ${getWatcherStatusBadgeClass(Boolean(watcherPresence?.online))}`}
                   >
                     {watcherStatusLabel}
                   </span>

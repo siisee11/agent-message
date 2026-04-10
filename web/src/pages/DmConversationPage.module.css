@@ -121,23 +121,80 @@
 .watcherStatusBadge {
   display: inline-flex;
   align-items: center;
+  gap: 0.45rem;
   min-height: 30px;
-  padding: 0.3rem 0.55rem;
-  border: 1px solid var(--border-strong);
-  background: transparent;
-  color: var(--text-primary);
+  padding: 0.34rem 0.68rem;
+  border: 1px solid var(--status-badge-neutral-border);
+  border-radius: var(--status-badge-radius);
+  background: var(--status-badge-neutral-bg);
+  color: var(--status-badge-neutral-text);
   font-family: var(--font-display);
   font-size: 0.72rem;
-  letter-spacing: 0.12em;
+  font-weight: 600;
+  letter-spacing: 0.08em;
   text-transform: uppercase;
 }
 
-.headerStatusBadgeError,
-.watcherStatusBadgeOffline,
+.headerStatusBadge::before,
+.watcherStatusBadge::before {
+  content: '';
+  width: 0.48rem;
+  height: 0.48rem;
+  border-radius: 999px;
+  background: var(--status-badge-neutral-dot);
+  flex: none;
+}
+
+.headerStatusBadgeLive {
+  border-color: var(--status-badge-live-border);
+  background: var(--status-badge-live-bg);
+  color: var(--status-badge-live-text);
+}
+
+.headerStatusBadgeLive::before {
+  background: var(--status-badge-live-dot);
+}
+
+.headerStatusBadgeConnecting {
+  border-color: var(--status-badge-connecting-border);
+  background: var(--status-badge-connecting-bg);
+  color: var(--status-badge-connecting-text);
+}
+
+.headerStatusBadgeConnecting::before {
+  background: var(--status-badge-connecting-dot);
+}
+
+.headerStatusBadgeOffline,
+.watcherStatusBadgeOffline {
+  border-color: var(--status-badge-offline-border);
+  background: var(--status-badge-offline-bg);
+  color: var(--status-badge-offline-text);
+}
+
+.headerStatusBadgeOffline::before,
+.watcherStatusBadgeOffline::before {
+  background: var(--status-badge-offline-dot);
+}
+
 .watcherStatusBadgeOnline {
-  border-color: var(--border-strong);
-  background: transparent;
-  color: var(--text-primary);
+  border-color: var(--status-badge-online-border);
+  background: var(--status-badge-online-bg);
+  color: var(--status-badge-online-text);
+}
+
+.watcherStatusBadgeOnline::before {
+  background: var(--status-badge-online-dot);
+}
+
+.headerStatusBadgeError {
+  border-color: var(--status-badge-error-border);
+  background: var(--status-badge-error-bg);
+  color: var(--status-badge-error-text);
+}
+
+.headerStatusBadgeError::before {
+  background: var(--status-badge-error-dot);
 }
 
 .muted,

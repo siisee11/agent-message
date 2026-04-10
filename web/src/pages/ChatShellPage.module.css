@@ -98,15 +98,57 @@
 .statusBadge {
   display: inline-flex;
   align-items: center;
+  gap: 0.45rem;
   min-height: 32px;
-  padding: 0.35rem 0.65rem;
-  border: 1px solid var(--border-strong);
-  background: transparent;
-  color: var(--text-primary);
+  padding: 0.38rem 0.72rem;
+  border: 1px solid var(--status-badge-neutral-border);
+  border-radius: var(--status-badge-radius);
+  background: var(--status-badge-neutral-bg);
+  color: var(--status-badge-neutral-text);
   font-family: var(--font-display);
   font-size: 0.75rem;
-  letter-spacing: 0.12em;
+  font-weight: 600;
+  letter-spacing: 0.08em;
   text-transform: uppercase;
+}
+
+.statusBadge::before {
+  content: '';
+  width: 0.5rem;
+  height: 0.5rem;
+  border-radius: 999px;
+  background: var(--status-badge-neutral-dot);
+  flex: none;
+}
+
+.statusBadgeLive {
+  border-color: var(--status-badge-live-border);
+  background: var(--status-badge-live-bg);
+  color: var(--status-badge-live-text);
+}
+
+.statusBadgeLive::before {
+  background: var(--status-badge-live-dot);
+}
+
+.statusBadgeConnecting {
+  border-color: var(--status-badge-connecting-border);
+  background: var(--status-badge-connecting-bg);
+  color: var(--status-badge-connecting-text);
+}
+
+.statusBadgeConnecting::before {
+  background: var(--status-badge-connecting-dot);
+}
+
+.statusBadgeOffline {
+  border-color: var(--status-badge-offline-border);
+  background: var(--status-badge-offline-bg);
+  color: var(--status-badge-offline-text);
+}
+
+.statusBadgeOffline::before {
+  background: var(--status-badge-offline-dot);
 }
 
 .notificationRow {

@@ -47,6 +47,16 @@ function formatLastMessageTime(lastMessage?: Message): string {
   return DATE_FORMATTER.format(new Date(parsed))
 }
 
+function getRealtimeStatusBadgeClass(status: ReturnType<typeof useRealtime>['status']): string {
+  if (status === 'open') {
+    return styles.statusBadgeLive
+  }
+  if (status === 'connecting') {
+    return styles.statusBadgeConnecting
+  }
+  return styles.statusBadgeOffline
+}
+
 export function ChatShellPage() {
   const { themeColor } = useTheme()
 
@@ -214,6 +224,7 @@ export function ChatShellPage() {
   }
 
   const conversations = conversationsQuery.data ?? []
+  const realtimeStatusBadgeClassName = `${styles.statusBadge} ${getRealtimeStatusBadgeClass(realtime.status)}`
 
   return (
     <main className={styles.page}>
@@ -238,7 +249,7 @@ export function ChatShellPage() {
           </div>
           <div className={styles.headerMeta}>
             <p className={styles.currentUser}>{user ? `@${user.username}` : 'Unknown user'}</p>
-            <span className={styles.statusBadge}>{formatRealtimeStatusLabel(realtime.status)}</span>
+            <span className={realtimeStatusBadgeClassName}>{formatRealtimeStatusLabel(realtime.status)}</span>
           </div>
           <div className={styles.notificationRow}>
             <div className={styles.notificationText} title={resolvePushStatusText()}>

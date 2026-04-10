@@ -17,6 +17,7 @@ import {
 } from '../api'
 import { apiClient } from '../api/runtime'
 import { useAuth } from '../auth'
+import { ChatAvatar } from '../components/ChatAvatar'
 import { MessageJsonRender } from '../components/MessageJsonRender'
 import { ThemeToggleButton } from '../components/ThemeToggleButton'
 import {
@@ -780,6 +781,11 @@ export function DmConversationPage() {
             >
               ←
             </button>
+            <ChatAvatar
+              className={styles.headerAvatar}
+              size="lg"
+              username={otherParticipant?.username ?? 'conversation'}
+            />
             <div className={styles.headerCopy}>
               <div className={styles.headerTitleRow}>
                 <h2 className={styles.title}>{headerTitle}</h2>
@@ -839,7 +845,14 @@ export function DmConversationPage() {
                       >
                         <div className={`${styles.messageBubble} ${messageSurfaceClassName}`}>
                           <div className={`${styles.timelineMeta} ${timelineMetaClassName}`}>
-                            <span className={styles.sender}>{details.sender.username}</span>
+                            <span className={styles.timelineMetaLeft}>
+                              <ChatAvatar
+                                className={styles.messageMetaAvatar}
+                                size="sm"
+                                username={details.sender.username}
+                              />
+                              <span className={styles.sender}>{details.sender.username}</span>
+                            </span>
                             <span className={styles.timelineMetaRight}>
                               <span className={styles.timestamp}>{formatMessageTimestamp(details.message)}</span>
                               {!details.message.deleted && details.message.edited ? (

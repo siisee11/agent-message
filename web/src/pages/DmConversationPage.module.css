@@ -30,9 +30,13 @@
 
 .headerBar {
   display: flex;
-  align-items: flex-start;
+  align-items: center;
   gap: 0.75rem;
   min-width: 0;
+}
+
+.headerAvatar {
+  flex-shrink: 0;
 }
 
 .headerCopy {
@@ -294,6 +298,13 @@
   gap: 0.7rem;
 }
 
+.timelineMetaLeft {
+  min-width: 0;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.7rem;
+}
+
 .timelineMetaAgent,
 .timelineMetaOwn {
   margin-bottom: 0.65rem;
@@ -310,11 +321,19 @@
 }
 
 .sender {
+  min-width: 0;
   color: var(--text-primary);
   font-family: var(--font-display);
   font-size: 0.75rem;
   letter-spacing: 0.14em;
   text-transform: uppercase;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.messageMetaAvatar {
+  flex-shrink: 0;
 }
 
 .timestamp,

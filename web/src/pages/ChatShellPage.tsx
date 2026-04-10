@@ -4,6 +4,7 @@ import { NavLink, useNavigate } from 'react-router-dom'
 import { ApiError, type ConversationSummary, type Message } from '../api'
 import { apiClient } from '../api/runtime'
 import { useAuth } from '../auth'
+import { ChatAvatar } from '../components/ChatAvatar'
 import { ThemeToggleButton } from '../components/ThemeToggleButton'
 import { useDocumentSurface } from '../hooks'
 import { summarizeLastMessagePreview } from '../messages/messagePresentation'
@@ -207,18 +208,21 @@ export function ChatShellPage() {
         key={summary.conversation.id}
         to={`/dm/${summary.conversation.id}`}
       >
-        {title ? (
-          <p className={styles.conversationTitle} title={title}>
-            {title}
+        <ChatAvatar className={styles.conversationAvatar} size="md" username={summary.other_user.username} />
+        <div className={styles.conversationBody}>
+          {title ? (
+            <p className={styles.conversationTitle} title={title}>
+              {title}
+            </p>
+          ) : null}
+          <div className={styles.conversationMeta}>
+            <span className={styles.conversationName}>{summary.other_user.username}</span>
+            <span className={styles.conversationTime}>{timestamp}</span>
+          </div>
+          <p className={styles.conversationPreview} title={preview}>
+            {preview}
           </p>
-        ) : null}
-        <div className={styles.conversationMeta}>
-          <span className={styles.conversationName}>{summary.other_user.username}</span>
-          <span className={styles.conversationTime}>{timestamp}</span>
         </div>
-        <p className={styles.conversationPreview} title={preview}>
-          {preview}
-        </p>
       </NavLink>
     )
   }

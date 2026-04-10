@@ -273,7 +273,9 @@
 
 .conversationItem {
   display: grid;
-  gap: 0.6rem;
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: start;
+  gap: 0.85rem;
   padding: 1rem;
   border: 1px solid var(--border);
   background: var(--surface-elevated);
@@ -294,6 +296,16 @@
   background: var(--surface-hover);
 }
 
+.conversationAvatar {
+  margin-top: 0.05rem;
+}
+
+.conversationBody {
+  min-width: 0;
+  display: grid;
+  gap: 0.6rem;
+}
+
 .conversationTitle {
   margin: 0;
   color: var(--text-primary);
@@ -310,15 +322,22 @@
   align-items: baseline;
   justify-content: space-between;
   gap: 0.75rem;
+  min-width: 0;
 }
 
 .conversationName {
+  min-width: 0;
+  flex: 1;
   font-size: 1rem;
   font-weight: 500;
   color: var(--text-secondary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .conversationTime {
+  flex: none;
   color: var(--text-tertiary);
   font-family: var(--font-display);
   font-size: 0.75rem;
@@ -407,6 +426,11 @@
 
   .notificationRow {
     gap: 0.75rem;
+  }
+
+  .conversationItem {
+    gap: 0.75rem;
+    padding: 0.9rem;
   }
 }
 

@@ -320,10 +320,7 @@
 @media (max-width: 480px) {
   .shell {
     gap: 0.75rem;
-    padding:
-      max(0.75rem, calc(env(safe-area-inset-top) + 0.75rem))
-      0.75rem
-      max(0.75rem, calc(env(safe-area-inset-bottom) + 0.75rem));
+    padding: 0;
   }
 
   .header,

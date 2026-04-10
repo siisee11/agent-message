@@ -20,7 +20,7 @@
 .header {
   display: grid;
   gap: 1rem;
-  padding: 1rem 5.5rem 1rem 1rem;
+  padding: 1rem;
   border: 1px solid var(--border);
   background: var(--surface-elevated);
 }
@@ -30,6 +30,14 @@
   align-items: flex-start;
   justify-content: space-between;
   gap: 1rem;
+}
+
+.headerActions {
+  display: inline-flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 0.6rem;
+  flex-wrap: wrap;
 }
 
 .eyebrow {
@@ -212,6 +220,8 @@
 .conversationList {
   min-height: 0;
   display: grid;
+  align-content: start;
+  grid-auto-rows: max-content;
   gap: 0.75rem;
   overflow: auto;
   overscroll-behavior: contain;
@@ -272,18 +282,6 @@
   white-space: nowrap;
 }
 
-.conversationId {
-  display: inline-flex;
-  width: fit-content;
-  padding: 0.28rem 0.5rem;
-  border: 1px solid var(--border-strong);
-  color: var(--text-tertiary);
-  font-family: var(--font-display);
-  font-size: 0.75rem;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-}
-
 .statusText,
 .errorMessage,
 .emptyTitle,
@@ -319,6 +317,48 @@
   line-height: 1.5;
 }
 
+@media (max-width: 480px) {
+  .shell {
+    gap: 0.75rem;
+    padding:
+      max(0.75rem, calc(env(safe-area-inset-top) + 0.75rem))
+      0.75rem
+      max(0.75rem, calc(env(safe-area-inset-bottom) + 0.75rem));
+  }
+
+  .header,
+  .listSection {
+    padding: 0.875rem;
+  }
+
+  .header {
+    gap: 0.875rem;
+  }
+
+  .headerTop {
+    align-items: flex-start;
+    gap: 0.875rem;
+  }
+
+  .headerActions {
+    gap: 0.5rem;
+  }
+
+  .brand {
+    display: none;
+  }
+
+  .logoutButton {
+    justify-self: end;
+    padding: 0.65rem 0.85rem;
+    font-size: 0.8rem;
+  }
+
+  .notificationRow {
+    gap: 0.75rem;
+  }
+}
+
 @media (min-width: 768px) {
   .shell {
     max-width: 1200px;
@@ -336,6 +376,6 @@
   }
 
   .header {
-    padding-right: 6.25rem;
+    padding: 1.5rem;
   }
 }

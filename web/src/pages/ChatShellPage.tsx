@@ -4,6 +4,7 @@ import { NavLink, useNavigate } from 'react-router-dom'
 import { ApiError, type ConversationSummary, type Message } from '../api'
 import { apiClient } from '../api/runtime'
 import { useAuth } from '../auth'
+import { ThemeToggleButton } from '../components/ThemeToggleButton'
 import { useDocumentSurface } from '../hooks'
 import { summarizeConversationLabel, summarizeLastMessagePreview } from '../messages/messagePresentation'
 import {
@@ -187,7 +188,6 @@ export function ChatShellPage() {
     const conversationLabel = summarizeConversationLabel(summary)
     const preview = summarizeLastMessagePreview(summary.last_message)
     const timestamp = formatLastMessageTime(summary.last_message)
-    const conversationId = summary.conversation.id
 
     return (
       <NavLink
@@ -204,7 +204,6 @@ export function ChatShellPage() {
         <p className={styles.conversationPreview} title={preview}>
           {preview}
         </p>
-        <span className={styles.conversationId}>{conversationId}</span>
       </NavLink>
     )
   }
@@ -220,14 +219,17 @@ export function ChatShellPage() {
               <p className={styles.eyebrow}>Messages</p>
               <h1 className={styles.brand}>Agent Message</h1>
             </div>
-            <button
-              className={styles.logoutButton}
-              disabled={logoutMutation.isPending}
-              onClick={() => logoutMutation.mutate()}
-              type="button"
-            >
-              {logoutMutation.isPending ? 'Signing out...' : 'Logout'}
-            </button>
+            <div className={styles.headerActions}>
+              <ThemeToggleButton />
+              <button
+                className={styles.logoutButton}
+                disabled={logoutMutation.isPending}
+                onClick={() => logoutMutation.mutate()}
+                type="button"
+              >
+                {logoutMutation.isPending ? 'Signing out...' : 'Logout'}
+              </button>
+            </div>
           </div>
           <div className={styles.headerMeta}>
             <p className={styles.currentUser}>{user ? `@${user.username}` : 'Unknown user'}</p>

@@ -18,6 +18,7 @@ import {
 import { apiClient } from '../api/runtime'
 import { useAuth } from '../auth'
 import { MessageJsonRender } from '../components/MessageJsonRender'
+import { ThemeToggleButton } from '../components/ThemeToggleButton'
 import {
   canDeleteMessageForUser,
   canEditMessageForUser,
@@ -786,6 +787,9 @@ export function DmConversationPage() {
               <p className={styles.headerHostname} title={`hostname: ${headerHostnameValue}`}>
                 {`hostname: ${headerHostnameValue}`}
               </p>
+            </div>
+            <div className={styles.headerActions}>
+              <ThemeToggleButton />
             </div>
           </div>
         </header>

@@ -12,6 +12,8 @@
   "dependencies": {
     "@fontsource/geist": "^5.2.8",
     "@fontsource/geist-mono": "^5.2.7",
+    "@fontsource/ibm-plex-mono": "^5.2.7",
+    "@fontsource/ibm-plex-sans": "^5.2.8",
     "@json-render/core": "^0.16.0",
     "@json-render/react": "^0.16.0",
     "@json-render/shadcn": "^0.16.0",

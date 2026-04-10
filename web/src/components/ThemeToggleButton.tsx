@@ -1,3 +1,4 @@
+import { useEffect, useRef, useState } from 'react'
 import { useTheme } from '../theme'
 import styles from './ThemeToggleButton.module.css'
 
@@ -35,20 +36,88 @@ interface ThemeToggleButtonProps {
 }
 
 export function ThemeToggleButton({ className }: ThemeToggleButtonProps) {
-  const { resolvedTheme, toggleTheme } = useTheme()
-  const classes = className ? `${styles.button} ${className}` : styles.button
+  const { availableThemes, colorMode, setTheme, theme, toggleColorMode } = useTheme()
+  const classes = className ? `${styles.root} ${className}` : styles.root
+  const [isMenuOpen, setIsMenuOpen] = useState(false)
+  const menuRef = useRef<HTMLDivElement | null>(null)
+
+  useEffect(() => {
+    if (!isMenuOpen) {
+      return
+    }
+
+    function handlePointerDown(event: MouseEvent) {
+      if (!menuRef.current?.contains(event.target as Node)) {
+        setIsMenuOpen(false)
+      }
+    }
+
+    function handleEscape(event: KeyboardEvent) {
+      if (event.key === 'Escape') {
+        setIsMenuOpen(false)
+      }
+    }
+
+    window.addEventListener('mousedown', handlePointerDown)
+    window.addEventListener('keydown', handleEscape)
+    return () => {
+      window.removeEventListener('mousedown', handlePointerDown)
+      window.removeEventListener('keydown', handleEscape)
+    }
+  }, [isMenuOpen])
 
   return (
-    <button
-      aria-label={resolvedTheme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'}
-      className={classes}
-      onClick={toggleTheme}
-      type="button"
-    >
-      {resolvedTheme === 'dark' ? <SunIcon /> : <MoonIcon />}
-      <span className={styles.srOnly}>
-        {resolvedTheme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'}
-      </span>
-    </button>
+    <div className={classes}>
+      <div className={styles.menuWrap} ref={menuRef}>
+        <button
+          aria-expanded={isMenuOpen}
+          aria-haspopup="menu"
+          className={styles.trigger}
+          onClick={() => setIsMenuOpen((current) => !current)}
+          type="button"
+        >
+          <span>Theme</span>
+          <span aria-hidden="true" className={styles.chevron}>
+            ▾
+          </span>
+        </button>
+        {isMenuOpen ? (
+          <div className={styles.menu} role="menu">
+            {availableThemes.map((themeOption) => {
+              const isActive = themeOption.id === theme
+              const optionClassName = isActive ? `${styles.option} ${styles.optionActive}` : styles.option
+
+              return (
+                <button
+                  aria-pressed={isActive}
+                  className={optionClassName}
+                  key={themeOption.id}
+                  onClick={() => {
+                    setTheme(themeOption.id)
+                    setIsMenuOpen(false)
+                  }}
+                  role="menuitemradio"
+                  type="button"
+                >
+                  <span>{themeOption.label}</span>
+                  {isActive ? <span className={styles.checkmark}>Selected</span> : null}
+                </button>
+              )
+            })}
+          </div>
+        ) : null}
+      </div>
+      <button
+        aria-label={colorMode === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'}
+        className={styles.iconButton}
+        onClick={toggleColorMode}
+        type="button"
+      >
+        {colorMode === 'dark' ? <SunIcon /> : <MoonIcon />}
+        <span className={styles.srOnly}>
+          {colorMode === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'}
+        </span>
+      </button>
+    </div>
   )
 }

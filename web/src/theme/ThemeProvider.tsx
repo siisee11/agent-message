@@ -1,6 +1,5 @@
 import {
   createContext,
-  useCallback,
   useContext,
   useEffect,
   useMemo,
@@ -9,20 +8,49 @@ import {
 } from 'react'
 
 const THEME_STORAGE_KEY = 'agent_message.theme'
+const COLOR_MODE_STORAGE_KEY = 'agent_message.color_mode'
 
-type ThemeMode = 'dark' | 'light'
+export const AVAILABLE_THEMES = [
+  {
+    id: 'default',
+    label: 'Default',
+    themeColorByMode: {
+      light: '#f3efe7',
+      dark: '#1f2228',
+    },
+  },
+  {
+    id: 'ibm',
+    label: 'IBM',
+    themeColorByMode: {
+      light: '#ffffff',
+      dark: '#161616',
+    },
+  },
+] as const
+
+export type ThemeName = (typeof AVAILABLE_THEMES)[number]['id']
+export type ColorMode = 'light' | 'dark'
+type ThemeDefinition = (typeof AVAILABLE_THEMES)[number]
 
 interface ThemeContextValue {
-  resolvedTheme: ThemeMode
-  toggleTheme: () => void
+  availableThemes: readonly ThemeDefinition[]
+  colorMode: ColorMode
+  setTheme: (theme: ThemeName) => void
+  theme: ThemeName
+  themeColor: string
+  toggleColorMode: () => void
 }
 
 const ThemeContext = createContext<ThemeContextValue | undefined>(undefined)
+const THEMES_BY_ID = new Map<ThemeName, ThemeDefinition>(
+  AVAILABLE_THEMES.map((theme) => [theme.id, theme]),
+)
 
-function readStoredTheme(): ThemeMode | null {
+function readStoredTheme(): ThemeName | null {
   try {
     const stored = window.localStorage.getItem(THEME_STORAGE_KEY)
-    if (stored === 'dark' || stored === 'light') {
+    if (stored === 'default' || stored === 'ibm') {
       return stored
     }
   } catch {
@@ -31,7 +59,7 @@ function readStoredTheme(): ThemeMode | null {
   return null
 }
 
-function writeStoredTheme(theme: ThemeMode): void {
+function writeStoredTheme(theme: ThemeName): void {
   try {
     window.localStorage.setItem(THEME_STORAGE_KEY, theme)
   } catch {
@@ -39,33 +67,58 @@ function writeStoredTheme(theme: ThemeMode): void {
   }
 }
 
-function getSystemTheme(): ThemeMode {
-  if (typeof window === 'undefined' || typeof window.matchMedia !== 'function') {
-    return 'light'
+function readStoredColorMode(): ColorMode | null {
+  try {
+    const storedColorMode = window.localStorage.getItem(COLOR_MODE_STORAGE_KEY)
+    if (storedColorMode === 'light' || storedColorMode === 'dark') {
+      return storedColorMode
+    }
+
+    const legacyThemeValue = window.localStorage.getItem(THEME_STORAGE_KEY)
+    if (legacyThemeValue === 'light' || legacyThemeValue === 'dark') {
+      return legacyThemeValue
+    }
+  } catch {
+    // Ignore storage failures.
   }
-  return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light'
+
+  return null
+}
+
+function writeStoredColorMode(colorMode: ColorMode): void {
+  try {
+    window.localStorage.setItem(COLOR_MODE_STORAGE_KEY, colorMode)
+  } catch {
+    // Ignore storage failures.
+  }
 }
 
 export function ThemeProvider({ children }: PropsWithChildren) {
-  const [theme, setTheme] = useState<ThemeMode>(() => readStoredTheme() ?? getSystemTheme())
+  const [theme, setTheme] = useState<ThemeName>(() => readStoredTheme() ?? 'default')
+  const [colorMode, setColorMode] = useState<ColorMode>(() => readStoredColorMode() ?? 'light')
+  const themeDefinition = THEMES_BY_ID.get(theme) ?? AVAILABLE_THEMES[0]
 
   useEffect(() => {
     const root = document.documentElement
-    root.dataset.theme = theme
-    root.style.colorScheme = theme
+    root.dataset.theme = themeDefinition.id
+    root.dataset.colorMode = colorMode
+    root.style.colorScheme = colorMode
     writeStoredTheme(theme)
-  }, [theme])
-
-  const toggleTheme = useCallback(() => {
-    setTheme((current) => (current === 'dark' ? 'light' : 'dark'))
-  }, [])
+    writeStoredColorMode(colorMode)
+  }, [colorMode, theme, themeDefinition])
 
   const value = useMemo<ThemeContextValue>(
     () => ({
-      resolvedTheme: theme,
-      toggleTheme,
+      availableThemes: AVAILABLE_THEMES,
+      colorMode,
+      setTheme,
+      theme,
+      themeColor: themeDefinition.themeColorByMode[colorMode],
+      toggleColorMode: () => {
+        setColorMode((current) => (current === 'dark' ? 'light' : 'dark'))
+      },
     }),
-    [theme, toggleTheme],
+    [colorMode, theme, themeDefinition],
   )
 
   return <ThemeContext.Provider value={value}>{children}</ThemeContext.Provider>

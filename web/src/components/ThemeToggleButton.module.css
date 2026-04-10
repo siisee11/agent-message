@@ -1,24 +1,100 @@
-.button {
-  width: 2.5rem;
-  height: 2.5rem;
-  padding: 0;
+.root {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.6rem;
+  flex-wrap: wrap;
+}
+
+.menuWrap {
+  position: relative;
+}
+
+.trigger,
+.iconButton {
+  min-height: 2.5rem;
+  padding: 0 0.8rem;
   border: 1px solid var(--border-strong);
   background: var(--surface-elevated);
   color: var(--text-primary);
   display: inline-flex;
   align-items: center;
   justify-content: center;
+  gap: 0.45rem;
   cursor: pointer;
   flex: none;
 }
 
-.button:hover {
+.trigger:hover,
+.iconButton:hover,
+.option:hover {
   background: var(--surface-hover);
 }
 
-.button:focus-visible {
+.trigger:focus-visible,
+.iconButton:focus-visible,
+.option:focus-visible {
   outline: 2px solid var(--ring);
   outline-offset: 2px;
+}
+
+.trigger {
+  font-family: var(--font-body);
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.chevron {
+  font-size: 0.7rem;
+}
+
+.menu {
+  position: absolute;
+  top: calc(100% + 0.35rem);
+  right: 0;
+  z-index: 20;
+  min-width: 11rem;
+  padding: 0.3rem;
+  border: 1px solid var(--border);
+  background: var(--background);
+  display: grid;
+  gap: 0.15rem;
+}
+
+.option {
+  min-height: 2.4rem;
+  width: 100%;
+  padding: 0.55rem 0.7rem;
+  border: 0;
+  background: transparent;
+  color: var(--text-secondary);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.7rem;
+  font-family: var(--font-body);
+  font-size: 0.86rem;
+  text-align: left;
+  cursor: pointer;
+}
+
+.optionActive {
+  color: var(--text-primary);
+  background: var(--surface-emphasis);
+}
+
+.checkmark {
+  color: var(--primary);
+  font-size: 0.7rem;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.iconButton {
+  width: 2.5rem;
+  padding: 0;
 }
 
 .icon {

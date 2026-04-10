@@ -24,8 +24,10 @@
   --radius-xl: calc(var(--radius) + 4px);
 }
 
-:root {
+:root,
+:root[data-theme='default'][data-color-mode='light'] {
   --app-surface-background: #f3efe7;
+  --theme-color: #f3efe7;
   --background: #f3efe7;
   --foreground: #1f2228;
   --card: rgba(31, 34, 40, 0.03);
@@ -53,6 +55,12 @@
   --border-strong: rgba(31, 34, 40, 0.2);
   --button-primary-bg: #1f2228;
   --button-primary-fg: #f3efe7;
+  --field-border: 1px solid var(--input);
+  --field-border-bottom: 1px solid var(--input);
+  --field-focus-border: 1px solid var(--input);
+  --field-focus-border-bottom: 1px solid var(--input);
+  --field-focus-outline: 2px solid var(--ring);
+  --field-focus-outline-offset: 2px;
   --font-display:
     "Geist Mono",
     ui-monospace,
@@ -83,8 +91,9 @@
   background: var(--app-surface-background);
 }
 
-:root[data-theme='dark'] {
+:root[data-theme='default'][data-color-mode='dark'] {
   --app-surface-background: #1f2228;
+  --theme-color: #1f2228;
   --background: #1f2228;
   --foreground: #ffffff;
   --card: rgba(255, 255, 255, 0.03);
@@ -100,6 +109,8 @@
   --destructive: #ffffff;
   --border: rgba(255, 255, 255, 0.1);
   --input: rgba(255, 255, 255, 0.2);
+  --ring: rgba(59, 130, 246, 0.5);
+  --radius: 0.25rem;
   --text-primary: #ffffff;
   --text-secondary: rgba(255, 255, 255, 0.7);
   --text-tertiary: rgba(255, 255, 255, 0.5);
@@ -110,6 +121,114 @@
   --border-strong: rgba(255, 255, 255, 0.2);
   --button-primary-bg: #ffffff;
   --button-primary-fg: #1f2228;
+  --field-border: 1px solid var(--input);
+  --field-border-bottom: 1px solid var(--input);
+  --field-focus-border: 1px solid var(--input);
+  --field-focus-border-bottom: 1px solid var(--input);
+  --field-focus-outline: 2px solid var(--ring);
+  --field-focus-outline-offset: 2px;
+  color-scheme: dark;
+}
+
+:root[data-theme='ibm'][data-color-mode='light'] {
+  --app-surface-background: #ffffff;
+  --theme-color: #ffffff;
+  --background: #ffffff;
+  --foreground: #161616;
+  --card: #f4f4f4;
+  --card-foreground: #161616;
+  --primary: #0f62fe;
+  --primary-foreground: #ffffff;
+  --secondary: #f4f4f4;
+  --secondary-foreground: #161616;
+  --muted: #f4f4f4;
+  --muted-foreground: #525252;
+  --accent: #edf5ff;
+  --accent-foreground: #0f62fe;
+  --destructive: #da1e28;
+  --border: #c6c6c6;
+  --input: #c6c6c6;
+  --ring: #0f62fe;
+  --radius: 0;
+  --text-primary: #161616;
+  --text-secondary: #525252;
+  --text-tertiary: #6f6f6f;
+  --text-quaternary: #8d8d8d;
+  --surface-elevated: #f4f4f4;
+  --surface-emphasis: #e8e8e8;
+  --surface-hover: #edf5ff;
+  --border-strong: #8d8d8d;
+  --button-primary-bg: #0f62fe;
+  --button-primary-fg: #ffffff;
+  --field-border: none;
+  --field-border-bottom: 1px solid var(--input);
+  --field-focus-border: none;
+  --field-focus-border-bottom: 2px solid var(--ring);
+  --field-focus-outline: none;
+  --field-focus-outline-offset: 0;
+  --font-display:
+    "IBM Plex Sans",
+    "Helvetica Neue",
+    Arial,
+    "Noto Sans KR",
+    sans-serif;
+  --font-body:
+    "IBM Plex Sans",
+    "Helvetica Neue",
+    Arial,
+    "Noto Sans KR",
+    sans-serif;
+  color-scheme: light;
+}
+
+:root[data-theme='ibm'][data-color-mode='dark'] {
+  --app-surface-background: #161616;
+  --theme-color: #161616;
+  --background: #161616;
+  --foreground: #f4f4f4;
+  --card: #262626;
+  --card-foreground: #f4f4f4;
+  --primary: #78a9ff;
+  --primary-foreground: #161616;
+  --secondary: #262626;
+  --secondary-foreground: #f4f4f4;
+  --muted: #262626;
+  --muted-foreground: #c6c6c6;
+  --accent: #393939;
+  --accent-foreground: #78a9ff;
+  --destructive: #ff8389;
+  --border: #393939;
+  --input: #6f6f6f;
+  --ring: #78a9ff;
+  --radius: 0;
+  --text-primary: #f4f4f4;
+  --text-secondary: #c6c6c6;
+  --text-tertiary: #a8a8a8;
+  --text-quaternary: #8d8d8d;
+  --surface-elevated: #262626;
+  --surface-emphasis: #393939;
+  --surface-hover: color-mix(in srgb, #78a9ff 16%, #262626);
+  --border-strong: #6f6f6f;
+  --button-primary-bg: #0f62fe;
+  --button-primary-fg: #ffffff;
+  --field-border: none;
+  --field-border-bottom: 1px solid var(--input);
+  --field-focus-border: none;
+  --field-focus-border-bottom: 2px solid var(--ring);
+  --field-focus-outline: none;
+  --field-focus-outline-offset: 0;
+  --font-display:
+    "IBM Plex Sans",
+    "Helvetica Neue",
+    Arial,
+    "Noto Sans KR",
+    sans-serif;
+  --font-body:
+    "IBM Plex Sans",
+    "Helvetica Neue",
+    Arial,
+    "Noto Sans KR",
+    sans-serif;
   color-scheme: dark;
 }
 
@@ -143,7 +262,7 @@ body {
 }
 
 a {
-  color: inherit;
+  color: var(--primary);
 }
 
 button,
@@ -151,6 +270,17 @@ input,
 textarea,
 select {
   font: inherit;
+}
+
+button,
+input,
+textarea,
+select,
+a {
+  transition:
+    background-color 140ms ease,
+    border-color 140ms ease,
+    color 140ms ease;
 }
 
 ::selection {

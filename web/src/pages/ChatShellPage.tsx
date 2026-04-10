@@ -48,11 +48,11 @@ function formatLastMessageTime(lastMessage?: Message): string {
 }
 
 export function ChatShellPage() {
-  const { resolvedTheme } = useTheme()
+  const { themeColor } = useTheme()
 
   useDocumentSurface({
     backgroundColor: 'var(--app-surface-background)',
-    themeColor: resolvedTheme === 'dark' ? '#1f2228' : '#f3efe7',
+    themeColor,
   })
 
   const navigate = useNavigate()

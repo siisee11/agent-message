@@ -14,11 +14,11 @@ interface LocationState {
 }
 
 export function LoginPage() {
-  const { resolvedTheme } = useTheme()
+  const { themeColor } = useTheme()
 
   useDocumentSurface({
     backgroundColor: 'var(--app-surface-background)',
-    themeColor: resolvedTheme === 'dark' ? '#1f2228' : '#f3efe7',
+    themeColor,
   })
 
   const navigate = useNavigate()

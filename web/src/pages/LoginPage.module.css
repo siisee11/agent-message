@@ -54,7 +54,8 @@
 }
 
 .input {
-  border: 1px solid var(--input);
+  border: var(--field-border);
+  border-bottom: var(--field-border-bottom);
   border-radius: 0;
   padding: 0.75rem;
   font-size: 0.95rem;
@@ -63,9 +64,10 @@
 }
 
 .input:focus {
-  outline: 2px solid var(--ring);
-  outline-offset: 2px;
-  border-color: var(--input);
+  outline: var(--field-focus-outline);
+  outline-offset: var(--field-focus-outline-offset);
+  border: var(--field-focus-border);
+  border-bottom: var(--field-focus-border-bottom);
 }
 
 .input::placeholder {

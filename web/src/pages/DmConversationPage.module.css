@@ -474,14 +474,16 @@
   align-items: center;
   cursor: text;
   padding: 0.2rem 0.75rem;
-  border: 1px solid var(--input);
+  border: var(--field-border);
+  border-bottom: var(--field-border-bottom);
   background: var(--surface-elevated);
 }
 
 .composerField:focus-within {
-  border-color: var(--input);
-  outline: 2px solid var(--ring);
-  outline-offset: 2px;
+  border: var(--field-focus-border);
+  border-bottom: var(--field-focus-border-bottom);
+  outline: var(--field-focus-outline);
+  outline-offset: var(--field-focus-outline-offset);
 }
 
 .composerInput {

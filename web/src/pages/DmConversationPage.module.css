@@ -553,7 +553,7 @@
 .submitButton {
   width: 2.75rem;
   height: 2.75rem;
-  border: 1px solid var(--button-primary-bg);
+  border: 1px solid var(--button-primary-border);
   background: var(--button-primary-bg);
   color: var(--button-primary-fg);
   display: inline-flex;

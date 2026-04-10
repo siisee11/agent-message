@@ -298,7 +298,7 @@
 .approvalActionPrimary {
   background: var(--button-primary-bg);
   color: var(--button-primary-fg);
-  border-color: var(--button-primary-bg);
+  border-color: var(--button-primary-border);
 }
 
 .approvalActionSecondary {

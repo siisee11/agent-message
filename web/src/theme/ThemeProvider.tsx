@@ -27,6 +27,22 @@ export const AVAILABLE_THEMES = [
       dark: '#161616',
     },
   },
+  {
+    id: 'ferrari',
+    label: 'Ferrari',
+    themeColorByMode: {
+      light: '#ffffff',
+      dark: '#000000',
+    },
+  },
+  {
+    id: 'opencode',
+    label: 'OpenCode',
+    themeColorByMode: {
+      light: '#fdfcfc',
+      dark: '#201d1d',
+    },
+  },
 ] as const
 
 export type ThemeName = (typeof AVAILABLE_THEMES)[number]['id']
@@ -50,7 +66,7 @@ const THEMES_BY_ID = new Map<ThemeName, ThemeDefinition>(
 function readStoredTheme(): ThemeName | null {
   try {
     const stored = window.localStorage.getItem(THEME_STORAGE_KEY)
-    if (stored === 'default' || stored === 'ibm') {
+    if (stored === 'default' || stored === 'ibm' || stored === 'ferrari' || stored === 'opencode') {
       return stored
     }
   } catch {

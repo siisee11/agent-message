@@ -55,6 +55,7 @@
   --border-strong: rgba(31, 34, 40, 0.2);
   --button-primary-bg: #1f2228;
   --button-primary-fg: #f3efe7;
+  --button-primary-border: var(--button-primary-bg);
   --field-border: 1px solid var(--input);
   --field-border-bottom: 1px solid var(--input);
   --field-focus-border: 1px solid var(--input);
@@ -121,6 +122,7 @@
   --border-strong: rgba(255, 255, 255, 0.2);
   --button-primary-bg: #ffffff;
   --button-primary-fg: #1f2228;
+  --button-primary-border: var(--button-primary-bg);
   --field-border: 1px solid var(--input);
   --field-border-bottom: 1px solid var(--input);
   --field-focus-border: 1px solid var(--input);
@@ -160,6 +162,7 @@
   --border-strong: #8d8d8d;
   --button-primary-bg: #0f62fe;
   --button-primary-fg: #ffffff;
+  --button-primary-border: var(--button-primary-bg);
   --field-border: none;
   --field-border-bottom: 1px solid var(--input);
   --field-focus-border: none;
@@ -211,6 +214,7 @@
   --border-strong: #6f6f6f;
   --button-primary-bg: #0f62fe;
   --button-primary-fg: #ffffff;
+  --button-primary-border: var(--button-primary-bg);
   --field-border: none;
   --field-border-bottom: 1px solid var(--input);
   --field-focus-border: none;
@@ -229,6 +233,234 @@
     Arial,
     "Noto Sans KR",
     sans-serif;
+  color-scheme: dark;
+}
+
+:root[data-theme='ferrari'][data-color-mode='light'] {
+  --app-surface-background: #ffffff;
+  --theme-color: #ffffff;
+  --background: #ffffff;
+  --foreground: #181818;
+  --card: #ffffff;
+  --card-foreground: #181818;
+  --primary: #181818;
+  --primary-foreground: #ffffff;
+  --secondary: #f6f6f6;
+  --secondary-foreground: #181818;
+  --muted: #f6f6f6;
+  --muted-foreground: #666666;
+  --accent: #da291c;
+  --accent-foreground: #ffffff;
+  --destructive: #f13a2c;
+  --border: #d2d2d2;
+  --input: #cccccc;
+  --ring: #da291c;
+  --radius: 0.125rem;
+  --text-primary: #181818;
+  --text-secondary: #666666;
+  --text-tertiary: #8f8f8f;
+  --text-quaternary: #969696;
+  --surface-elevated: #ffffff;
+  --surface-emphasis: #f3f3f3;
+  --surface-hover: rgba(218, 41, 28, 0.08);
+  --border-strong: #303030;
+  --button-primary-bg: #ffffff;
+  --button-primary-fg: #000000;
+  --button-primary-border: #000000;
+  --field-border: 1px solid var(--input);
+  --field-border-bottom: 1px solid var(--input);
+  --field-focus-border: 1px solid #303030;
+  --field-focus-border-bottom: 1px solid #303030;
+  --field-focus-outline: 2px solid rgba(0, 0, 0, 0.16);
+  --field-focus-outline-offset: 2px;
+  --font-display:
+    "Helvetica Neue",
+    Helvetica,
+    Arial,
+    "Noto Sans KR",
+    sans-serif;
+  --font-body:
+    "Helvetica Neue",
+    Helvetica,
+    Arial,
+    "Noto Sans KR",
+    sans-serif;
+  color-scheme: light;
+}
+
+:root[data-theme='ferrari'][data-color-mode='dark'] {
+  --app-surface-background: #000000;
+  --theme-color: #000000;
+  --background: #000000;
+  --foreground: #ffffff;
+  --card: #181818;
+  --card-foreground: #ffffff;
+  --primary: #ffffff;
+  --primary-foreground: #000000;
+  --secondary: #181818;
+  --secondary-foreground: #ffffff;
+  --muted: #181818;
+  --muted-foreground: #8f8f8f;
+  --accent: #da291c;
+  --accent-foreground: #ffffff;
+  --destructive: #f13a2c;
+  --border: #303030;
+  --input: #cccccc;
+  --ring: #da291c;
+  --radius: 0.125rem;
+  --text-primary: #ffffff;
+  --text-secondary: #d2d2d2;
+  --text-tertiary: #8f8f8f;
+  --text-quaternary: #969696;
+  --surface-elevated: #181818;
+  --surface-emphasis: #303030;
+  --surface-hover: rgba(218, 41, 28, 0.16);
+  --border-strong: #d2d2d2;
+  --button-primary-bg: #da291c;
+  --button-primary-fg: #ffffff;
+  --button-primary-border: #da291c;
+  --field-border: 1px solid var(--input);
+  --field-border-bottom: 1px solid var(--input);
+  --field-focus-border: 1px solid #ffffff;
+  --field-focus-border-bottom: 1px solid #ffffff;
+  --field-focus-outline: 2px solid rgba(218, 41, 28, 0.45);
+  --field-focus-outline-offset: 2px;
+  --font-display:
+    "Helvetica Neue",
+    Helvetica,
+    Arial,
+    "Noto Sans KR",
+    sans-serif;
+  --font-body:
+    "Helvetica Neue",
+    Helvetica,
+    Arial,
+    "Noto Sans KR",
+    sans-serif;
+  color-scheme: dark;
+}
+
+:root[data-theme='opencode'][data-color-mode='light'] {
+  --app-surface-background: #fdfcfc;
+  --theme-color: #fdfcfc;
+  --background: #fdfcfc;
+  --foreground: #201d1d;
+  --card: #f1eeee;
+  --card-foreground: #201d1d;
+  --primary: #201d1d;
+  --primary-foreground: #fdfcfc;
+  --secondary: #f1eeee;
+  --secondary-foreground: #201d1d;
+  --muted: #f1eeee;
+  --muted-foreground: #6e6e73;
+  --accent: #007aff;
+  --accent-foreground: #fdfcfc;
+  --destructive: #ff3b30;
+  --border: rgba(15, 0, 0, 0.12);
+  --input: rgba(15, 0, 0, 0.12);
+  --ring: #007aff;
+  --radius: 0.25rem;
+  --text-primary: #201d1d;
+  --text-secondary: #424245;
+  --text-tertiary: #9a9898;
+  --text-quaternary: #6e6e73;
+  --surface-elevated: #f1eeee;
+  --surface-emphasis: #ebe7e7;
+  --surface-hover: rgba(0, 122, 255, 0.08);
+  --border-strong: #646262;
+  --button-primary-bg: #201d1d;
+  --button-primary-fg: #fdfcfc;
+  --button-primary-border: #646262;
+  --field-border: 1px solid rgba(15, 0, 0, 0.12);
+  --field-border-bottom: 1px solid rgba(15, 0, 0, 0.12);
+  --field-focus-border: 1px solid #646262;
+  --field-focus-border-bottom: 1px solid #646262;
+  --field-focus-outline: 2px solid rgba(0, 122, 255, 0.2);
+  --field-focus-outline-offset: 2px;
+  --font-display:
+    "Berkeley Mono",
+    "IBM Plex Mono",
+    ui-monospace,
+    "SFMono-Regular",
+    Menlo,
+    Monaco,
+    Consolas,
+    "Liberation Mono",
+    "Courier New",
+    monospace;
+  --font-body:
+    "Berkeley Mono",
+    "IBM Plex Mono",
+    ui-monospace,
+    "SFMono-Regular",
+    Menlo,
+    Monaco,
+    Consolas,
+    "Liberation Mono",
+    "Courier New",
+    monospace;
+  color-scheme: light;
+}
+
+:root[data-theme='opencode'][data-color-mode='dark'] {
+  --app-surface-background: #201d1d;
+  --theme-color: #201d1d;
+  --background: #201d1d;
+  --foreground: #fdfcfc;
+  --card: #302c2c;
+  --card-foreground: #fdfcfc;
+  --primary: #fdfcfc;
+  --primary-foreground: #201d1d;
+  --secondary: #302c2c;
+  --secondary-foreground: #fdfcfc;
+  --muted: #302c2c;
+  --muted-foreground: #9a9898;
+  --accent: #007aff;
+  --accent-foreground: #fdfcfc;
+  --destructive: #ff3b30;
+  --border: rgba(15, 0, 0, 0.12);
+  --input: rgba(253, 252, 252, 0.12);
+  --ring: #007aff;
+  --radius: 0.25rem;
+  --text-primary: #fdfcfc;
+  --text-secondary: #9a9898;
+  --text-tertiary: #6e6e73;
+  --text-quaternary: #646262;
+  --surface-elevated: #302c2c;
+  --surface-emphasis: #3a3535;
+  --surface-hover: rgba(0, 122, 255, 0.14);
+  --border-strong: #646262;
+  --button-primary-bg: #201d1d;
+  --button-primary-fg: #fdfcfc;
+  --button-primary-border: #646262;
+  --field-border: 1px solid rgba(253, 252, 252, 0.12);
+  --field-border-bottom: 1px solid rgba(253, 252, 252, 0.12);
+  --field-focus-border: 1px solid #646262;
+  --field-focus-border-bottom: 1px solid #646262;
+  --field-focus-outline: 2px solid rgba(0, 122, 255, 0.24);
+  --field-focus-outline-offset: 2px;
+  --font-display:
+    "Berkeley Mono",
+    "IBM Plex Mono",
+    ui-monospace,
+    "SFMono-Regular",
+    Menlo,
+    Monaco,
+    Consolas,
+    "Liberation Mono",
+    "Courier New",
+    monospace;
+  --font-body:
+    "Berkeley Mono",
+    "IBM Plex Mono",
+    ui-monospace,
+    "SFMono-Regular",
+    Menlo,
+    Monaco,
+    Consolas,
+    "Liberation Mono",
+    "Courier New",
+    monospace;
   color-scheme: dark;
 }
 

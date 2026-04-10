@@ -1,0 +1,485 @@
+.page {
+  position: relative;
+  min-height: 100%;
+  overflow-x: clip;
+  padding:
+    max(1rem, calc(env(safe-area-inset-top) + 1rem))
+    clamp(1rem, 3vw, 2.5rem)
+    max(2rem, calc(env(safe-area-inset-bottom) + 2rem));
+  background:
+    radial-gradient(circle at top, color-mix(in srgb, var(--background) 72%, #6ca5ff 28%), transparent 36%),
+    radial-gradient(circle at 85% 24%, color-mix(in srgb, var(--background) 78%, #82d8c8 22%), transparent 28%),
+    linear-gradient(180deg, color-mix(in srgb, var(--background) 92%, var(--foreground) 8%), var(--background));
+}
+
+.aurora,
+.gridGlow {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+
+.aurora {
+  opacity: 0.7;
+  background:
+    radial-gradient(circle at 18% 18%, color-mix(in srgb, var(--foreground) 8%, transparent), transparent 24%),
+    radial-gradient(circle at 78% 14%, color-mix(in srgb, #6ca5ff 18%, transparent), transparent 28%),
+    radial-gradient(circle at 70% 74%, color-mix(in srgb, #82d8c8 16%, transparent), transparent 26%);
+  filter: blur(28px);
+}
+
+.gridGlow {
+  background-image:
+    linear-gradient(color-mix(in srgb, var(--border) 65%, transparent) 1px, transparent 1px),
+    linear-gradient(90deg, color-mix(in srgb, var(--border) 65%, transparent) 1px, transparent 1px);
+  background-size: 42px 42px;
+  mask-image: linear-gradient(180deg, rgba(0, 0, 0, 0.5), transparent 82%);
+  opacity: 0.25;
+}
+
+.nav,
+.hero,
+.featureSection,
+.workflowSection,
+.ctaSection {
+  position: relative;
+  z-index: 1;
+  width: min(100%, 1240px);
+  margin: 0 auto;
+}
+
+.nav {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-bottom: clamp(2.5rem, 8vw, 5rem);
+}
+
+.brand {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.85rem;
+  color: var(--text-primary);
+  text-decoration: none;
+}
+
+.brandMark {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.7rem;
+  height: 2.7rem;
+  border: 1px solid color-mix(in srgb, var(--border-strong) 90%, transparent);
+  background: color-mix(in srgb, var(--surface-elevated) 88%, transparent);
+  font-family: var(--font-display);
+  font-size: 0.92rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.brandText {
+  font-family: var(--font-display);
+  font-size: 0.95rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.navActions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+}
+
+.navLink,
+.primaryAction,
+.secondaryAction {
+  min-height: 2.9rem;
+  padding: 0.8rem 1.05rem;
+  border: 1px solid transparent;
+  color: var(--text-primary);
+  text-decoration: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--font-display);
+  font-size: 0.78rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  transition:
+    transform 140ms ease,
+    background-color 140ms ease,
+    border-color 140ms ease;
+}
+
+.navLink,
+.secondaryAction {
+  border-color: var(--border);
+  background: color-mix(in srgb, var(--surface-elevated) 88%, transparent);
+}
+
+.primaryAction {
+  background: var(--button-primary-bg);
+  color: var(--button-primary-fg);
+}
+
+.navLink:hover,
+.primaryAction:hover,
+.secondaryAction:hover {
+  transform: translateY(-1px);
+}
+
+.hero {
+  display: grid;
+  grid-template-columns: minmax(0, 1.05fr) minmax(0, 0.95fr);
+  gap: clamp(1.5rem, 4vw, 3rem);
+  align-items: center;
+  margin-bottom: clamp(4rem, 10vw, 7rem);
+}
+
+.heroCopy {
+  display: grid;
+  gap: 1.3rem;
+}
+
+.eyebrow,
+.sectionEyebrow {
+  margin: 0;
+  color: var(--text-secondary);
+  font-family: var(--font-display);
+  font-size: 0.78rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+
+.title {
+  margin: 0;
+  max-width: 10ch;
+  font-family: var(--font-display);
+  font-size: clamp(3.5rem, 9vw, 6.75rem);
+  font-weight: 300;
+  line-height: 0.92;
+  letter-spacing: -0.06em;
+  text-transform: uppercase;
+}
+
+.description,
+.workflowCopy,
+.featureDescription,
+.guideDescription,
+.statusBody,
+.installHint {
+  margin: 0;
+  color: var(--text-secondary);
+  line-height: 1.6;
+}
+
+.description {
+  max-width: 40rem;
+  font-size: clamp(1rem, 2vw, 1.16rem);
+}
+
+.actionRow {
+  display: flex;
+  align-items: center;
+  gap: 0.85rem;
+  flex-wrap: wrap;
+}
+
+.installCard {
+  width: min(100%, 36rem);
+  padding: 1rem 1.15rem;
+  border: 1px solid color-mix(in srgb, var(--border-strong) 80%, transparent);
+  background: color-mix(in srgb, var(--surface-elevated) 92%, transparent);
+  display: grid;
+  gap: 0.55rem;
+}
+
+.installLabel {
+  color: var(--text-tertiary);
+  font-family: var(--font-display);
+  font-size: 0.72rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.installCommand,
+.guideCommand,
+.terminalCommand,
+.terminalPath {
+  font-family: var(--font-display);
+}
+
+.installCommand {
+  font-size: clamp(0.95rem, 2vw, 1.15rem);
+  word-break: break-word;
+}
+
+.heroVisual {
+  position: relative;
+}
+
+.visualBackdrop {
+  position: relative;
+  min-height: 38rem;
+  padding: clamp(1rem, 2vw, 1.6rem);
+  border: 1px solid color-mix(in srgb, var(--border-strong) 80%, transparent);
+  background:
+    linear-gradient(180deg, color-mix(in srgb, var(--surface-elevated) 92%, transparent), color-mix(in srgb, var(--background) 88%, var(--foreground) 12%)),
+    radial-gradient(circle at top, color-mix(in srgb, #6ca5ff 18%, transparent), transparent 40%);
+  overflow: hidden;
+}
+
+.visualHalo {
+  position: absolute;
+  inset: auto -12% -16% auto;
+  width: 26rem;
+  aspect-ratio: 1;
+  border-radius: 999px;
+  background: radial-gradient(circle, color-mix(in srgb, #82d8c8 22%, transparent), transparent 70%);
+  filter: blur(18px);
+}
+
+.terminalWindow {
+  position: relative;
+  width: min(100%, 31rem);
+  border: 1px solid color-mix(in srgb, var(--border-strong) 82%, transparent);
+  background: color-mix(in srgb, var(--background) 94%, black 6%);
+  box-shadow: 0 24px 80px color-mix(in srgb, var(--foreground) 10%, transparent);
+}
+
+.windowChrome {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  padding: 0.75rem 0.9rem;
+  border-bottom: 1px solid var(--border);
+}
+
+.windowDot {
+  width: 0.68rem;
+  height: 0.68rem;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--text-tertiary) 80%, transparent);
+}
+
+.terminalBody {
+  padding: 1rem;
+  display: grid;
+  gap: 0.85rem;
+}
+
+.terminalPath,
+.terminalOutput,
+.terminalMuted {
+  margin: 0;
+}
+
+.terminalPath,
+.terminalMuted {
+  color: var(--text-tertiary);
+  font-size: 0.85rem;
+}
+
+.terminalPromptRow {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 0.75rem;
+  align-items: start;
+}
+
+.terminalPrompt {
+  color: color-mix(in srgb, #82d8c8 72%, var(--text-primary) 28%);
+  font-family: var(--font-display);
+}
+
+.terminalCommand {
+  font-size: 0.95rem;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.terminalOutput {
+  color: color-mix(in srgb, #82d8c8 64%, var(--text-primary) 36%);
+  font-size: 0.92rem;
+}
+
+.statusPanel {
+  position: absolute;
+  right: clamp(0.75rem, 1.8vw, 1.25rem);
+  bottom: clamp(0.75rem, 1.8vw, 1.25rem);
+  width: min(100%, 18.5rem);
+  display: grid;
+  gap: 0.85rem;
+}
+
+.statusCard,
+.featureCard,
+.guideCard,
+.ctaPanel {
+  border: 1px solid var(--border);
+  background: color-mix(in srgb, var(--surface-elevated) 92%, transparent);
+  backdrop-filter: blur(12px);
+}
+
+.statusCard {
+  padding: 1rem;
+  display: grid;
+  gap: 0.45rem;
+}
+
+.statusLabel,
+.featureTitle,
+.guideTitle {
+  margin: 0;
+  font-family: var(--font-display);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.statusLabel {
+  color: var(--text-tertiary);
+  font-size: 0.74rem;
+}
+
+.statusTitle {
+  margin: 0;
+  font-size: 1rem;
+  line-height: 1.3;
+}
+
+.sectionHeader,
+.workflowIntro {
+  max-width: 52rem;
+  margin-bottom: 1.5rem;
+  display: grid;
+  gap: 0.7rem;
+}
+
+.sectionTitle {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: clamp(2rem, 4vw, 3.6rem);
+  font-weight: 400;
+  line-height: 0.96;
+  letter-spacing: -0.04em;
+  text-transform: uppercase;
+}
+
+.featureSection,
+.workflowSection {
+  margin-bottom: clamp(3rem, 8vw, 5rem);
+}
+
+.featureGrid,
+.guideGrid {
+  display: grid;
+  gap: 1rem;
+}
+
+.featureGrid {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.featureCard,
+.guideCard {
+  padding: 1.25rem;
+  min-height: 12rem;
+  display: grid;
+  align-content: start;
+  gap: 0.9rem;
+}
+
+.featureTitle,
+.guideTitle {
+  font-size: 0.92rem;
+}
+
+.guideGrid {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+.guideCommand {
+  padding: 0.8rem 0.9rem;
+  border: 1px solid color-mix(in srgb, var(--border-strong) 85%, transparent);
+  background: color-mix(in srgb, var(--background) 90%, transparent);
+  font-size: 0.82rem;
+  line-height: 1.45;
+  word-break: break-word;
+}
+
+.ctaSection {
+  padding-bottom: 1rem;
+}
+
+.ctaPanel {
+  padding: clamp(1.25rem, 3vw, 1.8rem);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.ctaActions {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+}
+
+@media (max-width: 1120px) {
+  .hero {
+    grid-template-columns: 1fr;
+  }
+
+  .visualBackdrop {
+    min-height: 30rem;
+  }
+
+  .featureGrid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .guideGrid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 760px) {
+  .page {
+    padding-inline: 0.85rem;
+  }
+
+  .nav {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .title {
+    max-width: none;
+    font-size: clamp(2.8rem, 17vw, 4.6rem);
+  }
+
+  .visualBackdrop {
+    min-height: auto;
+    display: grid;
+    gap: 1rem;
+  }
+
+  .statusPanel {
+    position: static;
+    width: 100%;
+  }
+
+  .featureGrid,
+  .guideGrid {
+    grid-template-columns: 1fr;
+  }
+
+  .ctaPanel {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+}

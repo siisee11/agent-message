@@ -33,8 +33,8 @@ export function LoginPage() {
   const redirectPath = useMemo(() => {
     const state = location.state as LocationState | null
     const candidate = state?.from?.pathname
-    if (!candidate || candidate === '/login') {
-      return '/'
+    if (!candidate || candidate === '/' || candidate === '/login') {
+      return '/app'
     }
     return candidate
   }, [location.state])

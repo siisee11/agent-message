@@ -776,7 +776,7 @@ export function DmConversationPage() {
             <button
               aria-label="Back to conversations"
               className={styles.backButton}
-              onClick={() => navigate('/')}
+              onClick={() => navigate('/app')}
               type="button"
             >
               ←

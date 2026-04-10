@@ -1,6 +1,7 @@
 import { Route, Routes } from 'react-router-dom'
 import { ChatShellPage } from './pages/ChatShellPage'
 import { DmConversationPage } from './pages/DmConversationPage'
+import { LandingPage } from './pages/LandingPage'
 import { LoginPage } from './pages/LoginPage'
 import { NotFoundPage } from './pages/NotFoundPage'
 import { RealtimeProvider } from './realtime'
@@ -12,9 +13,10 @@ export function App() {
     <div className={styles.app}>
       <RealtimeProvider>
         <Routes>
+          <Route element={<LandingPage />} path="/" />
           <Route element={<LoginPage />} path="/login" />
           <Route element={<ProtectedRoute />}>
-            <Route element={<ChatShellPage />} path="/" />
+            <Route element={<ChatShellPage />} path="/app" />
             <Route element={<DmConversationPage />} path="/dm/:conversationId" />
           </Route>
           <Route element={<NotFoundPage />} path="*" />

@@ -6,7 +6,7 @@ import { apiClient } from '../api/runtime'
 import { useAuth } from '../auth'
 import { ThemeToggleButton } from '../components/ThemeToggleButton'
 import { useDocumentSurface } from '../hooks'
-import { summarizeConversationLabel, summarizeLastMessagePreview } from '../messages/messagePresentation'
+import { summarizeLastMessagePreview } from '../messages/messagePresentation'
 import {
   disablePushNotifications,
   enablePushNotifications,
@@ -185,9 +185,9 @@ export function ChatShellPage() {
     (pushState.permission === 'denied' && !pushState.enabled)
 
   function renderConversationItem(summary: ConversationSummary) {
-    const conversationLabel = summarizeConversationLabel(summary)
     const preview = summarizeLastMessagePreview(summary.last_message)
     const timestamp = formatLastMessageTime(summary.last_message)
+    const title = summary.conversation.title?.trim() ?? ''
 
     return (
       <NavLink
@@ -197,8 +197,13 @@ export function ChatShellPage() {
         key={summary.conversation.id}
         to={`/dm/${summary.conversation.id}`}
       >
+        {title ? (
+          <p className={styles.conversationTitle} title={title}>
+            {title}
+          </p>
+        ) : null}
         <div className={styles.conversationMeta}>
-          <span className={styles.conversationName}>{conversationLabel}</span>
+          <span className={styles.conversationName}>{summary.other_user.username}</span>
           <span className={styles.conversationTime}>{timestamp}</span>
         </div>
         <p className={styles.conversationPreview} title={preview}>

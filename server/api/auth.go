@@ -51,7 +51,17 @@ func (h *authHandler) handleRegister(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if _, err := h.store.GetUserByUsername(r.Context(), req.Username); err == nil {
+	accountID := req.AccountIDValue()
+	if _, err := h.store.GetUserByAccountID(r.Context(), accountID); err == nil {
+		writeError(w, http.StatusConflict, "account_id already exists")
+		return
+	} else if !errors.Is(err, store.ErrNotFound) {
+		writeError(w, http.StatusInternalServerError, "failed to register user")
+		return
+	}
+
+	desiredUsername := req.UsernameValue()
+	if _, err := h.store.GetUserByUsername(r.Context(), desiredUsername); err == nil {
 		writeError(w, http.StatusConflict, "username already exists")
 		return
 	} else if !errors.Is(err, store.ErrNotFound) {
@@ -72,7 +82,8 @@ func (h *authHandler) handleRegister(w http.ResponseWriter, r *http.Request) {
 	now := h.nowFn().UTC()
 	user, err := h.store.CreateUser(r.Context(), models.CreateUserParams{
 		ID:           uuid.NewString(),
-		Username:     req.Username,
+		AccountID:    accountID,
+		Username:     desiredUsername,
 		PasswordHash: passwordHash,
 		CreatedAt:    now,
 	})
@@ -109,7 +120,7 @@ func (h *authHandler) handleLogin(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	user, err := h.store.GetUserByUsername(r.Context(), req.Username)
+	user, err := h.store.GetUserByAccountID(r.Context(), req.AccountIDValue())
 	if err != nil {
 		if errors.Is(err, store.ErrNotFound) {
 			writeError(w, http.StatusUnauthorized, "invalid credentials")

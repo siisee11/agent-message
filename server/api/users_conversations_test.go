@@ -187,12 +187,55 @@ func TestConversationsEndpoints(t *testing.T) {
 		t.Fatalf("unexpected conversation details: %+v", details)
 	}
 
+	reqPatch := httptest.NewRequest(http.MethodPatch, "/api/conversations/"+created.Conversation.ID, bytes.NewBufferString(`{"title":"Frontend polish"}`))
+	reqPatch.Header.Set("Authorization", "Bearer "+alice.Token)
+	reqPatch.Header.Set("Content-Type", "application/json")
+	respPatch := httptest.NewRecorder()
+	router.ServeHTTP(respPatch, reqPatch)
+	if respPatch.Code != http.StatusOK {
+		t.Fatalf("expected patch status %d, got %d body=%s", http.StatusOK, respPatch.Code, respPatch.Body.String())
+	}
+
+	var patched models.ConversationDetails
+	if err := json.NewDecoder(respPatch.Body).Decode(&patched); err != nil {
+		t.Fatalf("decode patched conversation details: %v", err)
+	}
+	if patched.Conversation.Title != "Frontend polish" {
+		t.Fatalf("expected patched title, got %+v", patched.Conversation)
+	}
+
+	reqPatchClear := httptest.NewRequest(http.MethodPatch, "/api/conversations/"+created.Conversation.ID, bytes.NewBufferString(`{"title":"   "}`))
+	reqPatchClear.Header.Set("Authorization", "Bearer "+alice.Token)
+	reqPatchClear.Header.Set("Content-Type", "application/json")
+	respPatchClear := httptest.NewRecorder()
+	router.ServeHTTP(respPatchClear, reqPatchClear)
+	if respPatchClear.Code != http.StatusOK {
+		t.Fatalf("expected clear patch status %d, got %d body=%s", http.StatusOK, respPatchClear.Code, respPatchClear.Body.String())
+	}
+
+	var cleared models.ConversationDetails
+	if err := json.NewDecoder(respPatchClear.Body).Decode(&cleared); err != nil {
+		t.Fatalf("decode cleared conversation details: %v", err)
+	}
+	if cleared.Conversation.Title != "" {
+		t.Fatalf("expected cleared title, got %+v", cleared.Conversation)
+	}
+
 	reqForbidden := httptest.NewRequest(http.MethodGet, "/api/conversations/"+created.Conversation.ID, nil)
 	reqForbidden.Header.Set("Authorization", "Bearer "+charlie.Token)
 	respForbidden := httptest.NewRecorder()
 	router.ServeHTTP(respForbidden, reqForbidden)
 	if respForbidden.Code != http.StatusForbidden {
 		t.Fatalf("expected forbidden status %d, got %d", http.StatusForbidden, respForbidden.Code)
+	}
+
+	reqForbiddenPatch := httptest.NewRequest(http.MethodPatch, "/api/conversations/"+created.Conversation.ID, bytes.NewBufferString(`{"title":"Nope"}`))
+	reqForbiddenPatch.Header.Set("Authorization", "Bearer "+charlie.Token)
+	reqForbiddenPatch.Header.Set("Content-Type", "application/json")
+	respForbiddenPatch := httptest.NewRecorder()
+	router.ServeHTTP(respForbiddenPatch, reqForbiddenPatch)
+	if respForbiddenPatch.Code != http.StatusForbidden {
+		t.Fatalf("expected forbidden patch status %d, got %d", http.StatusForbidden, respForbiddenPatch.Code)
 	}
 
 	reqUnknown := httptest.NewRequest(http.MethodPost, "/api/conversations", bytes.NewBufferString(`{"username":"nobody"}`))

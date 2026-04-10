@@ -7,5 +7,6 @@ type Conversation struct {
 	ID           string    `json:"id" db:"id"`
 	ParticipantA string    `json:"participant_a" db:"participant_a"`
 	ParticipantB string    `json:"participant_b" db:"participant_b"`
+	Title        string    `json:"title,omitempty" db:"title"`
 	CreatedAt    time.Time `json:"created_at" db:"created_at"`
 }

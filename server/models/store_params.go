@@ -8,9 +8,16 @@ import (
 // CreateUserParams is a persistence boundary shape for inserting users.
 type CreateUserParams struct {
 	ID           string
+	AccountID    string
 	Username     string
 	PasswordHash string
 	CreatedAt    time.Time
+}
+
+type UpdateUsernameParams struct {
+	UserID    string
+	Username  string
+	UpdatedAt time.Time
 }
 
 // CreateSessionParams is a persistence boundary shape for inserting sessions.
@@ -55,6 +62,12 @@ type GetOrCreateDirectConversationParams struct {
 type GetConversationForUserParams struct {
 	ConversationID string
 	UserID         string
+}
+
+type UpdateConversationTitleParams struct {
+	ConversationID string
+	ActorUserID    string
+	Title          string
 }
 
 // ListConversationMessagesParams defines participant-scoped message pagination.

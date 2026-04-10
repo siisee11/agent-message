@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"strings"
+	"unicode/utf8"
 )
 
 const (
@@ -20,6 +21,7 @@ var (
 	ErrMessageJSONRenderSpecRequired = errors.New("json_render_spec object is required for json_render messages")
 	ErrReactionEmojiRequired         = errors.New("emoji is required")
 	ErrPageLimitOutOfRange           = errors.New("limit must be between 1 and 100")
+	ErrConversationTitleTooLong      = errors.New("title must be at most 120 characters")
 )
 
 // StartConversationRequest is the JSON body for POST /api/conversations.
@@ -117,6 +119,22 @@ type ConversationDetails struct {
 	ParticipantA    UserProfile      `json:"participant_a"`
 	ParticipantB    UserProfile      `json:"participant_b"`
 	WatcherPresence *WatcherPresence `json:"watcher_presence,omitempty"`
+}
+
+// UpdateConversationRequest is the JSON body for PATCH /api/conversations/:id.
+type UpdateConversationRequest struct {
+	Title string `json:"title"`
+}
+
+func (r UpdateConversationRequest) Validate() error {
+	title := strings.TrimSpace(r.Title)
+	if title == "" {
+		return nil
+	}
+	if utf8.RuneCountInString(title) > 120 {
+		return ErrConversationTitleTooLong
+	}
+	return nil
 }
 
 // WatcherPresence reports whether the other participant currently has an active watcher connection.

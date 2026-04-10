@@ -29,11 +29,11 @@ func TestRunRegisterStoresTokenInConfig(t *testing.T) {
 		if err := json.Unmarshal(body, &payload); err != nil {
 			t.Fatalf("decode register payload: %v", err)
 		}
-		if payload["username"] != "alice" || payload["password"] != "secret123" {
+		if payload["account_id"] != "alice" || payload["password"] != "secret123" {
 			t.Fatalf("unexpected register payload: %+v", payload)
 		}
 
-		return jsonResponse(http.StatusCreated, `{"token":"reg-token","user":{"id":"u1","username":"alice","created_at":"2026-01-01T00:00:00Z"}}`), nil
+		return jsonResponse(http.StatusCreated, `{"token":"reg-token","user":{"id":"u1","account_id":"alice","username":"alice","created_at":"2026-01-01T00:00:00Z"}}`), nil
 	})
 
 	if err := runRegister(rt, "alice", "secret123"); err != nil {
@@ -86,11 +86,11 @@ func TestRunLoginStoresTokenInConfig(t *testing.T) {
 		if err := json.Unmarshal(body, &payload); err != nil {
 			t.Fatalf("decode login payload: %v", err)
 		}
-		if payload["username"] != "alice" || payload["password"] != "secret123" {
+		if payload["account_id"] != "alice" || payload["password"] != "secret123" {
 			t.Fatalf("unexpected login payload: %+v", payload)
 		}
 
-		return jsonResponse(http.StatusOK, `{"token":"login-token","user":{"id":"u1","username":"alice","created_at":"2026-01-01T00:00:00Z"}}`), nil
+		return jsonResponse(http.StatusOK, `{"token":"login-token","user":{"id":"u1","account_id":"alice","username":"alice","created_at":"2026-01-01T00:00:00Z"}}`), nil
 	})
 
 	if err := runLogin(rt, "alice", "secret123"); err != nil {
@@ -139,17 +139,17 @@ func TestRegisterCommandSupportsRawPayload(t *testing.T) {
 		if err := json.Unmarshal(body, &payload); err != nil {
 			t.Fatalf("decode register payload: %v", err)
 		}
-		if got, want := payload["username"], "alice"; got != want {
-			t.Fatalf("username mismatch: got %q want %q", got, want)
+		if got, want := payload["account_id"], "alice"; got != want {
+			t.Fatalf("account_id mismatch: got %q want %q", got, want)
 		}
 		if got, want := payload["password"], "secret123"; got != want {
 			t.Fatalf("password mismatch: got %q want %q", got, want)
 		}
-		return jsonResponse(http.StatusCreated, `{"token":"reg-token","user":{"id":"u1","username":"alice","created_at":"2026-01-01T00:00:00Z"}}`), nil
+		return jsonResponse(http.StatusCreated, `{"token":"reg-token","user":{"id":"u1","account_id":"alice","username":"alice","created_at":"2026-01-01T00:00:00Z"}}`), nil
 	})
 
 	command := newRegisterCommand(rt)
-	command.SetArgs([]string{"--payload", `{"username":"alice","password":"secret123"}`})
+	command.SetArgs([]string{"--payload", `{"account_id":"alice","password":"secret123"}`})
 
 	if err := command.Execute(); err != nil {
 		t.Fatalf("execute register command: %v", err)
@@ -170,10 +170,10 @@ func TestRunLoginRestoresStoredMasterForProfile(t *testing.T) {
 		if err := json.Unmarshal(body, &payload); err != nil {
 			t.Fatalf("decode login payload: %v", err)
 		}
-		if got, want := payload["username"], "alice"; got != want {
-			t.Fatalf("username mismatch: got %q want %q", got, want)
+		if got, want := payload["account_id"], "alice"; got != want {
+			t.Fatalf("account_id mismatch: got %q want %q", got, want)
 		}
-		return jsonResponse(http.StatusOK, `{"token":"login-token","user":{"id":"u1","username":"alice","created_at":"2026-01-01T00:00:00Z"}}`), nil
+		return jsonResponse(http.StatusOK, `{"token":"login-token","user":{"id":"u1","account_id":"alice","username":"alice","created_at":"2026-01-01T00:00:00Z"}}`), nil
 	})
 	rt.Config.Profiles = map[string]config.Profile{
 		"alice": {
@@ -208,8 +208,8 @@ func TestRunOnboardLogsInAndSetsMaster(t *testing.T) {
 		if err := json.Unmarshal(body, &payload); err != nil {
 			t.Fatalf("decode payload: %v", err)
 		}
-		if got, want := payload["username"], "alice"; got != want {
-			t.Fatalf("username mismatch: got %q want %q", got, want)
+		if got, want := payload["account_id"], "alice"; got != want {
+			t.Fatalf("account_id mismatch: got %q want %q", got, want)
 		}
 		if got, want := payload["password"], "secret123"; got != want {
 			t.Fatalf("password mismatch: got %q want %q", got, want)
@@ -217,7 +217,7 @@ func TestRunOnboardLogsInAndSetsMaster(t *testing.T) {
 
 		switch req.URL.Path {
 		case "/api/auth/login":
-			return jsonResponse(http.StatusOK, `{"token":"login-token","user":{"id":"u1","username":"alice","created_at":"2026-01-01T00:00:00Z"}}`), nil
+			return jsonResponse(http.StatusOK, `{"token":"login-token","user":{"id":"u1","account_id":"alice","username":"alice","created_at":"2026-01-01T00:00:00Z"}}`), nil
 		default:
 			t.Fatalf("unexpected path: %s", req.URL.Path)
 			return nil, nil
@@ -251,7 +251,7 @@ func TestRunOnboardLogsInAndSetsMaster(t *testing.T) {
 	if got, want := rt.Config.Master, "alice"; got != want {
 		t.Fatalf("master mismatch: got %q want %q", got, want)
 	}
-	if got, want := stdout.String(), "username: password: onboarded alice\n"; got != want {
+	if got, want := stdout.String(), "account_id: password: onboarded alice\n"; got != want {
 		t.Fatalf("stdout mismatch: got %q want %q", got, want)
 	}
 
@@ -281,8 +281,8 @@ func TestRunOnboardRegistersWhenLoginReturnsUnauthorized(t *testing.T) {
 		if err := json.Unmarshal(body, &payload); err != nil {
 			t.Fatalf("decode payload: %v", err)
 		}
-		if got, want := payload["username"], "alice"; got != want {
-			t.Fatalf("username mismatch: got %q want %q", got, want)
+		if got, want := payload["account_id"], "alice"; got != want {
+			t.Fatalf("account_id mismatch: got %q want %q", got, want)
 		}
 		if got, want := payload["password"], "secret123"; got != want {
 			t.Fatalf("password mismatch: got %q want %q", got, want)
@@ -292,7 +292,7 @@ func TestRunOnboardRegistersWhenLoginReturnsUnauthorized(t *testing.T) {
 		case "/api/auth/login":
 			return jsonResponse(http.StatusUnauthorized, `{"error":"invalid credentials"}`), nil
 		case "/api/auth/register":
-			return jsonResponse(http.StatusCreated, `{"token":"reg-token","user":{"id":"u1","username":"alice","created_at":"2026-01-01T00:00:00Z"}}`), nil
+			return jsonResponse(http.StatusCreated, `{"token":"reg-token","user":{"id":"u1","account_id":"alice","username":"alice","created_at":"2026-01-01T00:00:00Z"}}`), nil
 		default:
 			t.Fatalf("unexpected path: %s", req.URL.Path)
 			return nil, nil
@@ -313,7 +313,7 @@ func TestRunOnboardRegistersWhenLoginReturnsUnauthorized(t *testing.T) {
 	if got, want := rt.Config.Master, "alice"; got != want {
 		t.Fatalf("master mismatch: got %q want %q", got, want)
 	}
-	if got, want := stdout.String(), "username: password: onboarded alice\n"; got != want {
+	if got, want := stdout.String(), "account_id: password: onboarded alice\n"; got != want {
 		t.Fatalf("stdout mismatch: got %q want %q", got, want)
 	}
 }
@@ -332,10 +332,10 @@ func TestRunRegisterUsesConfiguredServerURLInsteadOfActiveProfileServerURL(t *te
 		if err := json.Unmarshal(body, &payload); err != nil {
 			t.Fatalf("decode register payload: %v", err)
 		}
-		if got, want := payload["username"], "alice"; got != want {
-			t.Fatalf("username mismatch: got %q want %q", got, want)
+		if got, want := payload["account_id"], "alice"; got != want {
+			t.Fatalf("account_id mismatch: got %q want %q", got, want)
 		}
-		return jsonResponse(http.StatusCreated, `{"token":"reg-token","user":{"id":"u1","username":"alice","created_at":"2026-01-01T00:00:00Z"}}`), nil
+		return jsonResponse(http.StatusCreated, `{"token":"reg-token","user":{"id":"u1","account_id":"alice","username":"alice","created_at":"2026-01-01T00:00:00Z"}}`), nil
 	})
 	rt.Config.ActiveProfile = "local-alice"
 	rt.Config.ActiveProfileServerURL = "http://127.0.0.1:45180"
@@ -371,10 +371,10 @@ func TestRunRegisterUsesConfiguredServerURLInsteadOfActiveProfileServerURL(t *te
 		if err := json.Unmarshal(body, &payload); err != nil {
 			t.Fatalf("decode register payload: %v", err)
 		}
-		if got, want := payload["username"], "alice"; got != want {
-			t.Fatalf("username mismatch: got %q want %q", got, want)
+		if got, want := payload["account_id"], "alice"; got != want {
+			t.Fatalf("account_id mismatch: got %q want %q", got, want)
 		}
-		return jsonResponse(http.StatusCreated, `{"token":"reg-token","user":{"id":"u1","username":"alice","created_at":"2026-01-01T00:00:00Z"}}`), nil
+		return jsonResponse(http.StatusCreated, `{"token":"reg-token","user":{"id":"u1","account_id":"alice","username":"alice","created_at":"2026-01-01T00:00:00Z"}}`), nil
 	})})
 
 	if err := runRegister(rt, "alice", "1234"); err != nil {
@@ -410,10 +410,10 @@ func TestRunOnboardUsesConfiguredServerURLInsteadOfActiveProfileServerURL(t *tes
 		if err := json.Unmarshal(body, &payload); err != nil {
 			t.Fatalf("decode onboard payload: %v", err)
 		}
-		if got, want := payload["username"], "alice"; got != want {
-			t.Fatalf("username mismatch: got %q want %q", got, want)
+		if got, want := payload["account_id"], "alice"; got != want {
+			t.Fatalf("account_id mismatch: got %q want %q", got, want)
 		}
-		return jsonResponse(http.StatusOK, `{"token":"login-token","user":{"id":"u1","username":"alice","created_at":"2026-01-01T00:00:00Z"}}`), nil
+		return jsonResponse(http.StatusOK, `{"token":"login-token","user":{"id":"u1","account_id":"alice","username":"alice","created_at":"2026-01-01T00:00:00Z"}}`), nil
 	})
 	rt.Config.ActiveProfile = "local-alice"
 	rt.Config.ActiveProfileServerURL = "http://127.0.0.1:45180"
@@ -449,10 +449,10 @@ func TestRunOnboardUsesConfiguredServerURLInsteadOfActiveProfileServerURL(t *tes
 		if err := json.Unmarshal(body, &payload); err != nil {
 			t.Fatalf("decode onboard payload: %v", err)
 		}
-		if got, want := payload["username"], "alice"; got != want {
-			t.Fatalf("username mismatch: got %q want %q", got, want)
+		if got, want := payload["account_id"], "alice"; got != want {
+			t.Fatalf("account_id mismatch: got %q want %q", got, want)
 		}
-		return jsonResponse(http.StatusOK, `{"token":"login-token","user":{"id":"u1","username":"alice","created_at":"2026-01-01T00:00:00Z"}}`), nil
+		return jsonResponse(http.StatusOK, `{"token":"login-token","user":{"id":"u1","account_id":"alice","username":"alice","created_at":"2026-01-01T00:00:00Z"}}`), nil
 	})})
 
 	rt.Stdin = strings.NewReader("alice\n1234\n")
@@ -577,7 +577,7 @@ func TestRunWhoAmIReturnsCurrentUsername(t *testing.T) {
 			t.Fatalf("authorization mismatch: got %q want %q", got, want)
 		}
 
-		return jsonResponse(http.StatusOK, `{"id":"u1","username":"alice","created_at":"2026-01-01T00:00:00Z"}`), nil
+		return jsonResponse(http.StatusOK, `{"id":"u1","account_id":"alice","username":"alice","created_at":"2026-01-01T00:00:00Z"}`), nil
 	})
 
 	if err := runWhoAmI(rt); err != nil {

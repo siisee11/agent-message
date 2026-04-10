@@ -90,6 +90,8 @@ func NewRootCommand() *cobra.Command {
 		newLoginCommand(rt),
 		newLogoutCommand(rt),
 		newWhoAmICommand(rt),
+		newUsernameCommand(rt),
+		newTitleCommand(rt),
 		newListConversationsCommand(rt),
 		newOpenConversationCommand(rt),
 		newSendMessageCommand(rt),

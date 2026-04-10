@@ -28,6 +28,7 @@ agent-message upgrade
 ```
 
 This creates or logs into your account, saves the CLI profile in `~/.agent-message/config`, and sets your username as `master`.
+Authentication now uses `account_id`; the public `username` initially defaults to the same value and can be changed later with `agent-message username set <username>`.
 After that, you can use either the web app at `https://am.namjaeyoun.com` or the CLI:
 
 ```bash
@@ -77,6 +78,7 @@ The bundled CLI continues to work from the same command:
 agent-message onboard
 agent-message register alice secret123
 agent-message login alice secret123
+agent-message username set jay-ui-bot
 agent-message config set master jay
 agent-message upgrade
 agent-message ls
@@ -427,6 +429,7 @@ cd cli
 go run . onboard
 go run . register alice secret123
 go run . login alice secret123
+go run . username set jay-ui-bot
 go run . profile list
 go run . profile switch alice
 ```
@@ -456,13 +459,15 @@ go run . watch bob
 
 CLI config is stored at `~/.agent-message/config` by default.
 Each successful `login` or `register` also saves a named profile, and `go run . profile switch <username>` swaps the active account locally.
-`go run . onboard` is the cloud-friendly shortcut: it interactively asks for username/password, logs in if the account exists, creates it if it does not, and sets that username as `master`.
+`go run . onboard` is the cloud-friendly shortcut: it interactively asks for `account_id`/password, logs in if the account exists, creates it if it does not, and sets the resulting public `username` as `master`.
+`go run . username set <username>` changes the public name shown in chats, and `go run . username clear` falls back to the `account_id`.
+For bots, wrappers, or task-specific accounts, choose a username that is related to the chat topic or role so recipients can understand the conversation context at a glance.
 For a self-hosted server, set `server_url` once with `go run . config set server_url http://localhost:8080` or use `--server-url` per command.
 To set a default recipient for agent reports, run `go run . config set master jay`; after that, `go run . send "done"` sends to `jay`, and `go run . send --to bob "done"` overrides it for one command.
 
 ## Validation and Constraints (Phase 7)
 
-- Username identity fields: `3-32` chars, allowed `[A-Za-z0-9._-]`
+- Account IDs and usernames: `3-32` chars, allowed `[A-Za-z0-9._-]`
 - Password: `4-72` characters
 - Uploads:
   - max file size: `20 MB`

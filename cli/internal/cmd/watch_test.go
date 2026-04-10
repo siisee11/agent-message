@@ -59,7 +59,7 @@ func TestRunWatchStreamsOnlyTargetConversationMessageNewEvents(t *testing.T) {
 	if got := strings.TrimSpace(stderr.String()); got != "" {
 		t.Fatalf("expected empty stderr, got %q", got)
 	}
-	if got, want := strings.TrimSpace(stdout.String()), "m-target u2: hello"; got != want {
+	if got, want := strings.TrimSpace(stdout.String()), "m-target bob: hello"; got != want {
 		t.Fatalf("stdout mismatch: got %q want %q", got, want)
 	}
 	if !strings.HasPrefix(capturedURL, "http://example.test/api/events?") {
@@ -208,7 +208,7 @@ func TestRunWaitReturnsAfterFirstMatchingEvent(t *testing.T) {
 	if got := strings.TrimSpace(stderr.String()); got != "" {
 		t.Fatalf("expected empty stderr, got %q", got)
 	}
-	if got, want := strings.TrimSpace(stdout.String()), "m-1 u2: first"; got != want {
+	if got, want := strings.TrimSpace(stdout.String()), "m-1 bob: first"; got != want {
 		t.Fatalf("stdout mismatch: got %q want %q", got, want)
 	}
 }
@@ -312,7 +312,7 @@ func TestRunWaitReconnectsWhenHeartbeatLosesWatcherSession(t *testing.T) {
 	if got := strings.TrimSpace(stderr.String()); got != "" {
 		t.Fatalf("expected empty stderr, got %q", got)
 	}
-	if got, want := strings.TrimSpace(stdout.String()), "m-reconnected u2: after reconnect"; got != want {
+	if got, want := strings.TrimSpace(stdout.String()), "m-reconnected bob: after reconnect"; got != want {
 		t.Fatalf("stdout mismatch: got %q want %q", got, want)
 	}
 }

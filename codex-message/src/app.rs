@@ -67,6 +67,18 @@ fn startup_text(
     )
 }
 
+fn session_title(cwd: &std::path::Path, agent_name: &str) -> String {
+    let project = cwd
+        .file_name()
+        .and_then(|value| value.to_str())
+        .map(str::trim)
+        .filter(|value| !value.is_empty());
+    match project {
+        Some(project) => format!("{agent_name} · {project}"),
+        None => format!("{agent_name} session"),
+    }
+}
+
 pub(crate) struct App {
     config: Config,
 }
@@ -139,11 +151,17 @@ impl Runtime {
             .send_text_message(&to_username, &startup_text)
             .await
             .context("send startup message")?;
+        let conversation_title = session_title(&config.cwd, "Codex");
+        agent_client
+            .set_conversation_title(&to_username, &conversation_title)
+            .await
+            .context("set conversation title")?;
         logger.success(
             "Startup message sent",
             [
                 format!("Recipient: @{to_username}"),
                 format!("Message: {startup_message_id}"),
+                format!("Title: {conversation_title}"),
             ],
         );
 

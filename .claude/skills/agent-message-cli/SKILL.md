@@ -28,18 +28,20 @@ After installing, start the server first with `agent-message start`, then use `a
 
 ### Register a new account
 ```bash
-agent-message register <username> <pin>
-# username: 3-32 chars, [A-Za-z0-9._-]
-# pin: 4-6 numeric digits
-# Output: registered <username>
+agent-message register <account-id> <password>
+# account-id: 3-32 chars, [A-Za-z0-9._-]
+# password: 4-72 characters
+# Output: registered <account-id>
 # Side effect: saves token to config (no separate login needed)
 ```
 
+Registration creates the authentication `account_id` and initializes the public `username` to the same value.
+
 ### Login
 ```bash
-agent-message login <username> <pin>
-# Output: logged in as <username>
-# Side effect: saves/updates a local profile for this username and makes it active
+agent-message login <account-id> <password>
+# Output: logged in as <account-id>
+# Side effect: saves/updates a local profile for this account_id and makes it active
 ```
 
 ### Logout
@@ -54,6 +56,16 @@ agent-message logout
 agent-message whoami
 # Output: <username>
 ```
+
+### Manage public usernames
+```bash
+agent-message username set <username>
+agent-message username clear
+```
+
+Use `username set` to change the public name other users see in conversations.
+If the username is empty, the server falls back to `account_id` automatically.
+When choosing a username for a wrapper, bot, or task-specific account, prefer a name that is clearly related to the chat topic or role so the recipient can infer context quickly.
 
 ### List and switch saved profiles
 ```bash
@@ -86,6 +98,17 @@ agent-message open <username>
 # Output: <conversation-id> <username>
 # Creates the conversation if it doesn't exist yet
 ```
+
+### Manage conversation titles
+```bash
+agent-message title set <username> "<title>"
+agent-message title clear <username>
+```
+
+Use `title set` to store a short title on the DM conversation itself.
+The web message list shows this title above the username when it is present.
+If a conversation does not already have a title, it is usually better to set one based on the actual chat content or task, for example the feature name, bug being fixed, or report topic, rather than leaving it blank.
+Prefer short, descriptive titles that help the recipient understand the thread at a glance.
 
 ---
 
@@ -221,7 +244,7 @@ Special message display:
 agent-message watch <username>
 # Streams new messages as they arrive (SSE)
 # Blocks until Ctrl-C
-# Output per message: <message-id> <sender-id>: <text>
+# Output per message: <message-id> <sender-username>: <text>
 ```
 
 ---

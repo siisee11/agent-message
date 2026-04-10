@@ -20,7 +20,7 @@ func newRegisterCommand(rt *Runtime) *cobra.Command {
 	var payloadFile string
 	var payloadStdin bool
 	cmd := &cobra.Command{
-		Use:   "register <username> <password>",
+		Use:   "register <account-id> <password>",
 		Short: "Register a new account",
 		Args: func(_ *cobra.Command, args []string) error {
 			if len(args) > 2 {
@@ -57,10 +57,10 @@ func newOnboardCommand(rt *Runtime) *cobra.Command {
 	}
 }
 
-func runRegister(rt *Runtime, username, password string) error {
+func runRegister(rt *Runtime, accountID, password string) error {
 	return runRegisterRequest(rt, api.AuthRequest{
-		Username: username,
-		Password: password,
+		AccountID: accountID,
+		Password:  password,
 	})
 }
 
@@ -77,11 +77,11 @@ func runRegisterRequest(rt *Runtime, request api.AuthRequest) error {
 		return err
 	}
 
-	if err := activateAuthenticatedProfile(rt, resp.User.Username, rt.Client.ServerURL(), resp.Token); err != nil {
+	if err := activateAuthenticatedProfile(rt, resp.User.AccountID, rt.Client.ServerURL(), resp.Token); err != nil {
 		return err
 	}
 
-	return writeTextOrJSON(rt, fmt.Sprintf("registered %s", resp.User.Username), map[string]any{
+	return writeTextOrJSON(rt, fmt.Sprintf("registered %s", resp.User.AccountID), map[string]any{
 		"status": "registered",
 		"user":   resp.User,
 	})
@@ -96,7 +96,7 @@ func runOnboard(rt *Runtime) error {
 	}
 
 	reader := bufio.NewReader(rt.Stdin)
-	username, err := promptRequiredInput(reader, rt.Stdout, "username")
+	accountID, err := promptRequiredInput(reader, rt.Stdout, "account_id")
 	if err != nil {
 		return err
 	}
@@ -105,12 +105,12 @@ func runOnboard(rt *Runtime) error {
 		return err
 	}
 
-	resp, err := loginOrRegister(rt.Client, username, password)
+	resp, err := loginOrRegister(rt.Client, accountID, password)
 	if err != nil {
 		return err
 	}
 
-	if err := activateAuthenticatedProfile(rt, resp.User.Username, rt.Client.ServerURL(), resp.Token); err != nil {
+	if err := activateAuthenticatedProfile(rt, resp.User.AccountID, rt.Client.ServerURL(), resp.Token); err != nil {
 		return err
 	}
 
@@ -120,7 +120,7 @@ func runOnboard(rt *Runtime) error {
 		return err
 	}
 
-	return writeTextOrJSON(rt, fmt.Sprintf("onboarded %s", resp.User.Username), map[string]any{
+	return writeTextOrJSON(rt, fmt.Sprintf("onboarded %s", resp.User.AccountID), map[string]any{
 		"status": "onboarded",
 		"user":   resp.User,
 		"master": rt.Config.Master,
@@ -132,8 +132,8 @@ func newLoginCommand(rt *Runtime) *cobra.Command {
 	var payloadFile string
 	var payloadStdin bool
 	cmd := &cobra.Command{
-		Use:   "login <username> <password>",
-		Short: "Log in with username and password",
+		Use:   "login <account-id> <password>",
+		Short: "Log in with account ID and password",
 		Args: func(_ *cobra.Command, args []string) error {
 			if len(args) > 2 {
 				return fmt.Errorf("accepts at most 2 arg(s), received %d", len(args))
@@ -158,10 +158,10 @@ func newLoginCommand(rt *Runtime) *cobra.Command {
 	return cmd
 }
 
-func runLogin(rt *Runtime, username, password string) error {
+func runLogin(rt *Runtime, accountID, password string) error {
 	return runLoginRequest(rt, api.AuthRequest{
-		Username: username,
-		Password: password,
+		AccountID: accountID,
+		Password:  password,
 	})
 }
 
@@ -178,11 +178,11 @@ func runLoginRequest(rt *Runtime, request api.AuthRequest) error {
 		return err
 	}
 
-	if err := activateAuthenticatedProfile(rt, resp.User.Username, rt.Client.ServerURL(), resp.Token); err != nil {
+	if err := activateAuthenticatedProfile(rt, resp.User.AccountID, rt.Client.ServerURL(), resp.Token); err != nil {
 		return err
 	}
 
-	return writeTextOrJSON(rt, fmt.Sprintf("logged in as %s", resp.User.Username), map[string]any{
+	return writeTextOrJSON(rt, fmt.Sprintf("logged in as %s", resp.User.AccountID), map[string]any{
 		"status": "logged_in",
 		"user":   resp.User,
 	})
@@ -200,16 +200,16 @@ func resolveAuthRequest(stdin io.Reader, payloadOptions rawPayloadOptions, args 
 		return decodeStrictJSONObject[api.AuthRequest](rawPayload, action+" payload")
 	}
 	if len(args) != 2 {
-		return api.AuthRequest{}, fmt.Errorf("%s requires <username> <password>", action)
+		return api.AuthRequest{}, fmt.Errorf("%s requires <account-id> <password>", action)
 	}
 	return api.AuthRequest{
-		Username: args[0],
-		Password: args[1],
+		AccountID: args[0],
+		Password:  args[1],
 	}, nil
 }
 
-func loginOrRegister(client *api.Client, username, password string) (api.AuthResponse, error) {
-	resp, err := client.Login(context.Background(), username, password)
+func loginOrRegister(client *api.Client, accountID, password string) (api.AuthResponse, error) {
+	resp, err := client.Login(context.Background(), accountID, password)
 	if err == nil {
 		return resp, nil
 	}
@@ -217,7 +217,7 @@ func loginOrRegister(client *api.Client, username, password string) (api.AuthRes
 		return api.AuthResponse{}, err
 	}
 
-	resp, registerErr := client.Register(context.Background(), username, password)
+	resp, registerErr := client.Register(context.Background(), accountID, password)
 	if registerErr != nil {
 		if isAPIStatus(registerErr, http.StatusConflict) {
 			return api.AuthResponse{}, err
@@ -263,8 +263,9 @@ func runWhoAmI(rt *Runtime) error {
 	}
 
 	return writeTextOrJSON(rt, user.Username, map[string]any{
-		"username": user.Username,
-		"user":     user,
+		"account_id": user.AccountID,
+		"username":   user.Username,
+		"user":       user,
 	})
 }
 
@@ -314,10 +315,10 @@ func ensureRuntime(rt *Runtime) error {
 	}
 }
 
-func activateAuthenticatedProfile(rt *Runtime, username, serverURL, token string) error {
-	profileName := strings.TrimSpace(username)
+func activateAuthenticatedProfile(rt *Runtime, accountID, serverURL, token string) error {
+	profileName := strings.TrimSpace(accountID)
 	if profileName == "" {
-		return errors.New("username is required")
+		return errors.New("account_id is required")
 	}
 
 	cfg := rt.Config

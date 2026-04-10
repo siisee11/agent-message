@@ -106,6 +106,17 @@ impl AgentMessageClient {
         parse_sent_message_id(&output)
     }
 
+    pub(crate) async fn set_conversation_title(&self, username: &str, title: &str) -> Result<()> {
+        let output = self
+            .run(&["title", "set", username, title])
+            .await
+            .context("run `agent-message title set`")?;
+        if !output.contains(&format!("title set for {username}")) {
+            bail!("unexpected title output: {output}");
+        }
+        Ok(())
+    }
+
     pub(crate) async fn watch_messages(&self, username: &str) -> Result<MessageWatch> {
         let mut command = Command::new(&self.binary);
         if let Some(profile) = &self.from_profile {

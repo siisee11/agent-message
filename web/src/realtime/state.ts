@@ -4,7 +4,8 @@ import type { ConversationDetails, Message, MessageDetails, Reaction, UserProfil
 export function fallbackSender(message: Message): UserProfile {
   return {
     id: message.sender_id,
-    username: 'me',
+    account_id: message.sender_id,
+    username: message.sender_id,
     created_at: message.created_at,
   }
 }

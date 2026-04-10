@@ -60,7 +60,7 @@ func TestServerStackE2EValidationErrors(t *testing.T) {
 	testServer := newE2EServer(t)
 	defer testServer.Close()
 
-	t.Run("register rejects invalid username", func(t *testing.T) {
+	t.Run("register rejects invalid account_id", func(t *testing.T) {
 		status, body := doJSONRequest(t, http.MethodPost, testServer.URL+"/api/auth/register", "", map[string]string{
 			"username": "ab",
 			"password": "1234",
@@ -68,7 +68,7 @@ func TestServerStackE2EValidationErrors(t *testing.T) {
 		if status != http.StatusBadRequest {
 			t.Fatalf("expected %d, got %d", http.StatusBadRequest, status)
 		}
-		assertErrorEnvelope(t, body, models.ErrUsernameLength.Error())
+		assertErrorEnvelope(t, body, models.ErrAccountIDLength.Error())
 	})
 
 	t.Run("register rejects invalid password", func(t *testing.T) {

@@ -164,7 +164,7 @@ func ensureLoggedIn(rt *Runtime) error {
 	if strings.TrimSpace(rt.Config.Token) != "" {
 		return nil
 	}
-	return errors.New("not logged in; run `agent-message login <username> <password>`")
+	return errors.New("not logged in; run `agent-message login <account-id> <password>`")
 }
 
 func resolveOtherUsername(details api.ConversationDetails, requestedUsername string) string {

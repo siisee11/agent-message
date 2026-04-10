@@ -10,7 +10,7 @@ func TestBuildSchemaDocumentCoversFullCommandTree(t *testing.T) {
 		t.Fatalf("buildSchemaDocument: %v", err)
 	}
 
-	if got, want := len(document.Commands), 28; got != want {
+	if got, want := len(document.Commands), 34; got != want {
 		t.Fatalf("command count mismatch: got %d want %d", got, want)
 	}
 	assertHasCommandPath(t, document, "agent-message")
@@ -18,6 +18,12 @@ func TestBuildSchemaDocumentCoversFullCommandTree(t *testing.T) {
 	assertHasCommandPath(t, document, "agent-message send")
 	assertHasCommandPath(t, document, "agent-message config set")
 	assertHasCommandPath(t, document, "agent-message watch")
+	assertHasCommandPath(t, document, "agent-message username")
+	assertHasCommandPath(t, document, "agent-message username set")
+	assertHasCommandPath(t, document, "agent-message username clear")
+	assertHasCommandPath(t, document, "agent-message title")
+	assertHasCommandPath(t, document, "agent-message title set")
+	assertHasCommandPath(t, document, "agent-message title clear")
 }
 
 func TestBuildSchemaDocumentForSendIncludesTypedModes(t *testing.T) {

@@ -16,7 +16,7 @@ const AUTH_TOKEN_STORAGE_KEY = 'agent_message.auth_token'
 type AuthStatus = 'loading' | 'authenticated' | 'unauthenticated'
 
 export interface LoginCredentials {
-  username: string
+  accountId: string
   password: string
 }
 
@@ -111,7 +111,7 @@ export function AuthProvider({ children }: PropsWithChildren) {
   const loginWithAutoRegister = useCallback(
     async (credentials: LoginCredentials): Promise<LoginResult> => {
       const payload = {
-        username: credentials.username.trim(),
+        account_id: credentials.accountId.trim(),
         password: credentials.password,
       }
 

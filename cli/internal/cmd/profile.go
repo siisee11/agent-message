@@ -150,7 +150,7 @@ func resolveStoredProfile(cfg config.Config, rawName string) (string, config.Pro
 		}
 	}
 
-	return "", config.Profile{}, fmt.Errorf("profile %q not found; run `agent-message login <username> <password>` first", name)
+	return "", config.Profile{}, fmt.Errorf("profile %q not found; run `agent-message login <account-id> <password>` first", name)
 }
 
 func sortedProfileNames(profiles map[string]config.Profile) []string {

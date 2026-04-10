@@ -14,68 +14,68 @@ func TestRegisterRequestValidate(t *testing.T) {
 		{
 			name: "valid",
 			req: RegisterRequest{
-				Username: "alice",
-				Password: "1234",
+				AccountID: "alice",
+				Password:  "1234",
 			},
 		},
 		{
 			name: "valid username with symbols",
 			req: RegisterRequest{
-				Username: "alice.smith-1",
-				Password: "abc12345",
+				AccountID: "alice.smith-1",
+				Password:  "abc12345",
 			},
 		},
 		{
 			name: "empty username",
 			req: RegisterRequest{
-				Username: "   ",
-				Password: "1234",
+				AccountID: "   ",
+				Password:  "1234",
 			},
 			wantErr: true,
 		},
 		{
 			name: "username too short",
 			req: RegisterRequest{
-				Username: "ab",
-				Password: "1234",
+				AccountID: "ab",
+				Password:  "1234",
 			},
 			wantErr: true,
 		},
 		{
 			name: "username has spaces",
 			req: RegisterRequest{
-				Username: "alice smith",
-				Password: "1234",
+				AccountID: "alice smith",
+				Password:  "1234",
 			},
 			wantErr: true,
 		},
 		{
 			name: "password too short",
 			req: RegisterRequest{
-				Username: "alice",
-				Password: "123",
+				AccountID: "alice",
+				Password:  "123",
 			},
 			wantErr: true,
 		},
 		{
 			name: "password may be non numeric",
 			req: RegisterRequest{
-				Username: "alice",
-				Password: "12a4",
+				AccountID: "alice",
+				Password:  "12a4",
 			},
 		},
 		{
 			name: "password too long",
 			req: RegisterRequest{
-				Username: "alice",
-				Password: strings.Repeat("a", 73),
+				AccountID: "alice",
+				Password:  strings.Repeat("a", 73),
 			},
 			wantErr: true,
 		},
 		{
 			name: "legacy pin field still validates",
 			req: RegisterRequest{
-				Username:  "alice",
+				AccountID: "alice",
 				LegacyPIN: "1234",
 			},
 		},

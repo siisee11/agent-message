@@ -319,6 +319,41 @@ func TestSQLiteStorePhase2CoreOperations(t *testing.T) {
 		t.Fatalf("expected no session metadata for AC, got %+v", conversations[1])
 	}
 
+	updatedConversation, err := s.UpdateConversationTitle(ctx, models.UpdateConversationTitleParams{
+		ConversationID: conversationAB.ID,
+		ActorUserID:    alice.ID,
+		Title:          "Frontend polish",
+	})
+	if err != nil {
+		t.Fatalf("UpdateConversationTitle() error = %v", err)
+	}
+	if updatedConversation.Title != "Frontend polish" {
+		t.Fatalf("unexpected updated conversation title: %+v", updatedConversation)
+	}
+
+	detailsWithTitle, err := s.GetConversationByIDForUser(ctx, models.GetConversationForUserParams{
+		ConversationID: conversationAB.ID,
+		UserID:         bob.ID,
+	})
+	if err != nil {
+		t.Fatalf("GetConversationByIDForUser() with title error = %v", err)
+	}
+	if detailsWithTitle.Conversation.Title != "Frontend polish" {
+		t.Fatalf("expected conversation title in details, got %+v", detailsWithTitle.Conversation)
+	}
+
+	clearedConversation, err := s.UpdateConversationTitle(ctx, models.UpdateConversationTitleParams{
+		ConversationID: conversationAB.ID,
+		ActorUserID:    bob.ID,
+		Title:          "   ",
+	})
+	if err != nil {
+		t.Fatalf("UpdateConversationTitle(clear) error = %v", err)
+	}
+	if clearedConversation.Title != "" {
+		t.Fatalf("expected cleared title, got %+v", clearedConversation)
+	}
+
 	firstPage, err := s.ListMessagesByConversation(ctx, models.ListConversationMessagesParams{
 		ConversationID: conversationAB.ID,
 		UserID:         alice.ID,

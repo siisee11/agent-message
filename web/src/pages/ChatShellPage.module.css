@@ -251,6 +251,17 @@
   background: var(--surface-hover);
 }
 
+.conversationTitle {
+  margin: 0;
+  color: var(--text-primary);
+  font-size: 0.95rem;
+  font-weight: 600;
+  line-height: 1.35;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 .conversationMeta {
   display: flex;
   align-items: baseline;
@@ -261,7 +272,7 @@
 .conversationName {
   font-size: 1rem;
   font-weight: 500;
-  color: var(--text-primary);
+  color: var(--text-secondary);
 }
 
 .conversationTime {

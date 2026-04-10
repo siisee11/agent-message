@@ -6,6 +6,7 @@ export type JsonRenderSpec = unknown
 
 export interface UserProfile {
   id: string
+  account_id: string
   username: string
   created_at: ISODateString
 }
@@ -16,12 +17,13 @@ export interface AuthResponse {
 }
 
 export interface RegisterRequest {
-  username: string
+  account_id: string
+  username?: string
   password: string
 }
 
 export interface LoginRequest {
-  username: string
+  account_id: string
   password: string
 }
 
@@ -29,6 +31,7 @@ export interface Conversation {
   id: string
   participant_a: string
   participant_b: string
+  title?: string
   created_at: ISODateString
 }
 

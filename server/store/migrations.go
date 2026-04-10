@@ -141,6 +141,23 @@ var sqliteMigrations = []migration{
 			ALTER TABLE users RENAME COLUMN pin_hash TO password_hash;
 		`,
 	},
+	{
+		version: 11,
+		name:    "split_users_account_id_and_username",
+		sql: `
+			ALTER TABLE users RENAME COLUMN username TO account_id;
+			ALTER TABLE users ADD COLUMN username TEXT NULL;
+			UPDATE users SET username = account_id WHERE username IS NULL OR TRIM(username) = '';
+			CREATE UNIQUE INDEX idx_users_username_unique ON users(username) WHERE username IS NOT NULL AND username <> '';
+		`,
+	},
+	{
+		version: 12,
+		name:    "add_conversation_title",
+		sql: `
+			ALTER TABLE conversations ADD COLUMN title TEXT NULL;
+		`,
+	},
 }
 
 func (s *SQLiteStore) migrate(ctx context.Context) error {

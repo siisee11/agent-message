@@ -419,7 +419,7 @@ func (h *messagesHandler) notifyConversationMessage(conversationID string, sende
 			ConversationID: conversationID,
 			MessageID:      message.ID,
 			SenderID:       sender.ID,
-			SenderName:     sender.Username,
+			SenderName:     sender.EffectiveUsername(),
 			Preview:        messageNotificationPreview(message),
 			URL:            "/dm/" + conversationID,
 		}); err != nil {

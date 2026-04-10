@@ -23,13 +23,13 @@ func TestSetServerURLRejectsQueryAndFragment(t *testing.T) {
 	}
 }
 
-func TestRegisterRejectsInvalidUsername(t *testing.T) {
+func TestRegisterRejectsInvalidAccountID(t *testing.T) {
 	t.Parallel()
 
 	client := newValidationTestClient(t)
 	_, err := client.Register(context.Background(), "bob?admin=true", "1234")
-	if err == nil || !strings.Contains(err.Error(), "username") {
-		t.Fatalf("expected username validation error, got %v", err)
+	if err == nil || !strings.Contains(err.Error(), "account_id") {
+		t.Fatalf("expected account_id validation error, got %v", err)
 	}
 }
 

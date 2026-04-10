@@ -16,8 +16,10 @@ var (
 type Store interface {
 	Close() error
 	CreateUser(ctx context.Context, params models.CreateUserParams) (models.User, error)
+	GetUserByAccountID(ctx context.Context, accountID string) (models.User, error)
 	GetUserByUsername(ctx context.Context, username string) (models.User, error)
 	GetUserByID(ctx context.Context, userID string) (models.User, error)
+	UpdateUsername(ctx context.Context, params models.UpdateUsernameParams) (models.User, error)
 	CreateSession(ctx context.Context, params models.CreateSessionParams) (models.Session, error)
 	GetSessionByToken(ctx context.Context, token string) (models.Session, error)
 	DeleteSessionByToken(ctx context.Context, token string) error
@@ -30,6 +32,7 @@ type Store interface {
 	ListConversationsByUser(ctx context.Context, params models.ListUserConversationsParams) ([]models.ConversationSummary, error)
 	GetOrCreateDirectConversation(ctx context.Context, params models.GetOrCreateDirectConversationParams) (models.Conversation, error)
 	GetConversationByIDForUser(ctx context.Context, params models.GetConversationForUserParams) (models.ConversationDetails, error)
+	UpdateConversationTitle(ctx context.Context, params models.UpdateConversationTitleParams) (models.Conversation, error)
 	ListMessagesByConversation(ctx context.Context, params models.ListConversationMessagesParams) ([]models.MessageDetails, error)
 	GetMessageByIDForUser(ctx context.Context, params models.GetMessageForUserParams) (models.Message, error)
 	CreateMessage(ctx context.Context, params models.CreateMessageParams) (models.Message, error)
@@ -53,11 +56,19 @@ func (s *NoopStore) CreateUser(_ context.Context, _ models.CreateUserParams) (mo
 	return models.User{}, ErrNotImplemented
 }
 
+func (s *NoopStore) GetUserByAccountID(_ context.Context, _ string) (models.User, error) {
+	return models.User{}, ErrNotImplemented
+}
+
 func (s *NoopStore) GetUserByUsername(_ context.Context, _ string) (models.User, error) {
 	return models.User{}, ErrNotImplemented
 }
 
 func (s *NoopStore) GetUserByID(_ context.Context, _ string) (models.User, error) {
+	return models.User{}, ErrNotImplemented
+}
+
+func (s *NoopStore) UpdateUsername(_ context.Context, _ models.UpdateUsernameParams) (models.User, error) {
 	return models.User{}, ErrNotImplemented
 }
 
@@ -107,6 +118,10 @@ func (s *NoopStore) GetOrCreateDirectConversation(_ context.Context, _ models.Ge
 
 func (s *NoopStore) GetConversationByIDForUser(_ context.Context, _ models.GetConversationForUserParams) (models.ConversationDetails, error) {
 	return models.ConversationDetails{}, ErrNotImplemented
+}
+
+func (s *NoopStore) UpdateConversationTitle(_ context.Context, _ models.UpdateConversationTitleParams) (models.Conversation, error) {
+	return models.Conversation{}, ErrNotImplemented
 }
 
 func (s *NoopStore) ListMessagesByConversation(_ context.Context, _ models.ListConversationMessagesParams) ([]models.MessageDetails, error) {

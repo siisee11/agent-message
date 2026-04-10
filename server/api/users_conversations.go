@@ -80,11 +80,18 @@ func (h *usersHandler) handleUsers(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *usersHandler) handleMe(w http.ResponseWriter, r *http.Request) {
-	if r.Method != http.MethodGet {
-		writeMethodNotAllowed(w, http.MethodGet)
-		return
+	switch r.Method {
+	case http.MethodGet:
+		h.handleGetMe(w, r)
+	case http.MethodPatch:
+		h.handlePatchMe(w, r)
+	default:
+		w.Header().Set("Allow", "GET, PATCH")
+		writeError(w, http.StatusMethodNotAllowed, "method not allowed")
 	}
+}
 
+func (h *usersHandler) handleGetMe(w http.ResponseWriter, r *http.Request) {
 	user, ok := userFromContext(r.Context())
 	if !ok {
 		writeError(w, http.StatusUnauthorized, "missing or invalid bearer token")
@@ -92,6 +99,53 @@ func (h *usersHandler) handleMe(w http.ResponseWriter, r *http.Request) {
 	}
 
 	writeJSON(w, http.StatusOK, user.Profile())
+}
+
+func (h *usersHandler) handlePatchMe(w http.ResponseWriter, r *http.Request) {
+	user, ok := userFromContext(r.Context())
+	if !ok {
+		writeError(w, http.StatusUnauthorized, "missing or invalid bearer token")
+		return
+	}
+
+	var req models.UpdateUsernameRequest
+	if err := decodeJSONBody(r, &req); err != nil {
+		writeError(w, http.StatusBadRequest, "invalid JSON body")
+		return
+	}
+	if err := req.Validate(); err != nil {
+		writeError(w, http.StatusBadRequest, err.Error())
+		return
+	}
+
+	desiredUsername := strings.TrimSpace(req.Username)
+	if desiredUsername != "" {
+		existing, err := h.store.GetUserByUsername(r.Context(), desiredUsername)
+		if err == nil && existing.ID != user.ID {
+			writeError(w, http.StatusConflict, "username already exists")
+			return
+		}
+		if err != nil && !errors.Is(err, store.ErrNotFound) {
+			writeError(w, http.StatusInternalServerError, "failed to update username")
+			return
+		}
+	}
+
+	updatedUser, err := h.store.UpdateUsername(r.Context(), models.UpdateUsernameParams{
+		UserID:    user.ID,
+		Username:  desiredUsername,
+		UpdatedAt: time.Now().UTC(),
+	})
+	if err != nil {
+		if errors.Is(err, store.ErrNotFound) {
+			writeError(w, http.StatusNotFound, "user not found")
+			return
+		}
+		writeError(w, http.StatusInternalServerError, "failed to update username")
+		return
+	}
+
+	writeJSON(w, http.StatusOK, updatedUser.Profile())
 }
 
 type conversationsHandler struct {
@@ -123,11 +177,18 @@ func (h *conversationsHandler) handleConversationsCollection(w http.ResponseWrit
 }
 
 func (h *conversationsHandler) handleConversationDetail(w http.ResponseWriter, r *http.Request) {
-	if r.Method != http.MethodGet {
-		writeMethodNotAllowed(w, http.MethodGet)
-		return
+	switch r.Method {
+	case http.MethodGet:
+		h.handleGetConversationDetail(w, r)
+	case http.MethodPatch:
+		h.handlePatchConversationDetail(w, r)
+	default:
+		w.Header().Set("Allow", "GET, PATCH")
+		writeError(w, http.StatusMethodNotAllowed, "method not allowed")
 	}
+}
 
+func (h *conversationsHandler) handleGetConversationDetail(w http.ResponseWriter, r *http.Request) {
 	user, ok := userFromContext(r.Context())
 	if !ok {
 		writeError(w, http.StatusUnauthorized, "missing or invalid bearer token")
@@ -153,6 +214,59 @@ func (h *conversationsHandler) handleConversationDetail(w http.ResponseWriter, r
 		default:
 			writeError(w, http.StatusInternalServerError, "failed to fetch conversation")
 		}
+		return
+	}
+
+	h.decorateWatcherPresence(&details, user.ID)
+	writeJSON(w, http.StatusOK, details)
+}
+
+func (h *conversationsHandler) handlePatchConversationDetail(w http.ResponseWriter, r *http.Request) {
+	user, ok := userFromContext(r.Context())
+	if !ok {
+		writeError(w, http.StatusUnauthorized, "missing or invalid bearer token")
+		return
+	}
+
+	conversationID, valid := conversationIDFromPath(r.URL.Path)
+	if !valid {
+		writeError(w, http.StatusNotFound, "conversation not found")
+		return
+	}
+
+	var req models.UpdateConversationRequest
+	if err := decodeJSONBody(r, &req); err != nil {
+		writeError(w, http.StatusBadRequest, "invalid JSON body")
+		return
+	}
+	if err := req.Validate(); err != nil {
+		writeError(w, http.StatusBadRequest, err.Error())
+		return
+	}
+
+	updatedConversation, err := h.store.UpdateConversationTitle(r.Context(), models.UpdateConversationTitleParams{
+		ConversationID: conversationID,
+		ActorUserID:    user.ID,
+		Title:          strings.TrimSpace(req.Title),
+	})
+	if err != nil {
+		switch {
+		case errors.Is(err, store.ErrNotFound):
+			writeError(w, http.StatusNotFound, "conversation not found")
+		case errors.Is(err, store.ErrForbidden):
+			writeError(w, http.StatusForbidden, "forbidden")
+		default:
+			writeError(w, http.StatusInternalServerError, "failed to update conversation")
+		}
+		return
+	}
+
+	details, err := h.store.GetConversationByIDForUser(r.Context(), models.GetConversationForUserParams{
+		ConversationID: updatedConversation.ID,
+		UserID:         user.ID,
+	})
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, "failed to fetch conversation")
 		return
 	}
 
@@ -207,7 +321,7 @@ func (h *conversationsHandler) handleStartConversation(w http.ResponseWriter, r 
 		writeError(w, http.StatusBadRequest, err.Error())
 		return
 	}
-	if strings.EqualFold(strings.TrimSpace(req.Username), user.Username) {
+	if strings.EqualFold(strings.TrimSpace(req.Username), user.EffectiveUsername()) {
 		writeError(w, http.StatusBadRequest, "cannot start a conversation with yourself")
 		return
 	}

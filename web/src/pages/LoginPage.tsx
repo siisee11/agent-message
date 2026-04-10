@@ -24,7 +24,7 @@ export function LoginPage() {
   const navigate = useNavigate()
   const location = useLocation()
   const { status, loginWithAutoRegister } = useAuth()
-  const [username, setUsername] = useState('')
+  const [accountId, setAccountId] = useState('')
   const [password, setPassword] = useState('')
   const [errorMessage, setErrorMessage] = useState<string | null>(null)
   const [successMessage, setSuccessMessage] = useState<string | null>(null)
@@ -52,7 +52,7 @@ export function LoginPage() {
     setIsSubmitting(true)
 
     try {
-      const result = await loginWithAutoRegister({ username, password })
+      const result = await loginWithAutoRegister({ accountId, password })
       if (result.mode === 'register') {
         setSuccessMessage('Account created and signed in.')
       }
@@ -78,18 +78,18 @@ export function LoginPage() {
           <h2 className={styles.title}>Sign in</h2>
           <ThemeToggleButton />
         </div>
-        <p className={styles.subtitle}>Enter your username and password.</p>
+        <p className={styles.subtitle}>Enter your account ID and password.</p>
         <form className={styles.form} onSubmit={handleSubmit}>
           <label className={styles.field}>
-            <span className={styles.label}>Username</span>
+            <span className={styles.label}>Account ID</span>
             <input
               autoComplete="username"
               className={styles.input}
               disabled={isSubmitting || isLoadingAuth}
-              onChange={(event) => setUsername(event.target.value)}
-              placeholder="alice"
+              onChange={(event) => setAccountId(event.target.value)}
+              placeholder="cva-chat_jay"
               required
-              value={username}
+              value={accountId}
             />
           </label>
 

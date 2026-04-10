@@ -161,7 +161,11 @@ func runWatchWithOptions(rt *Runtime, username string, options watchOptions) err
 				return fmt.Errorf("write watch JSON event: %w", err)
 			}
 		} else {
-			_, _ = fmt.Fprintf(rt.Stdout, "%s %s: %s\n", message.ID, strings.TrimSpace(message.SenderID), watchMessageText(message))
+			senderLabel := strings.TrimSpace(conversation.senderUsername(message.SenderID))
+			if senderLabel == "" {
+				senderLabel = strings.TrimSpace(message.SenderID)
+			}
+			_, _ = fmt.Fprintf(rt.Stdout, "%s %s: %s\n", message.ID, senderLabel, watchMessageText(message))
 		}
 		if options.once {
 			return nil

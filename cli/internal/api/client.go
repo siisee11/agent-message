@@ -106,48 +106,57 @@ func (c *Client) SetHTTPClient(httpClient *http.Client) {
 }
 
 type AuthRequest struct {
-	Username string `json:"username"`
-	Password string `json:"password"`
+	AccountID string `json:"account_id,omitempty"`
+	Username  string `json:"username,omitempty"`
+	Password  string `json:"password"`
 }
 
-func (c *Client) Register(ctx context.Context, username, password string) (AuthResponse, error) {
+func (c *Client) Register(ctx context.Context, accountID, password string) (AuthResponse, error) {
 	return c.RegisterWithRequest(ctx, AuthRequest{
-		Username: username,
-		Password: password,
+		AccountID: accountID,
+		Password:  password,
 	})
 }
 
 func (c *Client) RegisterWithRequest(ctx context.Context, input AuthRequest) (AuthResponse, error) {
-	normalizedUsername, err := validateUsername(input.Username)
+	rawAccountID := strings.TrimSpace(input.AccountID)
+	if rawAccountID == "" {
+		rawAccountID = strings.TrimSpace(input.Username)
+	}
+	normalizedAccountID, err := validateAccountID(rawAccountID)
 	if err != nil {
 		return AuthResponse{}, err
 	}
 
 	var out AuthResponse
 	err = c.doJSON(ctx, http.MethodPost, "/api/auth/register", map[string]string{
-		"username": normalizedUsername,
-		"password": input.Password,
+		"account_id": normalizedAccountID,
+		"password":   input.Password,
 	}, &out)
 	return out, err
 }
 
-func (c *Client) Login(ctx context.Context, username, password string) (AuthResponse, error) {
+func (c *Client) Login(ctx context.Context, accountID, password string) (AuthResponse, error) {
 	return c.LoginWithRequest(ctx, AuthRequest{
-		Username: username,
-		Password: password,
+		AccountID: accountID,
+		Password:  password,
 	})
 }
 
 func (c *Client) LoginWithRequest(ctx context.Context, input AuthRequest) (AuthResponse, error) {
-	normalizedUsername, err := validateUsername(input.Username)
+	rawAccountID := strings.TrimSpace(input.AccountID)
+	if rawAccountID == "" {
+		rawAccountID = strings.TrimSpace(input.Username)
+	}
+	normalizedAccountID, err := validateAccountID(rawAccountID)
 	if err != nil {
 		return AuthResponse{}, err
 	}
 
 	var out AuthResponse
 	err = c.doJSON(ctx, http.MethodPost, "/api/auth/login", map[string]string{
-		"username": normalizedUsername,
-		"password": input.Password,
+		"account_id": normalizedAccountID,
+		"password":   input.Password,
 	}, &out)
 	return out, err
 }
@@ -165,6 +174,23 @@ func (c *Client) GetCatalogPrompt(ctx context.Context) (CatalogPromptResponse, e
 func (c *Client) Me(ctx context.Context) (UserProfile, error) {
 	var out UserProfile
 	err := c.doJSON(ctx, http.MethodGet, "/api/users/me", nil, &out)
+	return out, err
+}
+
+func (c *Client) UpdateUsername(ctx context.Context, username string) (UserProfile, error) {
+	trimmed := strings.TrimSpace(username)
+	if trimmed != "" {
+		var err error
+		trimmed, err = validateUsername(trimmed)
+		if err != nil {
+			return UserProfile{}, err
+		}
+	}
+
+	var out UserProfile
+	err := c.doJSON(ctx, http.MethodPatch, "/api/users/me", map[string]string{
+		"username": trimmed,
+	}, &out)
 	return out, err
 }
 
@@ -214,6 +240,19 @@ func (c *Client) OpenConversationWithRequest(ctx context.Context, input OpenConv
 
 	var out ConversationDetails
 	err = c.doJSON(ctx, http.MethodPost, "/api/conversations", map[string]string{"username": normalizedUsername}, &out)
+	return out, err
+}
+
+func (c *Client) UpdateConversationTitle(ctx context.Context, conversationID, title string) (ConversationDetails, error) {
+	normalizedConversationID, err := validateResourceID("conversation ID", conversationID)
+	if err != nil {
+		return ConversationDetails{}, err
+	}
+
+	var out ConversationDetails
+	err = c.doJSON(ctx, http.MethodPatch, "/api/conversations/"+url.PathEscape(normalizedConversationID), map[string]string{
+		"title": strings.TrimSpace(title),
+	}, &out)
 	return out, err
 }
 
@@ -594,6 +633,7 @@ func (c *Client) doJSON(ctx context.Context, method, requestPath string, in, out
 // UserProfile is the safe user projection from API responses.
 type UserProfile struct {
 	ID        string    `json:"id"`
+	AccountID string    `json:"account_id"`
 	Username  string    `json:"username"`
 	CreatedAt time.Time `json:"created_at"`
 }
@@ -614,6 +654,7 @@ type Conversation struct {
 	ID           string    `json:"id"`
 	ParticipantA string    `json:"participant_a"`
 	ParticipantB string    `json:"participant_b"`
+	Title        string    `json:"title,omitempty"`
 	CreatedAt    time.Time `json:"created_at"`
 }
 

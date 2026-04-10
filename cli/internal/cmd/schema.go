@@ -353,8 +353,13 @@ func childNames(command *cobra.Command) []string {
 }
 
 func schemaRegistry() map[string]commandSchemaDescriptor {
+	accountIDArg := parameterMetadata{
+		Description: "Account ID used for authentication",
+		Pattern:     `^[A-Za-z0-9._-]{3,32}$`,
+		Constraints: []string{"must not contain control characters"},
+	}
 	usernameArg := parameterMetadata{
-		Description: "Username accepted by the Agent Message server",
+		Description: "Public username shown to other users",
 		Pattern:     `^[A-Za-z0-9._-]{3,32}$`,
 		Constraints: []string{"must not contain control characters"},
 	}
@@ -451,13 +456,13 @@ func schemaRegistry() map[string]commandSchemaDescriptor {
 			Prerequisites: []string{"configured_server_url"},
 			OutputFormats: []string{"text", "json"},
 			Notes: []string{
-				"Interactive command that reads username and password from stdin prompts.",
+				"Interactive command that reads account ID and password from stdin prompts.",
 			},
 		},
 		"agent-message register": {
 			Arguments: map[string]parameterMetadata{
-				"username": usernameArg,
-				"password": {Description: "Password or PIN string sent to the auth API"},
+				"account-id": accountIDArg,
+				"password":   {Description: "Password or PIN string sent to the auth API"},
 			},
 			Flags: map[string]parameterMetadata{
 				"payload":       {Description: "Inline raw JSON payload matching the register request body"},
@@ -468,21 +473,21 @@ func schemaRegistry() map[string]commandSchemaDescriptor {
 			InputModes: []commandInputMode{
 				{
 					Name:        "positional_fields",
-					Description: "Provide username and password as positional arguments",
-					Conditions:  []string{"requires `<username> <password>`"},
+					Description: "Provide account ID and password as positional arguments",
+					Conditions:  []string{"requires `<account-id> <password>`"},
 					RequestShape: shapePtr(requestObjectShape("Register request body", map[string]schemaValueShape{
-						"username": stringShape("Username accepted by the server", withPattern(`^[A-Za-z0-9._-]{3,32}$`)),
-						"password": stringShape("Password or PIN string"),
-					}, "username", "password")),
+						"account_id": stringShape("Account ID used for authentication", withPattern(`^[A-Za-z0-9._-]{3,32}$`)),
+						"password":   stringShape("Password or PIN string"),
+					}, "account_id", "password")),
 				},
 				{
 					Name:        "raw_payload",
 					Description: "Provide the register request body directly as JSON",
 					Conditions:  []string{"choose only one of --payload, --payload-file, or --payload-stdin", "no positional args are allowed in this mode"},
 					RequestShape: shapePtr(requestObjectShape("Register request body", map[string]schemaValueShape{
-						"username": stringShape("Username accepted by the server", withPattern(`^[A-Za-z0-9._-]{3,32}$`)),
-						"password": stringShape("Password or PIN string"),
-					}, "username", "password")),
+						"account_id": stringShape("Account ID used for authentication", withPattern(`^[A-Za-z0-9._-]{3,32}$`)),
+						"password":   stringShape("Password or PIN string"),
+					}, "account_id", "password")),
 				},
 			},
 			RequestShapes: []commandRequestShape{
@@ -491,21 +496,24 @@ func schemaRegistry() map[string]commandSchemaDescriptor {
 					ContentType: "application/json",
 					Description: "JSON body sent to POST /api/auth/register",
 					Shape: objectShape("Register request body", map[string]schemaValueShape{
-						"username": stringShape("Username accepted by the server", withPattern(`^[A-Za-z0-9._-]{3,32}$`)),
-						"password": stringShape("Password or PIN string"),
-					}, "username", "password"),
+						"account_id": stringShape("Account ID used for authentication", withPattern(`^[A-Za-z0-9._-]{3,32}$`)),
+						"password":   stringShape("Password or PIN string"),
+					}, "account_id", "password"),
 				},
 			},
 			OutputFormats: []string{"text", "json"},
 			Examples: []string{
 				"agent-message register alice secret123",
-				"agent-message register --payload '{\"username\":\"alice\",\"password\":\"secret123\"}'",
+				"agent-message register --payload '{\"account_id\":\"alice\",\"password\":\"secret123\"}'",
+			},
+			Notes: []string{
+				"The server currently defaults the initial public username to the same value as the account ID.",
 			},
 		},
 		"agent-message login": {
 			Arguments: map[string]parameterMetadata{
-				"username": usernameArg,
-				"password": {Description: "Password or PIN string sent to the auth API"},
+				"account-id": accountIDArg,
+				"password":   {Description: "Password or PIN string sent to the auth API"},
 			},
 			Flags: map[string]parameterMetadata{
 				"payload":       {Description: "Inline raw JSON payload matching the login request body"},
@@ -516,21 +524,21 @@ func schemaRegistry() map[string]commandSchemaDescriptor {
 			InputModes: []commandInputMode{
 				{
 					Name:        "positional_fields",
-					Description: "Provide username and password as positional arguments",
-					Conditions:  []string{"requires `<username> <password>`"},
+					Description: "Provide account ID and password as positional arguments",
+					Conditions:  []string{"requires `<account-id> <password>`"},
 					RequestShape: shapePtr(requestObjectShape("Login request body", map[string]schemaValueShape{
-						"username": stringShape("Username accepted by the server", withPattern(`^[A-Za-z0-9._-]{3,32}$`)),
-						"password": stringShape("Password or PIN string"),
-					}, "username", "password")),
+						"account_id": stringShape("Account ID used for authentication", withPattern(`^[A-Za-z0-9._-]{3,32}$`)),
+						"password":   stringShape("Password or PIN string"),
+					}, "account_id", "password")),
 				},
 				{
 					Name:        "raw_payload",
 					Description: "Provide the login request body directly as JSON",
 					Conditions:  []string{"choose only one of --payload, --payload-file, or --payload-stdin", "no positional args are allowed in this mode"},
 					RequestShape: shapePtr(requestObjectShape("Login request body", map[string]schemaValueShape{
-						"username": stringShape("Username accepted by the server", withPattern(`^[A-Za-z0-9._-]{3,32}$`)),
-						"password": stringShape("Password or PIN string"),
-					}, "username", "password")),
+						"account_id": stringShape("Account ID used for authentication", withPattern(`^[A-Za-z0-9._-]{3,32}$`)),
+						"password":   stringShape("Password or PIN string"),
+					}, "account_id", "password")),
 				},
 			},
 			RequestShapes: []commandRequestShape{
@@ -539,9 +547,9 @@ func schemaRegistry() map[string]commandSchemaDescriptor {
 					ContentType: "application/json",
 					Description: "JSON body sent to POST /api/auth/login",
 					Shape: objectShape("Login request body", map[string]schemaValueShape{
-						"username": stringShape("Username accepted by the server", withPattern(`^[A-Za-z0-9._-]{3,32}$`)),
-						"password": stringShape("Password or PIN string"),
-					}, "username", "password"),
+						"account_id": stringShape("Account ID used for authentication", withPattern(`^[A-Za-z0-9._-]{3,32}$`)),
+						"password":   stringShape("Password or PIN string"),
+					}, "account_id", "password"),
 				},
 			},
 			OutputFormats: []string{"text", "json"},
@@ -557,6 +565,52 @@ func schemaRegistry() map[string]commandSchemaDescriptor {
 		"agent-message whoami": {
 			Prerequisites: []string{"logged_in"},
 			OutputFormats: []string{"text", "json"},
+		},
+		"agent-message username": {},
+		"agent-message username set": {
+			Arguments: map[string]parameterMetadata{
+				"username": usernameArg,
+			},
+			Prerequisites: []string{"logged_in"},
+			OutputFormats: []string{"text", "json"},
+			Examples: []string{
+				"agent-message username set jay",
+			},
+		},
+		"agent-message username clear": {
+			Prerequisites: []string{"logged_in"},
+			OutputFormats: []string{"text", "json"},
+			Examples: []string{
+				"agent-message username clear",
+			},
+			Notes: []string{
+				"Clearing the username falls back to the account ID for display.",
+			},
+		},
+		"agent-message title": {},
+		"agent-message title set": {
+			Arguments: map[string]parameterMetadata{
+				"username": usernameArg,
+				"title": {
+					Description: "Conversation title to store for this DM",
+					Constraints: []string{"empty titles are rejected by this subcommand; use `title clear` to remove one", "maximum 120 characters after trimming"},
+				},
+			},
+			Prerequisites: []string{"logged_in"},
+			OutputFormats: []string{"text", "json"},
+			Examples: []string{
+				"agent-message title set jay Frontend polish",
+			},
+		},
+		"agent-message title clear": {
+			Arguments: map[string]parameterMetadata{
+				"username": usernameArg,
+			},
+			Prerequisites: []string{"logged_in"},
+			OutputFormats: []string{"text", "json"},
+			Examples: []string{
+				"agent-message title clear jay",
+			},
 		},
 		"agent-message ls": {
 			Prerequisites: []string{"logged_in"},

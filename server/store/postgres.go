@@ -84,22 +84,45 @@ func rebindPostgresPlaceholders(query string) string {
 }
 
 func (s *PostgresStore) CreateUser(ctx context.Context, params models.CreateUserParams) (models.User, error) {
+	accountID := strings.TrimSpace(params.AccountID)
+	if accountID == "" {
+		accountID = strings.TrimSpace(params.Username)
+	}
+
 	const query = `
-		INSERT INTO users (id, username, password_hash, created_at)
-		VALUES (?, ?, ?, ?)
+		INSERT INTO users (id, account_id, username, password_hash, created_at)
+		VALUES (?, ?, ?, ?, ?)
 	`
-	_, err := s.execContext(ctx, query, params.ID, params.Username, params.PasswordHash, formatTime(params.CreatedAt))
+	_, err := s.execContext(
+		ctx,
+		query,
+		params.ID,
+		accountID,
+		nullIfBlank(params.Username),
+		params.PasswordHash,
+		formatTime(params.CreatedAt),
+	)
 	if err != nil {
 		return models.User{}, fmt.Errorf("insert user: %w", err)
 	}
 	return s.GetUserByID(ctx, params.ID)
 }
 
+func (s *PostgresStore) GetUserByAccountID(ctx context.Context, accountID string) (models.User, error) {
+	const query = `
+		SELECT id, account_id, username, password_hash, created_at
+		FROM users
+		WHERE account_id = ?
+	`
+
+	return s.getUserByQuery(ctx, query, accountID)
+}
+
 func (s *PostgresStore) GetUserByUsername(ctx context.Context, username string) (models.User, error) {
 	const query = `
-		SELECT id, username, password_hash, created_at
+		SELECT id, account_id, username, password_hash, created_at
 		FROM users
-		WHERE username = ?
+		WHERE COALESCE(NULLIF(username, ''), account_id) = ?
 	`
 
 	return s.getUserByQuery(ctx, query, username)
@@ -107,12 +130,32 @@ func (s *PostgresStore) GetUserByUsername(ctx context.Context, username string) 
 
 func (s *PostgresStore) GetUserByID(ctx context.Context, userID string) (models.User, error) {
 	const query = `
-		SELECT id, username, password_hash, created_at
+		SELECT id, account_id, username, password_hash, created_at
 		FROM users
 		WHERE id = ?
 	`
 
 	return s.getUserByQuery(ctx, query, userID)
+}
+
+func (s *PostgresStore) UpdateUsername(ctx context.Context, params models.UpdateUsernameParams) (models.User, error) {
+	const query = `
+		UPDATE users
+		SET username = ?
+		WHERE id = ?
+	`
+	res, err := s.execContext(ctx, query, nullIfBlank(params.Username), params.UserID)
+	if err != nil {
+		return models.User{}, fmt.Errorf("update username: %w", err)
+	}
+	rowsAffected, err := res.RowsAffected()
+	if err != nil {
+		return models.User{}, fmt.Errorf("update username rows affected: %w", err)
+	}
+	if rowsAffected == 0 {
+		return models.User{}, ErrNotFound
+	}
+	return s.GetUserByID(ctx, params.UserID)
 }
 
 func (s *PostgresStore) CreateSession(ctx context.Context, params models.CreateSessionParams) (models.Session, error) {
@@ -176,7 +219,7 @@ func (s *PostgresStore) DeleteSessionByToken(ctx context.Context, token string) 
 
 func (s *PostgresStore) GetUserBySessionToken(ctx context.Context, token string) (models.User, error) {
 	const query = `
-		SELECT u.id, u.username, u.password_hash, u.created_at
+		SELECT u.id, u.account_id, u.username, u.password_hash, u.created_at
 		FROM users u
 		INNER JOIN sessions s ON s.user_id = u.id
 		WHERE s.token = ?
@@ -264,10 +307,10 @@ func (s *PostgresStore) SearchUsersByUsername(ctx context.Context, params models
 
 	like := strings.TrimSpace(params.Query) + "%"
 	const query = `
-		SELECT id, username, password_hash, created_at
+		SELECT id, account_id, username, password_hash, created_at
 		FROM users
-		WHERE username ILIKE ?
-		ORDER BY username ASC
+		WHERE COALESCE(NULLIF(username, ''), account_id) ILIKE ?
+		ORDER BY COALESCE(NULLIF(username, ''), account_id) ASC
 		LIMIT ?
 	`
 
@@ -281,7 +324,7 @@ func (s *PostgresStore) SearchUsersByUsername(ctx context.Context, params models
 	for rows.Next() {
 		var user models.User
 		var createdAtText string
-		if err := rows.Scan(&user.ID, &user.Username, &user.PasswordHash, &createdAtText); err != nil {
+		if err := rows.Scan(&user.ID, &user.AccountID, &user.Username, &user.PasswordHash, &createdAtText); err != nil {
 			return nil, fmt.Errorf("scan searched user: %w", err)
 		}
 		createdAt, err := parseStoredTime(createdAtText)
@@ -307,8 +350,8 @@ func (s *PostgresStore) ListConversationsByUser(ctx context.Context, params mode
 
 	const query = `
 		SELECT
-			c.id, c.participant_a, c.participant_b, c.created_at,
-			ou.id, ou.username, ou.created_at,
+			c.id, c.participant_a, c.participant_b, c.title, c.created_at,
+			ou.id, ou.account_id, ou.username, ou.created_at,
 			m.id, m.conversation_id, m.sender_id, m.content, m.kind, m.json_render_spec, m.attachment_url, m.attachment_type, m.edited, m.deleted, m.created_at, m.updated_at,
 			sm.content
 		FROM conversations c
@@ -341,6 +384,7 @@ func (s *PostgresStore) ListConversationsByUser(ctx context.Context, params mode
 	summaries := make([]models.ConversationSummary, 0, limit)
 	for rows.Next() {
 		var (
+			conversationTitle         sql.NullString
 			conversationCreatedAtText string
 			otherUserCreatedAtText    string
 			messageID                 sql.NullString
@@ -363,8 +407,10 @@ func (s *PostgresStore) ListConversationsByUser(ctx context.Context, params mode
 			&summary.Conversation.ID,
 			&summary.Conversation.ParticipantA,
 			&summary.Conversation.ParticipantB,
+			&conversationTitle,
 			&conversationCreatedAtText,
 			&summary.OtherUser.ID,
+			&summary.OtherUser.AccountID,
 			&summary.OtherUser.Username,
 			&otherUserCreatedAtText,
 			&messageID,
@@ -388,6 +434,9 @@ func (s *PostgresStore) ListConversationsByUser(ctx context.Context, params mode
 		if err != nil {
 			return nil, fmt.Errorf("parse conversation created_at: %w", err)
 		}
+		if conversationTitle.Valid {
+			summary.Conversation.Title = conversationTitle.String
+		}
 		summary.Conversation.CreatedAt = conversationCreatedAt
 
 		otherUserCreatedAt, err := parseStoredTime(otherUserCreatedAtText)
@@ -395,6 +444,7 @@ func (s *PostgresStore) ListConversationsByUser(ctx context.Context, params mode
 			return nil, fmt.Errorf("parse other user created_at: %w", err)
 		}
 		summary.OtherUser.CreatedAt = otherUserCreatedAt
+		summary.OtherUser.ApplyUsernameFallback()
 
 		if messageID.Valid {
 			message, err := nullableMessageToModel(
@@ -493,12 +543,37 @@ func (s *PostgresStore) GetOrCreateDirectConversation(ctx context.Context, param
 	return conversation, nil
 }
 
+func (s *PostgresStore) UpdateConversationTitle(ctx context.Context, params models.UpdateConversationTitleParams) (models.Conversation, error) {
+	if err := s.ensureConversationParticipant(ctx, params.ConversationID, params.ActorUserID); err != nil {
+		return models.Conversation{}, err
+	}
+
+	const query = `
+		UPDATE conversations
+		SET title = ?
+		WHERE id = ?
+	`
+	res, err := s.execContext(ctx, query, nullIfBlank(params.Title), params.ConversationID)
+	if err != nil {
+		return models.Conversation{}, fmt.Errorf("update conversation title: %w", err)
+	}
+	rowsAffected, err := res.RowsAffected()
+	if err != nil {
+		return models.Conversation{}, fmt.Errorf("update conversation title rows affected: %w", err)
+	}
+	if rowsAffected == 0 {
+		return models.Conversation{}, ErrNotFound
+	}
+
+	return s.getConversationByID(ctx, params.ConversationID)
+}
+
 func (s *PostgresStore) GetConversationByIDForUser(ctx context.Context, params models.GetConversationForUserParams) (models.ConversationDetails, error) {
 	const query = `
 		SELECT
-			c.id, c.participant_a, c.participant_b, c.created_at,
-			ua.id, ua.username, ua.created_at,
-			ub.id, ub.username, ub.created_at
+			c.id, c.participant_a, c.participant_b, c.title, c.created_at,
+			ua.id, ua.account_id, ua.username, ua.created_at,
+			ub.id, ub.account_id, ub.username, ub.created_at
 		FROM conversations c
 		INNER JOIN users ua ON ua.id = c.participant_a
 		INNER JOIN users ub ON ub.id = c.participant_b
@@ -508,6 +583,7 @@ func (s *PostgresStore) GetConversationByIDForUser(ctx context.Context, params m
 	row := s.queryRowContext(ctx, query, params.ConversationID)
 
 	var (
+		conversationTitle         sql.NullString
 		details                   models.ConversationDetails
 		conversationCreatedAtText string
 		participantACreatedAtText string
@@ -518,11 +594,14 @@ func (s *PostgresStore) GetConversationByIDForUser(ctx context.Context, params m
 		&details.Conversation.ID,
 		&details.Conversation.ParticipantA,
 		&details.Conversation.ParticipantB,
+		&conversationTitle,
 		&conversationCreatedAtText,
 		&details.ParticipantA.ID,
+		&details.ParticipantA.AccountID,
 		&details.ParticipantA.Username,
 		&participantACreatedAtText,
 		&details.ParticipantB.ID,
+		&details.ParticipantB.AccountID,
 		&details.ParticipantB.Username,
 		&participantBCreatedAtText,
 	); err != nil {
@@ -534,6 +613,9 @@ func (s *PostgresStore) GetConversationByIDForUser(ctx context.Context, params m
 
 	if params.UserID != details.Conversation.ParticipantA && params.UserID != details.Conversation.ParticipantB {
 		return models.ConversationDetails{}, ErrForbidden
+	}
+	if conversationTitle.Valid {
+		details.Conversation.Title = conversationTitle.String
 	}
 
 	conversationCreatedAt, err := parseStoredTime(conversationCreatedAtText)
@@ -553,6 +635,8 @@ func (s *PostgresStore) GetConversationByIDForUser(ctx context.Context, params m
 		return models.ConversationDetails{}, fmt.Errorf("parse participant_b created_at: %w", err)
 	}
 	details.ParticipantB.CreatedAt = participantBCreatedAt
+	details.ParticipantA.ApplyUsernameFallback()
+	details.ParticipantB.ApplyUsernameFallback()
 
 	return details, nil
 }
@@ -589,7 +673,7 @@ func (s *PostgresStore) ListMessagesByConversation(ctx context.Context, params m
 	query := `
 		SELECT
 			m.id, m.conversation_id, m.sender_id, m.content, m.kind, m.json_render_spec, m.attachment_url, m.attachment_type, m.edited, m.deleted, m.created_at, m.updated_at,
-			u.id, u.username, u.created_at
+			u.id, u.account_id, u.username, u.created_at
 		FROM messages m
 		INNER JOIN users u ON u.id = m.sender_id
 		WHERE m.conversation_id = ?
@@ -645,6 +729,7 @@ func (s *PostgresStore) ListMessagesByConversation(ctx context.Context, params m
 			&createdAtText,
 			&updatedAtText,
 			&details.Sender.ID,
+			&details.Sender.AccountID,
 			&details.Sender.Username,
 			&senderCreatedAtText,
 		); err != nil {
@@ -683,6 +768,7 @@ func (s *PostgresStore) ListMessagesByConversation(ctx context.Context, params m
 			return nil, fmt.Errorf("parse message sender created_at: %w", err)
 		}
 		details.Sender.CreatedAt = senderCreatedAt
+		details.Sender.ApplyUsernameFallback()
 
 		messages = append(messages, details)
 	}
@@ -994,7 +1080,7 @@ func (s *PostgresStore) getUserByQuery(ctx context.Context, query string, arg st
 
 	var user models.User
 	var createdAtText string
-	if err := row.Scan(&user.ID, &user.Username, &user.PasswordHash, &createdAtText); err != nil {
+	if err := row.Scan(&user.ID, &user.AccountID, &user.Username, &user.PasswordHash, &createdAtText); err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			return models.User{}, ErrNotFound
 		}
@@ -1093,7 +1179,7 @@ func (s *PostgresStore) ensureConversationParticipant(ctx context.Context, conve
 
 func (s *PostgresStore) getConversationByID(ctx context.Context, conversationID string) (models.Conversation, error) {
 	return getConversationByIDQueryPG(ctx, s.queryRowContext(ctx, `
-		SELECT id, participant_a, participant_b, created_at
+		SELECT id, participant_a, participant_b, title, created_at
 		FROM conversations
 		WHERE id = ?
 	`, conversationID))
@@ -1101,7 +1187,7 @@ func (s *PostgresStore) getConversationByID(ctx context.Context, conversationID 
 
 func getConversationByIDTxPG(ctx context.Context, tx *sql.Tx, conversationID string) (models.Conversation, error) {
 	return getConversationByIDQueryPG(ctx, txQueryRowContextPG(ctx, tx, `
-		SELECT id, participant_a, participant_b, created_at
+		SELECT id, participant_a, participant_b, title, created_at
 		FROM conversations
 		WHERE id = ?
 	`, conversationID))
@@ -1141,6 +1227,7 @@ func deleteReactionByIDTxPG(ctx context.Context, tx *sql.Tx, reactionID string) 
 
 func getConversationByIDQueryPG(_ context.Context, row *sql.Row) (models.Conversation, error) {
 	var (
+		title         sql.NullString
 		conversation  models.Conversation
 		createdAtText string
 	)
@@ -1148,6 +1235,7 @@ func getConversationByIDQueryPG(_ context.Context, row *sql.Row) (models.Convers
 		&conversation.ID,
 		&conversation.ParticipantA,
 		&conversation.ParticipantB,
+		&title,
 		&createdAtText,
 	); err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
@@ -1160,13 +1248,16 @@ func getConversationByIDQueryPG(_ context.Context, row *sql.Row) (models.Convers
 	if err != nil {
 		return models.Conversation{}, fmt.Errorf("parse conversation created_at: %w", err)
 	}
+	if title.Valid {
+		conversation.Title = title.String
+	}
 	conversation.CreatedAt = createdAt
 	return conversation, nil
 }
 
 func getConversationByParticipantsTxPG(ctx context.Context, tx *sql.Tx, participantA, participantB string) (models.Conversation, error) {
 	return getConversationByIDQueryPG(ctx, txQueryRowContextPG(ctx, tx, `
-		SELECT id, participant_a, participant_b, created_at
+		SELECT id, participant_a, participant_b, title, created_at
 		FROM conversations
 		WHERE participant_a = ? AND participant_b = ?
 	`, participantA, participantB))

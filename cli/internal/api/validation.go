@@ -22,18 +22,26 @@ func validateServerURLInput(raw string) (string, error) {
 	return trimmed, nil
 }
 
-func validateUsername(username string) (string, error) {
-	trimmed := strings.TrimSpace(username)
+func validateIdentifier(label, value string) (string, error) {
+	trimmed := strings.TrimSpace(value)
 	if trimmed == "" {
-		return "", errors.New("username is required")
+		return "", fmt.Errorf("%s is required", label)
 	}
 	if hasControlCharacters(trimmed) {
-		return "", errors.New("username must not contain control characters")
+		return "", fmt.Errorf("%s must not contain control characters", label)
 	}
 	if !usernamePattern.MatchString(trimmed) {
-		return "", errors.New("username must be 3-32 chars and use only letters, numbers, dot, underscore, or hyphen")
+		return "", fmt.Errorf("%s must be 3-32 chars and use only letters, numbers, dot, underscore, or hyphen", label)
 	}
 	return trimmed, nil
+}
+
+func validateUsername(username string) (string, error) {
+	return validateIdentifier("username", username)
+}
+
+func validateAccountID(accountID string) (string, error) {
+	return validateIdentifier("account_id", accountID)
 }
 
 func validateResourceID(label, value string) (string, error) {

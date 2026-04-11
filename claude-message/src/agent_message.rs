@@ -118,6 +118,10 @@ impl AgentMessageClient {
     }
 
     pub(crate) async fn watch_messages(&self, username: &str) -> Result<MessageWatch> {
+        let server_url = self
+            .server_url()
+            .await
+            .context("read agent-message server_url for watch")?;
         let mut command = Command::new(&self.binary);
         if let Some(profile) = &self.from_profile {
             command.args(["--from", profile]);
@@ -141,7 +145,7 @@ impl AgentMessageClient {
             .take()
             .context("capture agent-message watch stderr")?;
         let (messages_tx, messages_rx) = mpsc::unbounded_channel();
-        spawn_watch_stdout_pump(stdout, messages_tx, self.logger.clone());
+        spawn_watch_stdout_pump(stdout, messages_tx, self.logger.clone(), server_url);
         spawn_watch_stderr_pump(stderr, self.logger.clone());
 
         Ok(MessageWatch {
@@ -251,7 +255,7 @@ fn parse_sent_message_id(output: &str) -> Result<String> {
     Ok(id.to_string())
 }
 
-fn parse_watch_event(line: &str) -> Result<Option<Message>> {
+fn parse_watch_event(line: &str, server_url: &str) -> Result<Option<Message>> {
     let trimmed = line.trim();
     if trimmed.is_empty() {
         return Ok(None);
@@ -267,7 +271,7 @@ fn parse_watch_event(line: &str) -> Result<Option<Message>> {
     Ok(Some(Message {
         id: message.id.trim().to_string(),
         sender_username: message.sender.username.trim().to_string(),
-        text: watch_message_text(&message),
+        text: watch_message_text(&message, server_url),
     }))
 }
 
@@ -285,6 +289,7 @@ struct WatchJSONMessage {
     content: Option<String>,
     kind: String,
     attachment_url: Option<String>,
+    attachment_type: Option<String>,
     deleted: bool,
 }
 
@@ -293,38 +298,73 @@ struct WatchJSONSender {
     username: String,
 }
 
-fn watch_message_text(message: &WatchJSONMessage) -> String {
+fn watch_message_text(message: &WatchJSONMessage, server_url: &str) -> String {
     if message.deleted {
         return "deleted message".to_string();
     }
     if message.kind.trim() == "json_render" {
         return "[json-render]".to_string();
     }
-    if let Some(content) = &message.content {
-        let content = content.trim();
-        if !content.is_empty() {
-            return content.to_string();
-        }
+    let content = message
+        .content
+        .as_deref()
+        .map(str::trim)
+        .filter(|value| !value.is_empty());
+    let attachment_url = message
+        .attachment_url
+        .as_deref()
+        .map(str::trim)
+        .filter(|value| !value.is_empty())
+        .map(|value| normalize_attachment_url(server_url, value));
+
+    match (content, attachment_url) {
+        (Some(content), Some(attachment_url)) => format!(
+            "{content}\n\nAttached {}: {attachment_url}",
+            attachment_label(message.attachment_type.as_deref())
+        ),
+        (Some(content), None) => content.to_string(),
+        (None, Some(attachment_url)) => format!(
+            "Attached {}: {attachment_url}",
+            attachment_label(message.attachment_type.as_deref())
+        ),
+        (None, None) => String::new(),
     }
-    if let Some(attachment_url) = &message.attachment_url {
-        let attachment_url = attachment_url.trim();
-        if !attachment_url.is_empty() {
-            return attachment_url.to_string();
-        }
+}
+
+fn attachment_label(attachment_type: Option<&str>) -> &'static str {
+    match attachment_type
+        .map(str::trim)
+        .filter(|value| !value.is_empty())
+    {
+        Some("image") => "image",
+        Some("file") => "file",
+        _ => "attachment",
     }
-    String::new()
+}
+
+fn normalize_attachment_url(server_url: &str, attachment_url: &str) -> String {
+    if attachment_url.starts_with("http://") || attachment_url.starts_with("https://") {
+        return attachment_url.to_string();
+    }
+    let base = server_url.trim_end_matches('/');
+    let path = attachment_url.trim_start_matches('/');
+    if base.is_empty() || path.is_empty() {
+        return attachment_url.to_string();
+    }
+    format!("{base}/{path}")
 }
 
 fn spawn_watch_stdout_pump(
     stdout: ChildStdout,
     messages_tx: mpsc::UnboundedSender<Message>,
     logger: LogUi,
+    server_url: String,
 ) {
     tokio::spawn(async move {
         let mut lines = BufReader::new(stdout).lines();
         loop {
             match lines.next_line().await {
-                Ok(Some(line)) => match parse_watch_event(&line) {
+                Ok(Some(line)) => match parse_watch_event(&line, &server_url) {
                     Ok(Some(message)) => {
                         if messages_tx.send(message).is_err() {
                             break;

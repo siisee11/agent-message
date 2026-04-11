@@ -8,6 +8,7 @@ use serde_json::Value;
 use tokio::io::{AsyncBufReadExt, BufReader};
 use tokio::process::{Child, ChildStderr, ChildStdout, Command};
 use tokio::sync::mpsc;
+use url::Url;
 
 use crate::log_ui::LogUi;
 
@@ -149,6 +150,10 @@ impl AgentMessageClient {
     }
 
     pub(crate) async fn watch_messages(&self, username: &str) -> Result<MessageWatch> {
+        let server_url = self
+            .server_url()
+            .await
+            .context("read agent-message server_url for watch")?;
         let mut command = self.build_command();
         command
             .args(["watch", username, "--json"])
@@ -169,7 +174,7 @@ impl AgentMessageClient {
             .take()
             .context("capture agent-message watch stderr")?;
         let (messages_tx, messages_rx) = mpsc::unbounded_channel();
-        spawn_watch_stdout_pump(stdout, messages_tx, self.logger.clone());
+        spawn_watch_stdout_pump(stdout, messages_tx, self.logger.clone(), server_url);
         spawn_watch_stderr_pump(stderr, self.logger.clone());
 
         Ok(MessageWatch {
@@ -377,7 +382,7 @@ fn parse_sent_message_id(output: &str) -> Result<String> {
     Ok(id.to_string())
 }
 
-fn parse_watch_event(line: &str) -> Result<Option<Message>> {
+fn parse_watch_event(line: &str, server_url: &str) -> Result<Option<Message>> {
     let trimmed = line.trim();
     if trimmed.is_empty() {
         return Ok(None);
@@ -394,7 +399,7 @@ fn parse_watch_event(line: &str) -> Result<Option<Message>> {
         id: message.id.trim().to_string(),
         sender_username: message.sender.username.trim().to_string(),
         kind: message.kind.trim().to_string(),
-        text: watch_message_text(&message),
+        text: watch_message_text(&message, server_url),
     }))
 }
 
@@ -412,6 +417,7 @@ struct WatchJSONMessage {
     content: Option<String>,
     kind: String,
     attachment_url: Option<String>,
+    attachment_type: Option<String>,
     deleted: bool,
 }
 
@@ -420,32 +426,65 @@ struct WatchJSONSender {
     username: String,
 }
 
-fn watch_message_text(message: &WatchJSONMessage) -> String {
+fn watch_message_text(message: &WatchJSONMessage, server_url: &str) -> String {
     if message.deleted {
         return "deleted message".to_string();
     }
     if message.kind.trim() == "json_render" {
         return "[json-render]".to_string();
     }
-    if let Some(content) = &message.content {
-        let content = content.trim();
-        if !content.is_empty() {
-            return content.to_string();
-        }
+    let content = message
+        .content
+        .as_deref()
+        .map(str::trim)
+        .filter(|value| !value.is_empty());
+    let attachment_url = message
+        .attachment_url
+        .as_deref()
+        .map(str::trim)
+        .filter(|value| !value.is_empty())
+        .map(|value| normalize_attachment_url(server_url, value));
+
+    match (content, attachment_url) {
+        (Some(content), Some(attachment_url)) => format!(
+            "{content}\n\nAttached {}: {attachment_url}",
+            attachment_label(message.attachment_type.as_deref())
+        ),
+        (Some(content), None) => content.to_string(),
+        (None, Some(attachment_url)) => format!(
+            "Attached {}: {attachment_url}",
+            attachment_label(message.attachment_type.as_deref())
+        ),
+        (None, None) => String::new(),
     }
-    if let Some(attachment_url) = &message.attachment_url {
-        let attachment_url = attachment_url.trim();
-        if !attachment_url.is_empty() {
-            return attachment_url.to_string();
-        }
+}
+
+fn attachment_label(attachment_type: Option<&str>) -> &'static str {
+    match attachment_type
+        .map(str::trim)
+        .filter(|value| !value.is_empty())
+    {
+        Some("image") => "image",
+        Some("file") => "file",
+        _ => "attachment",
     }
-    String::new()
+}
+
+fn normalize_attachment_url(server_url: &str, attachment_url: &str) -> String {
+    let Ok(base_url) = Url::parse(server_url) else {
+        return attachment_url.to_string();
+    };
+    base_url
+        .join(attachment_url)
+        .map(|value| value.to_string())
+        .unwrap_or_else(|_| attachment_url.to_string())
 }
 
 fn spawn_watch_stdout_pump(
     stdout: ChildStdout,
     messages_tx: mpsc::UnboundedSender<Message>,
     logger: LogUi,
+    server_url: String,
 ) {
     tokio::spawn(async move {
         let mut lines = BufReader::new(stdout).lines();
@@ -463,7 +502,7 @@ fn spawn_watch_stdout_pump(
                 }
             };
 
-            match parse_watch_event(&line) {
+            match parse_watch_event(&line, &server_url) {
                 Ok(Some(message)) => {
                     if messages_tx.send(message).is_err() {
                         break;
@@ -507,6 +546,7 @@ mod tests {
     fn parses_watch_text_message() {
         let parsed = parse_watch_event(
             r#"{"type":"message.new","conversation_id":"c-1","message":{"id":"m-123","conversation_id":"c-1","sender":{"id":"u-1","username":"jay"},"content":"hello world","kind":"text","edited":false,"deleted":false,"created_at":"2026-01-01T00:00:00Z","updated_at":"2026-01-01T00:00:00Z"}}"#,
+            "https://agent.example.test",
         )
         .expect("parse watch event")
         .expect("message event");
@@ -546,6 +586,7 @@ mod tests {
     fn parses_watch_json_render_message() {
         let parsed = parse_watch_event(
             r#"{"type":"message.new","conversation_id":"c-1","message":{"id":"m-124","conversation_id":"c-1","sender":{"id":"u-1","username":"jay"},"kind":"json_render","deleted":false,"created_at":"2026-01-01T00:00:00Z","updated_at":"2026-01-01T00:00:00Z"}}"#,
+            "https://agent.example.test",
         )
         .expect("parse watch event")
         .expect("message event");
@@ -554,6 +595,37 @@ mod tests {
         assert_eq!(parsed.sender_username, "jay");
         assert_eq!(parsed.kind, "json_render");
         assert_eq!(parsed.text, "[json-render]");
+    }
+
+    #[test]
+    fn parses_watch_message_with_text_and_attachment() {
+        let parsed = parse_watch_event(
+            r#"{"type":"message.new","conversation_id":"c-1","message":{"id":"m-125","conversation_id":"c-1","sender":{"id":"u-1","username":"jay"},"content":"look at this","kind":"text","attachment_url":"/static/uploads/diagram.png","attachment_type":"image","deleted":false,"created_at":"2026-01-01T00:00:00Z","updated_at":"2026-01-01T00:00:00Z"}}"#,
+            "https://agent.example.test/base",
+        )
+        .expect("parse watch event")
+        .expect("message event");
+
+        assert_eq!(parsed.id, "m-125");
+        assert_eq!(
+            parsed.text,
+            "look at this\n\nAttached image: https://agent.example.test/static/uploads/diagram.png"
+        );
+    }
+
+    #[test]
+    fn parses_watch_message_with_attachment_only() {
+        let parsed = parse_watch_event(
+            r#"{"type":"message.new","conversation_id":"c-1","message":{"id":"m-126","conversation_id":"c-1","sender":{"id":"u-1","username":"jay"},"kind":"text","attachment_url":"https://cdn.example.test/diagram.png","attachment_type":"image","deleted":false,"created_at":"2026-01-01T00:00:00Z","updated_at":"2026-01-01T00:00:00Z"}}"#,
+            "https://agent.example.test",
+        )
+        .expect("parse watch event")
+        .expect("message event");
+
+        assert_eq!(
+            parsed.text,
+            "Attached image: https://cdn.example.test/diagram.png"
+        );
     }
 
     #[test]

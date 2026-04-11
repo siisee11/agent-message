@@ -1,7 +1,6 @@
 import { useEffect } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { useAuth } from '../auth'
-import { ThemeToggleButton } from '../components/ThemeToggleButton'
 import { useDocumentSurface } from '../hooks'
 import { useTheme } from '../theme'
 import styles from './LandingPage.module.css'
@@ -109,7 +108,6 @@ export function LandingPage() {
         </Link>
 
         <div className={styles.navActions}>
-          <ThemeToggleButton />
           <Link className={styles.navLink} to={primaryHref}>
             {primaryLabel}
           </Link>

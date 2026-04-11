@@ -20,7 +20,6 @@ import { apiClient } from '../api/runtime'
 import { useAuth } from '../auth'
 import { ChatAvatar } from '../components/ChatAvatar'
 import { MessageJsonRender } from '../components/MessageJsonRender'
-import { ThemeToggleButton } from '../components/ThemeToggleButton'
 import {
   canDeleteMessageForUser,
   canEditMessageForUser,
@@ -29,7 +28,7 @@ import {
   MESSAGE_PREVIEW_DELETED,
   resolveMessageRenderContent,
 } from '../messages/messagePresentation'
-import { formatRealtimeStatusLabel, useRealtime } from '../realtime'
+import { useRealtime } from '../realtime'
 import { useTheme } from '../theme'
 import { useDocumentSurface } from '../hooks'
 import {
@@ -105,17 +104,14 @@ function formatMessageTimestamp(message: Message): string {
 }
 
 function getRealtimeStatusBadgeClass(status: ReturnType<typeof useRealtime>['status']): string {
-  if (status === 'open') {
-    return styles.headerStatusBadgeLive
-  }
   if (status === 'connecting') {
     return styles.headerStatusBadgeConnecting
   }
   return styles.headerStatusBadgeOffline
 }
 
-function getWatcherStatusBadgeClass(online: boolean): string {
-  return online ? styles.watcherStatusBadgeOnline : styles.watcherStatusBadgeOffline
+function getWatcherPresenceClass(online: boolean): string {
+  return `${styles.headerPresence} ${online ? styles.headerPresenceOnline : styles.headerPresenceOffline}`
 }
 
 function buildSelectedFileKey(file: File): string {
@@ -744,9 +740,6 @@ export function DmConversationPage() {
       : otherParticipant
         ? `@${otherParticipant.username}`
         : 'Conversation'
-  const headerStatus = conversationQuery.isError
-    ? resolveErrorMessage(conversationQuery.error, 'Failed to load conversation.')
-    : formatRealtimeStatusLabel(realtime.status)
   const watcherPresence = conversationQuery.data?.watcher_presence
   const watcherStatusLabel =
     conversationQuery.isError || !watcherPresence
@@ -754,11 +747,19 @@ export function DmConversationPage() {
       : watcherPresence.online
         ? 'Online'
         : 'Offline'
-  const realtimeStatusBadgeClassName = `${styles.headerStatusBadge} ${
-    conversationQuery.isError
-      ? styles.headerStatusBadgeError
-      : getRealtimeStatusBadgeClass(realtime.status)
-  }`
+  const showRealtimeStatusBadge = conversationQuery.isError || realtime.status !== 'open'
+  const realtimeStatusBadgeClassName = showRealtimeStatusBadge
+    ? `${styles.headerStatusBadge} ${
+        conversationQuery.isError
+          ? styles.headerStatusBadgeError
+          : getRealtimeStatusBadgeClass(realtime.status)
+      }`
+    : null
+  const realtimeStatusLabel = conversationQuery.isError
+    ? resolveErrorMessage(conversationQuery.error, 'Failed to load conversation.')
+    : realtime.status === 'connecting'
+      ? 'Connecting'
+      : 'Offline'
   const headerCwdValue = conversationQuery.isLoading
     ? 'loading...'
     : conversationQuery.isError
@@ -791,24 +792,30 @@ export function DmConversationPage() {
             <div className={styles.headerCopy}>
               <div className={styles.headerTitleRow}>
                 <h2 className={styles.title}>{headerTitle}</h2>
-                <span className={realtimeStatusBadgeClassName}>{headerStatus}</span>
-                {watcherStatusLabel ? (
-                  <span
-                    className={`${styles.watcherStatusBadge} ${getWatcherStatusBadgeClass(Boolean(watcherPresence?.online))}`}
-                  >
-                    {watcherStatusLabel}
-                  </span>
-                ) : null}
               </div>
+              {watcherStatusLabel || showRealtimeStatusBadge ? (
+                <div className={styles.headerStatusRow}>
+                  {watcherStatusLabel ? (
+                    <span className={getWatcherPresenceClass(Boolean(watcherPresence?.online))}>
+                      {watcherStatusLabel}
+                    </span>
+                  ) : null}
+                  {showRealtimeStatusBadge && realtimeStatusBadgeClassName ? (
+                    <span className={realtimeStatusBadgeClassName}>
+                      {realtime.status === 'connecting' && !conversationQuery.isError ? (
+                        <span aria-hidden="true" className={styles.headerStatusSpinner} />
+                      ) : null}
+                      <span>{realtimeStatusLabel}</span>
+                    </span>
+                  ) : null}
+                </div>
+              ) : null}
               <p className={styles.headerCwd} title={`cwd: ${headerCwdValue}`}>
                 {`cwd: ${headerCwdValue}`}
               </p>
               <p className={styles.headerHostname} title={`hostname: ${headerHostnameValue}`}>
                 {`hostname: ${headerHostnameValue}`}
               </p>
-            </div>
-            <div className={styles.headerActions}>
-              <ThemeToggleButton />
             </div>
           </div>
         </header>
@@ -851,11 +858,13 @@ export function DmConversationPage() {
                         <div className={`${styles.messageBubble} ${messageSurfaceClassName}`}>
                           <div className={`${styles.timelineMeta} ${timelineMetaClassName}`}>
                             <span className={styles.timelineMetaLeft}>
-                              <ChatAvatar
-                                className={styles.messageMetaAvatar}
-                                size="sm"
-                                username={details.sender.username}
-                              />
+                              {!isOwnMessage ? (
+                                <ChatAvatar
+                                  className={styles.messageMetaAvatar}
+                                  size="sm"
+                                  username={details.sender.username}
+                                />
+                              ) : null}
                               <span className={styles.sender}>{details.sender.username}</span>
                             </span>
                             <span className={styles.timelineMetaRight}>

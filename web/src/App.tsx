@@ -1,4 +1,4 @@
-import { Route, Routes } from 'react-router-dom'
+import { Route, Routes, useLocation } from 'react-router-dom'
 import { ChatShellPage } from './pages/ChatShellPage'
 import { DmConversationPage } from './pages/DmConversationPage'
 import { LandingPage } from './pages/LandingPage'
@@ -9,8 +9,11 @@ import { ProtectedRoute } from './routes'
 import styles from './App.module.css'
 
 export function App() {
+  const location = useLocation()
+  const isFixedShellRoute = location.pathname.startsWith('/app') || location.pathname.startsWith('/dm/')
+
   return (
-    <div className={styles.app}>
+    <div className={`${styles.app} ${isFixedShellRoute ? styles.appShell : styles.appDocument}`}>
       <RealtimeProvider>
         <Routes>
           <Route element={<LandingPage />} path="/" />

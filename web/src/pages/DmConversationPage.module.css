@@ -14,7 +14,7 @@
   height: 100%;
   min-height: 0;
   display: grid;
-  grid-template-rows: auto auto minmax(0, 1fr);
+  grid-template-rows: auto minmax(0, 1fr);
   overflow: hidden;
 }
 
@@ -38,13 +38,16 @@
 
 .headerAvatar {
   flex-shrink: 0;
+  width: 2.4rem;
+  height: 2.4rem;
+  align-self: center;
 }
 
 .headerCopy {
   min-width: 0;
   flex: 1;
   display: grid;
-  gap: 0;
+  gap: 0.2rem;
 }
 
 .headerTitleRow {
@@ -128,7 +131,7 @@
   align-items: center;
   gap: 0.55rem;
   min-width: 0;
-  padding: 0.8rem 1rem 0;
+  padding: 0;
   color: var(--text-tertiary);
   font-family: var(--font-display);
   font-size: 0.75rem;
@@ -655,10 +658,6 @@
       0.85rem
       0.85rem;
   }
-
-  .sessionMetaBar {
-    padding: 0 1rem 0;
-  }
 }
 
 @media (min-width: 768px) {
@@ -680,10 +679,6 @@
       1.5rem
       1.25rem
       1.5rem;
-  }
-
-  .sessionMetaBar {
-    padding: 0 1.5rem 0;
   }
 
   .messageBubbleOwnFull,

@@ -755,7 +755,7 @@ export function DmConversationPage() {
           <div className={styles.headerBar}>
             <ChatAvatar
               className={styles.headerAvatar}
-              size="lg"
+              size="sm"
               username={otherParticipant?.username ?? 'conversation'}
             />
             <div className={styles.headerCopy}>
@@ -767,16 +767,19 @@ export function DmConversationPage() {
                   </span>
                 ) : null}
               </div>
+              <div
+                className={styles.sessionMetaBar}
+                title={`cwd: ${headerCwdValue} | hostname: ${headerHostnameValue}`}
+              >
+                <span className={styles.sessionMetaLabel}>{`cwd: ${headerCwdValue}`}</span>
+                <span aria-hidden="true" className={styles.sessionMetaDivider}>
+                  /
+                </span>
+                <span className={styles.sessionMetaLabel}>{`hostname: ${headerHostnameValue}`}</span>
+              </div>
             </div>
           </div>
         </header>
-        <div className={styles.sessionMetaBar} title={`cwd: ${headerCwdValue} | hostname: ${headerHostnameValue}`}>
-          <span className={styles.sessionMetaLabel}>{`cwd: ${headerCwdValue}`}</span>
-          <span aria-hidden="true" className={styles.sessionMetaDivider}>
-            /
-          </span>
-          <span className={styles.sessionMetaLabel}>{`hostname: ${headerHostnameValue}`}</span>
-        </div>
 
         <section className={styles.timelineSection}>
           <div className={styles.timelineViewport} ref={timelineRef}>

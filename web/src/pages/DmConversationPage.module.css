@@ -33,6 +33,7 @@
   align-items: center;
   gap: 0.75rem;
   min-width: 0;
+  padding-right: 0;
 }
 
 .headerAvatar {
@@ -43,31 +44,16 @@
   min-width: 0;
   flex: 1;
   display: grid;
-  gap: 0.3rem;
+  gap: 0;
 }
 
 .headerTitleRow {
   display: flex;
   align-items: center;
+  gap: 0.6rem;
   min-width: 0;
 }
 
-.backButton {
-  min-width: 44px;
-  min-height: 44px;
-  padding: 0.6rem 0.75rem;
-  border: 1px solid var(--border-strong);
-  background: transparent;
-  color: var(--text-primary);
-  font-family: var(--font-display);
-  font-size: 0.875rem;
-  letter-spacing: 0.12em;
-  text-transform: uppercase;
-  cursor: pointer;
-  flex-shrink: 0;
-}
-
-.backButton:hover:not(:disabled),
 .editingCancelButton:hover:not(:disabled),
 .attachmentRemove:hover:not(:disabled),
 .contextMenuAction:hover:not(:disabled),
@@ -76,7 +62,6 @@
   background: var(--surface-emphasis);
 }
 
-.backButton:focus-visible,
 .messageActionsTrigger:focus-visible,
 .composerInput:focus-visible,
 .attachButton:focus-visible,
@@ -98,44 +83,6 @@
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-}
-
-.headerCwd,
-.headerHostname {
-  margin: 0;
-  min-width: 0;
-  color: var(--text-tertiary);
-  font-family: var(--font-display);
-  font-size: 0.75rem;
-  letter-spacing: 0.04em;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.headerStatusRow {
-  display: flex;
-  align-items: center;
-  flex-wrap: wrap;
-  gap: 0.5rem;
-  min-width: 0;
-}
-
-.headerStatusBadge {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.45rem;
-  min-height: 30px;
-  padding: 0.34rem 0.68rem;
-  border: 1px solid var(--status-badge-neutral-border);
-  border-radius: var(--status-badge-radius);
-  background: var(--status-badge-neutral-bg);
-  color: var(--status-badge-neutral-text);
-  font-family: var(--font-display);
-  font-size: 0.72rem;
-  font-weight: 600;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
 }
 
 .headerPresence {
@@ -176,41 +123,28 @@
   background: var(--status-badge-offline-dot);
 }
 
-.headerStatusBadgeConnecting {
-  border-color: var(--status-badge-connecting-border);
-  background: var(--status-badge-connecting-bg);
-  color: var(--status-badge-connecting-text);
+.sessionMetaBar {
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+  min-width: 0;
+  padding: 0.8rem 1rem 0;
+  color: var(--text-tertiary);
+  font-family: var(--font-display);
+  font-size: 0.75rem;
+  letter-spacing: 0.04em;
+  white-space: nowrap;
+  overflow: hidden;
 }
 
-.headerStatusBadgeOffline {
-  border-color: var(--status-badge-offline-border);
-  background: var(--status-badge-offline-bg);
-  color: var(--status-badge-offline-text);
+.sessionMetaLabel {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
-.headerStatusBadgeError {
-  border-color: var(--status-badge-error-border);
-  background: var(--status-badge-error-bg);
-  color: var(--status-badge-error-text);
-}
-
-.headerStatusSpinner {
-  width: 0.72rem;
-  height: 0.72rem;
-  border: 2px solid color-mix(in srgb, currentColor 24%, transparent);
-  border-top-color: currentColor;
-  border-radius: 999px;
+.sessionMetaDivider {
   flex: none;
-  animation: headerStatusSpin 0.8s linear infinite;
-}
-
-@keyframes headerStatusSpin {
-  from {
-    transform: rotate(0deg);
-  }
-  to {
-    transform: rotate(360deg);
-  }
 }
 
 .muted,
@@ -721,6 +655,10 @@
       0.85rem
       0.85rem;
   }
+
+  .sessionMetaBar {
+    padding: 0 1rem 0;
+  }
 }
 
 @media (min-width: 768px) {
@@ -742,6 +680,10 @@
       1.5rem
       1.25rem
       1.5rem;
+  }
+
+  .sessionMetaBar {
+    padding: 0 1.5rem 0;
   }
 
   .messageBubbleOwnFull,

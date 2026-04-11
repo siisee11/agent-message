@@ -6,7 +6,7 @@ import {
   useQueryClient,
 } from '@tanstack/react-query'
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
-import { useNavigate, useParams } from 'react-router-dom'
+import { useParams } from 'react-router-dom'
 import {
   ApiError,
   type MessageAttachment,
@@ -28,7 +28,6 @@ import {
   MESSAGE_PREVIEW_DELETED,
   resolveMessageRenderContent,
 } from '../messages/messagePresentation'
-import { useRealtime } from '../realtime'
 import { useTheme } from '../theme'
 import { useDocumentSurface } from '../hooks'
 import {
@@ -101,13 +100,6 @@ function formatMessageTimestamp(message: Message): string {
     return message.created_at
   }
   return TIMESTAMP_FORMATTER.format(new Date(parsed))
-}
-
-function getRealtimeStatusBadgeClass(status: ReturnType<typeof useRealtime>['status']): string {
-  if (status === 'connecting') {
-    return styles.headerStatusBadgeConnecting
-  }
-  return styles.headerStatusBadgeOffline
 }
 
 function getWatcherPresenceClass(online: boolean): string {
@@ -193,10 +185,8 @@ export function DmConversationPage() {
     themeColor,
   })
 
-  const navigate = useNavigate()
   const { conversationId } = useParams()
   const { user } = useAuth()
-  const realtime = useRealtime()
   const queryClient = useQueryClient()
 
   const timelineRef = useRef<HTMLDivElement | null>(null)
@@ -747,19 +737,6 @@ export function DmConversationPage() {
       : watcherPresence.online
         ? 'Online'
         : 'Offline'
-  const showRealtimeStatusBadge = conversationQuery.isError || realtime.status !== 'open'
-  const realtimeStatusBadgeClassName = showRealtimeStatusBadge
-    ? `${styles.headerStatusBadge} ${
-        conversationQuery.isError
-          ? styles.headerStatusBadgeError
-          : getRealtimeStatusBadgeClass(realtime.status)
-      }`
-    : null
-  const realtimeStatusLabel = conversationQuery.isError
-    ? resolveErrorMessage(conversationQuery.error, 'Failed to load conversation.')
-    : realtime.status === 'connecting'
-      ? 'Connecting'
-      : 'Offline'
   const headerCwdValue = conversationQuery.isLoading
     ? 'loading...'
     : conversationQuery.isError
@@ -776,14 +753,6 @@ export function DmConversationPage() {
       <div className={styles.panel}>
         <header className={styles.header}>
           <div className={styles.headerBar}>
-            <button
-              aria-label="Back to conversations"
-              className={styles.backButton}
-              onClick={() => navigate('/app')}
-              type="button"
-            >
-              ←
-            </button>
             <ChatAvatar
               className={styles.headerAvatar}
               size="lg"
@@ -792,33 +761,22 @@ export function DmConversationPage() {
             <div className={styles.headerCopy}>
               <div className={styles.headerTitleRow}>
                 <h2 className={styles.title}>{headerTitle}</h2>
+                {watcherStatusLabel ? (
+                  <span className={getWatcherPresenceClass(Boolean(watcherPresence?.online))}>
+                    {watcherStatusLabel}
+                  </span>
+                ) : null}
               </div>
-              {watcherStatusLabel || showRealtimeStatusBadge ? (
-                <div className={styles.headerStatusRow}>
-                  {watcherStatusLabel ? (
-                    <span className={getWatcherPresenceClass(Boolean(watcherPresence?.online))}>
-                      {watcherStatusLabel}
-                    </span>
-                  ) : null}
-                  {showRealtimeStatusBadge && realtimeStatusBadgeClassName ? (
-                    <span className={realtimeStatusBadgeClassName}>
-                      {realtime.status === 'connecting' && !conversationQuery.isError ? (
-                        <span aria-hidden="true" className={styles.headerStatusSpinner} />
-                      ) : null}
-                      <span>{realtimeStatusLabel}</span>
-                    </span>
-                  ) : null}
-                </div>
-              ) : null}
-              <p className={styles.headerCwd} title={`cwd: ${headerCwdValue}`}>
-                {`cwd: ${headerCwdValue}`}
-              </p>
-              <p className={styles.headerHostname} title={`hostname: ${headerHostnameValue}`}>
-                {`hostname: ${headerHostnameValue}`}
-              </p>
             </div>
           </div>
         </header>
+        <div className={styles.sessionMetaBar} title={`cwd: ${headerCwdValue} | hostname: ${headerHostnameValue}`}>
+          <span className={styles.sessionMetaLabel}>{`cwd: ${headerCwdValue}`}</span>
+          <span aria-hidden="true" className={styles.sessionMetaDivider}>
+            /
+          </span>
+          <span className={styles.sessionMetaLabel}>{`hostname: ${headerHostnameValue}`}</span>
+        </div>
 
         <section className={styles.timelineSection}>
           <div className={styles.timelineViewport} ref={timelineRef}>

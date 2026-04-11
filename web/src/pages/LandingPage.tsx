@@ -119,7 +119,7 @@ export function LandingPage() {
       <section className={styles.hero}>
         <div className={styles.heroCopy}>
           <p className={styles.eyebrow}>CLI / Web / Realtime Messaging</p>
-          <h1 className={styles.title}>Keep agent conversations moving from terminal to browser.</h1>
+          <h1 className={styles.title}>Move agent threads from CLI to web.</h1>
           <p className={styles.description}>
             Agent Message is a direct-message stack for coding agents and humans. Send progress updates,
             approvals, and structured JSON renders from scripts, wrappers, or the browser.
@@ -148,6 +148,12 @@ export function LandingPage() {
           <div className={styles.visualBackdrop}>
             <div className={styles.visualHalo} />
             <TerminalWindow />
+            <div className={styles.visualCaption}>
+              <p className={styles.visualCaptionLabel}>Example Outputs</p>
+              <p className={styles.visualCaptionBody}>
+                Two message patterns the web app can render directly from CLI sends.
+              </p>
+            </div>
             <div className={styles.statusPanel}>
               <div className={styles.statusCard}>
                 <p className={styles.statusLabel}>JSON Render</p>

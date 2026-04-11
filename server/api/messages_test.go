@@ -31,6 +31,9 @@ func TestMessagesEndpoints(t *testing.T) {
 	if *msg3.AttachmentType != models.AttachmentTypeFile {
 		t.Fatalf("expected attachment type file from multipart upload, got %q", *msg3.AttachmentType)
 	}
+	if len(msg3.Attachments) != 1 {
+		t.Fatalf("expected one normalized attachment on msg3, got %+v", msg3.Attachments)
+	}
 
 	t.Run("list messages first page", func(t *testing.T) {
 		req := httptest.NewRequest(http.MethodGet, "/api/conversations/"+conversationID+"/messages?limit=2", nil)
@@ -221,6 +224,30 @@ func TestMessagesEndpoints(t *testing.T) {
 			t.Fatalf("expected %d, got %d", http.StatusBadRequest, resp.Code)
 		}
 		assertErrorBody(t, resp.Body, "unsupported file type")
+	})
+
+	t.Run("send multipart message with multiple images", func(t *testing.T) {
+		message := mustSendMultipartMessageFiles(
+			t,
+			router,
+			alice.Token,
+			conversationID,
+			"gallery",
+			[]multipartTestFile{
+				{Filename: "one.png", Data: []byte("png-1")},
+				{Filename: "two.png", Data: []byte("png-2")},
+			},
+		)
+
+		if len(message.Attachments) != 2 {
+			t.Fatalf("expected two attachments, got %+v", message.Attachments)
+		}
+		if message.AttachmentURL == nil || message.AttachmentType == nil {
+			t.Fatalf("expected legacy attachment fallback fields, got %+v", message)
+		}
+		if *message.AttachmentType != models.AttachmentTypeFile {
+			t.Fatalf("expected legacy fallback type to reflect first upload, got %q", *message.AttachmentType)
+		}
 	})
 
 	t.Run("toggle reaction add then remove", func(t *testing.T) {
@@ -459,7 +486,23 @@ func mustSendJSONMessage(t *testing.T, router http.Handler, token, conversationI
 	return message
 }
 
+type multipartTestFile struct {
+	Filename string
+	Data     []byte
+}
+
 func mustSendMultipartMessage(t *testing.T, router http.Handler, token, conversationID, content, filename string, data []byte) models.Message {
+	return mustSendMultipartMessageFiles(t, router, token, conversationID, content, []multipartTestFile{
+		{Filename: filename, Data: data},
+	})
+}
+
+func mustSendMultipartMessageFiles(
+	t *testing.T,
+	router http.Handler,
+	token, conversationID, content string,
+	files []multipartTestFile,
+) models.Message {
 	t.Helper()
 
 	var body bytes.Buffer
@@ -467,12 +510,14 @@ func mustSendMultipartMessage(t *testing.T, router http.Handler, token, conversa
 	if err := writer.WriteField("content", content); err != nil {
 		t.Fatalf("write multipart content field: %v", err)
 	}
-	part, err := writer.CreateFormFile("attachment", filename)
-	if err != nil {
-		t.Fatalf("create multipart file part: %v", err)
-	}
-	if _, err := part.Write(data); err != nil {
-		t.Fatalf("write multipart attachment: %v", err)
+	for _, file := range files {
+		part, err := writer.CreateFormFile("attachment", file.Filename)
+		if err != nil {
+			t.Fatalf("create multipart file part: %v", err)
+		}
+		if _, err := part.Write(file.Data); err != nil {
+			t.Fatalf("write multipart attachment: %v", err)
+		}
 	}
 	if err := writer.Close(); err != nil {
 		t.Fatalf("close multipart writer: %v", err)

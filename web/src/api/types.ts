@@ -4,6 +4,11 @@ export type AttachmentType = 'image' | 'file'
 export type MessageKind = 'text' | 'json_render'
 export type JsonRenderSpec = unknown
 
+export interface MessageAttachment {
+  url: string
+  type: AttachmentType
+}
+
 export interface UserProfile {
   id: string
   account_id: string
@@ -42,6 +47,7 @@ export interface Message {
   content?: string
   kind?: MessageKind | null
   json_render_spec?: JsonRenderSpec | null
+  attachments?: MessageAttachment[]
   attachment_url?: string
   attachment_type?: AttachmentType
   edited: boolean
@@ -156,6 +162,11 @@ export interface SendMessageFileInput {
   attachment: File
 }
 
+export interface SendMessageFilesInput {
+  content?: string
+  attachments: File[]
+}
+
 export interface SendMessageAttachmentURLInput {
   content?: string
   attachmentUrl: string
@@ -165,4 +176,5 @@ export interface SendMessageAttachmentURLInput {
 export type SendMessageInput =
   | SendMessageTextInput
   | SendMessageFileInput
+  | SendMessageFilesInput
   | SendMessageAttachmentURLInput

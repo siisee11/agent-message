@@ -9,6 +9,7 @@ import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } fr
 import { useNavigate, useParams } from 'react-router-dom'
 import {
   ApiError,
+  type MessageAttachment,
   type ConversationDetails,
   type Message,
   type MessageDetails,
@@ -103,10 +104,6 @@ function formatMessageTimestamp(message: Message): string {
   return TIMESTAMP_FORMATTER.format(new Date(parsed))
 }
 
-function inferAttachmentType(file: File): 'image' | 'file' {
-  return file.type.startsWith('image/') ? 'image' : 'file'
-}
-
 function getRealtimeStatusBadgeClass(status: ReturnType<typeof useRealtime>['status']): string {
   if (status === 'open') {
     return styles.headerStatusBadgeLive
@@ -119,6 +116,10 @@ function getRealtimeStatusBadgeClass(status: ReturnType<typeof useRealtime>['sta
 
 function getWatcherStatusBadgeClass(online: boolean): string {
   return online ? styles.watcherStatusBadgeOnline : styles.watcherStatusBadgeOffline
+}
+
+function buildSelectedFileKey(file: File): string {
+  return `${file.name}-${file.size}-${file.lastModified}`
 }
 
 function PlusIcon() {
@@ -212,7 +213,7 @@ export function DmConversationPage() {
   const composerInputRef = useRef<HTMLTextAreaElement | null>(null)
 
   const [composerText, setComposerText] = useState('')
-  const [selectedFile, setSelectedFile] = useState<File | null>(null)
+  const [selectedFiles, setSelectedFiles] = useState<File[]>([])
   const [composerError, setComposerError] = useState<string | null>(null)
   const [editingTarget, setEditingTarget] = useState<EditTarget | null>(null)
   const [actionMenu, setActionMenu] = useState<ActionMenuState | null>(null)
@@ -288,7 +289,7 @@ export function DmConversationPage() {
       if (options?.resetComposer ?? false) {
         setEditingTarget(null)
         setComposerText('')
-        setSelectedFile(null)
+        setSelectedFiles([])
         if (fileInputRef.current) {
           fileInputRef.current.value = ''
         }
@@ -312,18 +313,16 @@ export function DmConversationPage() {
   )
 
   const sendMessageMutation = useMutation({
-    mutationFn: async (input: { content: string; attachment: File | null }) => {
+    mutationFn: async (input: { content: string; attachments: File[] }) => {
       if (!conversationId) {
         throw new Error('Conversation id is missing.')
       }
 
       const trimmedContent = input.content.trim()
-      if (input.attachment) {
-        const uploadedAttachment = await apiClient.uploadFile(input.attachment, 'file')
+      if (input.attachments.length > 0) {
         return apiClient.sendMessage(conversationId, {
           content: trimmedContent === '' ? undefined : trimmedContent,
-          attachmentUrl: uploadedAttachment.url,
-          attachmentType: inferAttachmentType(input.attachment),
+          attachments: input.attachments,
         })
       }
 
@@ -613,7 +612,7 @@ export function DmConversationPage() {
       messageId: details.message.id,
     })
     setComposerText(details.message.content?.trim() ?? '')
-    setSelectedFile(null)
+    setSelectedFiles([])
     if (fileInputRef.current) {
       fileInputRef.current.value = ''
     }
@@ -628,15 +627,18 @@ export function DmConversationPage() {
   }
 
   function handleSelectAttachment(event: React.ChangeEvent<HTMLInputElement>): void {
-    const file = event.target.files?.[0] ?? null
-    setSelectedFile(file)
+    const files = Array.from(event.target.files ?? [])
+    setSelectedFiles(files)
   }
 
-  function clearSelectedAttachment(): void {
-    setSelectedFile(null)
-    if (fileInputRef.current) {
-      fileInputRef.current.value = ''
-    }
+  function clearSelectedAttachment(fileKey: string): void {
+    setSelectedFiles((current) => {
+      const nextFiles = current.filter((file) => buildSelectedFileKey(file) !== fileKey)
+      if (nextFiles.length === 0 && fileInputRef.current) {
+        fileInputRef.current.value = ''
+      }
+      return nextFiles
+    })
   }
 
   function handleOpenFilePicker(): void {
@@ -676,13 +678,13 @@ export function DmConversationPage() {
       return
     }
 
-    if (trimmedContent === '' && !selectedFile) {
+    if (trimmedContent === '' && selectedFiles.length === 0) {
       return
     }
 
     sendMessageMutation.mutate({
       content: composerText,
-      attachment: selectedFile,
+      attachments: selectedFiles,
     })
   }
 
@@ -729,7 +731,7 @@ export function DmConversationPage() {
   const timelineError = messagePagesQuery.isError
     ? resolveErrorMessage(messagePagesQuery.error, 'Failed to load messages.')
     : null
-  const hasComposerContent = composerText.trim() !== '' || Boolean(selectedFile)
+  const hasComposerContent = composerText.trim() !== '' || selectedFiles.length > 0
   const disableComposerActions =
     sendMessageMutation.isPending ||
     approvalResponseMutation.isPending ||
@@ -827,6 +829,9 @@ export function DmConversationPage() {
                   {messagesAscending.map((details: MessageDetails) => {
                     const renderContent = resolveMessageRenderContent(details.message)
                     const reactionGroups = groupReactionsByEmoji(details.reactions, user?.id)
+                    const attachments = details.message.attachments ?? []
+                    const imageAttachments = attachments.filter((attachment) => attachment.type === 'image')
+                    const fileAttachments = attachments.filter((attachment) => attachment.type === 'file')
                     const isOwnMessage = details.message.sender_id === user?.id
                     const isAgentMessage = !isOwnMessage
                     const messageSurfaceClassName = isOwnMessage
@@ -897,36 +902,42 @@ export function DmConversationPage() {
                             />
                           ) : null}
 
-                          {!details.message.deleted &&
-                          details.message.attachment_type === 'image' &&
-                          details.message.attachment_url ? (
-                            <a
-                              className={styles.imageAttachmentLink}
-                              href={details.message.attachment_url}
-                              rel="noreferrer"
-                              target="_blank"
-                            >
-                              <img
-                                alt="Message attachment"
-                                className={styles.imageAttachment}
-                                loading="lazy"
-                                src={details.message.attachment_url}
-                              />
-                            </a>
+                          {!details.message.deleted && imageAttachments.length > 0 ? (
+                            <div className={styles.imageAttachmentGrid}>
+                              {imageAttachments.map((attachment: MessageAttachment) => (
+                                <a
+                                  className={styles.imageAttachmentLink}
+                                  href={attachment.url}
+                                  key={attachment.url}
+                                  rel="noreferrer"
+                                  target="_blank"
+                                >
+                                  <img
+                                    alt="Message attachment"
+                                    className={styles.imageAttachment}
+                                    loading="lazy"
+                                    src={attachment.url}
+                                  />
+                                </a>
+                              ))}
+                            </div>
                           ) : null}
 
-                          {!details.message.deleted &&
-                          details.message.attachment_type === 'file' &&
-                          details.message.attachment_url ? (
-                            <a
-                              className={styles.fileAttachmentLink}
-                              download
-                              href={details.message.attachment_url}
-                              rel="noreferrer"
-                              target="_blank"
-                            >
-                              Download attachment
-                            </a>
+                          {!details.message.deleted && fileAttachments.length > 0 ? (
+                            <div className={styles.fileAttachmentList}>
+                              {fileAttachments.map((attachment: MessageAttachment, index: number) => (
+                                <a
+                                  className={styles.fileAttachmentLink}
+                                  download
+                                  href={attachment.url}
+                                  key={`${attachment.url}-${index}`}
+                                  rel="noreferrer"
+                                  target="_blank"
+                                >
+                                  Download attachment
+                                </a>
+                              ))}
+                            </div>
                           ) : null}
 
                           {!details.message.deleted && reactionGroups.length > 0 ? (
@@ -973,17 +984,21 @@ export function DmConversationPage() {
               </div>
             ) : null}
 
-            {selectedFile ? (
-              <div className={styles.attachmentChip}>
-                <span className={styles.attachmentName}>{selectedFile.name}</span>
-                <button
-                  className={styles.attachmentRemove}
-                  disabled={disableComposerActions}
-                  onClick={clearSelectedAttachment}
-                  type="button"
-                >
-                  Remove
-                </button>
+            {selectedFiles.length > 0 ? (
+              <div className={styles.attachmentChipList}>
+                {selectedFiles.map((selectedFile) => (
+                  <div className={styles.attachmentChip} key={buildSelectedFileKey(selectedFile)}>
+                    <span className={styles.attachmentName}>{selectedFile.name}</span>
+                    <button
+                      className={styles.attachmentRemove}
+                      disabled={disableComposerActions}
+                      onClick={() => clearSelectedAttachment(buildSelectedFileKey(selectedFile))}
+                      type="button"
+                    >
+                      Remove
+                    </button>
+                  </div>
+                ))}
               </div>
             ) : null}
 
@@ -994,6 +1009,7 @@ export function DmConversationPage() {
                 onChange={handleSelectAttachment}
                 ref={fileInputRef}
                 type="file"
+                multiple
               />
 
               <button

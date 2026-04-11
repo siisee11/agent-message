@@ -227,7 +227,7 @@ func (h *messagesHandler) handleCreateMessage(w http.ResponseWriter, r *http.Req
 		return
 	}
 
-	content, kind, jsonRenderSpec, attachmentURL, attachmentType, err := h.parseCreateMessagePayload(w, r)
+	content, kind, jsonRenderSpec, attachments, attachmentURL, attachmentType, err := h.parseCreateMessagePayload(w, r)
 	if err != nil {
 		switch {
 		case errors.Is(err, errRequestEntityTooLarge):
@@ -248,6 +248,7 @@ func (h *messagesHandler) handleCreateMessage(w http.ResponseWriter, r *http.Req
 		Content:        content,
 		Kind:           kind,
 		JSONRenderSpec: jsonRenderSpec,
+		Attachments:    attachments,
 		AttachmentURL:  attachmentURL,
 		AttachmentType: attachmentType,
 		CreatedAt:      now,
@@ -429,6 +430,9 @@ func (h *messagesHandler) notifyConversationMessage(conversationID string, sende
 }
 
 func messageNotificationPreview(message models.Message) string {
+	message.ApplyAttachmentFallbacks()
+	attachmentCount := len(message.Attachments)
+
 	switch {
 	case message.Deleted:
 		return "Deleted message"
@@ -436,6 +440,10 @@ func messageNotificationPreview(message models.Message) string {
 		return truncateNotificationText(strings.TrimSpace(*message.Content), 140)
 	case message.Kind == models.MessageKindJSONRender:
 		return "Sent an interactive card"
+	case attachmentCount > 1 && allMessageAttachmentsAreType(message.Attachments, models.AttachmentTypeImage):
+		return "Sent images"
+	case attachmentCount > 1:
+		return "Sent attachments"
 	case message.AttachmentType != nil && *message.AttachmentType == models.AttachmentTypeImage:
 		return "Sent an image"
 	case message.AttachmentType != nil && *message.AttachmentType == models.AttachmentTypeFile:
@@ -456,44 +464,47 @@ func truncateNotificationText(value string, limit int) string {
 func (h *messagesHandler) parseCreateMessagePayload(
 	w http.ResponseWriter,
 	r *http.Request,
-) (*string, models.MessageKind, json.RawMessage, *string, *models.AttachmentType, error) {
+) (*string, models.MessageKind, json.RawMessage, []models.MessageAttachment, *string, *models.AttachmentType, error) {
 	contentType := strings.TrimSpace(r.Header.Get("Content-Type"))
 	mediaType, _, err := mime.ParseMediaType(contentType)
 	if err != nil {
-		return nil, "", nil, nil, nil, errors.New("invalid content type")
+		return nil, "", nil, nil, nil, nil, errors.New("invalid content type")
 	}
 
 	switch mediaType {
 	case "application/json":
 		var req models.SendMessageRequest
 		if err := decodeJSONBody(r, &req); err != nil {
-			return nil, "", nil, nil, nil, errors.New("invalid JSON body")
+			return nil, "", nil, nil, nil, nil, errors.New("invalid JSON body")
 		}
 		if err := req.Validate(); err != nil {
-			return nil, "", nil, nil, nil, err
+			return nil, "", nil, nil, nil, nil, err
 		}
 		if req.Kind == models.MessageKindJSONRender {
-			return nil, models.MessageKindJSONRender, req.JSONRenderSpec, nil, nil, nil
+			return nil, models.MessageKindJSONRender, req.JSONRenderSpec, nil, nil, nil, nil
 		}
 		content := strings.TrimSpace(*req.Content)
-		return &content, models.MessageKindText, nil, nil, nil, nil
+		return &content, models.MessageKindText, nil, nil, nil, nil, nil
 	case "multipart/form-data":
-		content, attachmentURL, attachmentType, err := h.parseMultipartMessagePayload(w, r)
-		return content, models.MessageKindText, nil, attachmentURL, attachmentType, err
+		content, attachments, attachmentURL, attachmentType, err := h.parseMultipartMessagePayload(w, r)
+		return content, models.MessageKindText, nil, attachments, attachmentURL, attachmentType, err
 	default:
-		return nil, "", nil, nil, nil, errors.New("content type must be application/json or multipart/form-data")
+		return nil, "", nil, nil, nil, nil, errors.New("content type must be application/json or multipart/form-data")
 	}
 }
 
-func (h *messagesHandler) parseMultipartMessagePayload(w http.ResponseWriter, r *http.Request) (*string, *string, *models.AttachmentType, error) {
+func (h *messagesHandler) parseMultipartMessagePayload(
+	w http.ResponseWriter,
+	r *http.Request,
+) (*string, []models.MessageAttachment, *string, *models.AttachmentType, error) {
 	maxBodyBytes := int64(maxUploadBytes + multipartBodySizeBuffer)
 	r.Body = http.MaxBytesReader(w, r.Body, maxBodyBytes)
 	if err := r.ParseMultipartForm(maxBodyBytes); err != nil {
 		var maxBytesErr *http.MaxBytesError
 		if errors.As(err, &maxBytesErr) {
-			return nil, nil, nil, errRequestEntityTooLarge
+			return nil, nil, nil, nil, errRequestEntityTooLarge
 		}
-		return nil, nil, nil, errors.New("invalid multipart form")
+		return nil, nil, nil, nil, errors.New("invalid multipart form")
 	}
 
 	contentText := strings.TrimSpace(r.FormValue("content"))
@@ -502,32 +513,58 @@ func (h *messagesHandler) parseMultipartMessagePayload(w http.ResponseWriter, r 
 		content = &contentText
 	}
 
-	uploadedFile, header, err := r.FormFile("attachment")
-	if err == nil {
-		defer uploadedFile.Close()
-		url, attachmentType, saveErr := saveUploadedFile(h.uploadDir, uploadedFile, header)
-		if saveErr != nil {
-			return nil, nil, nil, saveErr
+	attachments := make([]models.MessageAttachment, 0)
+	if r.MultipartForm != nil {
+		files := r.MultipartForm.File["attachment"]
+		for _, header := range files {
+			uploadedFile, err := header.Open()
+			if err != nil {
+				return nil, nil, nil, nil, errors.New("invalid attachment payload")
+			}
+
+			url, attachmentType, saveErr := saveUploadedFile(h.uploadDir, uploadedFile, header)
+			_ = uploadedFile.Close()
+			if saveErr != nil {
+				return nil, nil, nil, nil, saveErr
+			}
+
+			attachments = append(attachments, models.MessageAttachment{
+				URL:  url,
+				Type: attachmentType,
+			})
 		}
-		return content, &url, &attachmentType, nil
-	}
-	if !errors.Is(err, http.ErrMissingFile) {
-		return nil, nil, nil, errors.New("invalid attachment payload")
 	}
 
-	attachmentURLText := strings.TrimSpace(r.FormValue("attachment_url"))
-	if attachmentURLText != "" {
-		attachmentType, err := parseAttachmentType(r.FormValue("attachment_type"))
-		if err != nil {
-			return nil, nil, nil, err
+	if len(attachments) == 0 && r.MultipartForm != nil {
+		attachmentURLValues := r.MultipartForm.Value["attachment_url"]
+		attachmentTypeValues := r.MultipartForm.Value["attachment_type"]
+		for index, rawURL := range attachmentURLValues {
+			attachmentURLText := strings.TrimSpace(rawURL)
+			if attachmentURLText == "" {
+				continue
+			}
+
+			rawType := ""
+			if index < len(attachmentTypeValues) {
+				rawType = attachmentTypeValues[index]
+			}
+			attachmentType, err := parseAttachmentType(rawType)
+			if err != nil {
+				return nil, nil, nil, nil, err
+			}
+			attachments = append(attachments, models.MessageAttachment{
+				URL:  attachmentURLText,
+				Type: attachmentType,
+			})
 		}
-		return content, &attachmentURLText, &attachmentType, nil
 	}
 
-	if content == nil {
-		return nil, nil, nil, models.ErrMessageContentRequired
+	if len(attachments) == 0 && content == nil {
+		return nil, nil, nil, nil, models.ErrMessageContentRequired
 	}
-	return content, nil, nil, nil
+
+	firstAttachmentURL, firstAttachmentType := firstMessageAttachmentPointers(attachments)
+	return content, attachments, firstAttachmentURL, firstAttachmentType, nil
 }
 
 func parseAttachmentType(raw string) (models.AttachmentType, error) {
@@ -540,6 +577,34 @@ func parseAttachmentType(raw string) (models.AttachmentType, error) {
 	default:
 		return "", errors.New("attachment_type must be image or file")
 	}
+}
+
+func firstMessageAttachmentPointers(
+	attachments []models.MessageAttachment,
+) (*string, *models.AttachmentType) {
+	if len(attachments) == 0 {
+		return nil, nil
+	}
+
+	firstAttachment := attachments[0]
+	return &firstAttachment.URL, &firstAttachment.Type
+}
+
+func allMessageAttachmentsAreType(
+	attachments []models.MessageAttachment,
+	attachmentType models.AttachmentType,
+) bool {
+	if len(attachments) == 0 {
+		return false
+	}
+
+	for _, attachment := range attachments {
+		if attachment.Type != attachmentType {
+			return false
+		}
+	}
+
+	return true
 }
 
 func parseMessageLimit(raw string) (int, error) {

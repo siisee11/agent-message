@@ -99,6 +99,17 @@ describe('message presentation helpers', () => {
     expect(summarizeLastMessagePreview(fileMessage)).toBe('[file] [json-render]')
   })
 
+  it('summarizes multiple image attachments compactly', () => {
+    const message = createMessage({
+      attachments: [
+        { url: 'https://example.test/1.png', type: 'image' },
+        { url: 'https://example.test/2.png', type: 'image' },
+      ],
+    })
+
+    expect(summarizeLastMessagePreview(message)).toBe('[2 images]')
+  })
+
   it('extracts a useful preview from table-based json render messages', () => {
     const message = createMessage({
       kind: 'json_render',

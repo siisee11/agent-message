@@ -152,6 +152,13 @@ var postgresMigrations = []migration{
 			ALTER TABLE conversations ADD COLUMN title TEXT NULL;
 		`,
 	},
+	{
+		version: 13,
+		name:    "add_message_attachments_json",
+		sql: `
+			ALTER TABLE messages ADD COLUMN attachments_json TEXT NULL;
+		`,
+	},
 }
 
 func (s *PostgresStore) migrate(ctx context.Context) error {

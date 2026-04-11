@@ -103,6 +103,10 @@ function isSendMessageFileInput(payload: SendMessageInput): payload is { content
   return 'attachment' in payload
 }
 
+function isSendMessageFilesInput(payload: SendMessageInput): payload is { content?: string; attachments: File[] } {
+  return 'attachments' in payload
+}
+
 function isSendMessageAttachmentURLInput(
   payload: SendMessageInput,
 ): payload is { content?: string; attachmentUrl: string; attachmentType?: 'image' | 'file' } {
@@ -222,6 +226,21 @@ export class ApiClient {
 
   async sendMessage(conversationId: string, payload: SendMessageInput): Promise<Message> {
     const path = `/api/conversations/${encodeURIComponent(conversationId)}/messages`
+
+    if (isSendMessageFilesInput(payload)) {
+      const formData = new FormData()
+      if (payload.content && payload.content.trim() !== '') {
+        formData.set('content', payload.content)
+      }
+      for (const attachment of payload.attachments) {
+        formData.append('attachment', attachment)
+      }
+      return this.requestJSON<Message>({
+        method: 'POST',
+        path,
+        body: formData,
+      }).then(normalizeMessageProtocol)
+    }
 
     if (isSendMessageFileInput(payload)) {
       const formData = new FormData()

@@ -368,6 +368,15 @@ function extractJsonRenderPreview(spec: JsonRenderSpec | null): string | null {
 }
 
 function resolveAttachmentLabel(message: Message): string | undefined {
+  const attachments = message.attachments ?? []
+  if (attachments.length > 1) {
+    const imageCount = attachments.filter((attachment) => attachment.type === 'image').length
+    if (imageCount === attachments.length) {
+      return `[${imageCount} images]`
+    }
+    return `[${attachments.length} attachments]`
+  }
+
   if (message.attachment_type === 'image') {
     return '[image]'
   }

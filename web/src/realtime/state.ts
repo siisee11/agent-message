@@ -56,6 +56,7 @@ export function markMessageDeletedInPages(
           ...details.message,
           deleted: true,
           content: undefined,
+          attachments: undefined,
           attachment_url: undefined,
           attachment_type: undefined,
         },

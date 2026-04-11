@@ -313,7 +313,7 @@ func (s *SQLiteStore) ListConversationsByUser(ctx context.Context, params models
 		SELECT
 			c.id, c.participant_a, c.participant_b, c.title, c.created_at,
 			ou.id, ou.account_id, ou.username, ou.created_at,
-			m.id, m.conversation_id, m.sender_id, m.content, m.kind, m.json_render_spec, m.attachment_url, m.attachment_type, m.edited, m.deleted, m.created_at, m.updated_at,
+			m.id, m.conversation_id, m.sender_id, m.content, m.kind, m.json_render_spec, m.attachments_json, m.attachment_url, m.attachment_type, m.edited, m.deleted, m.created_at, m.updated_at,
 			sm.content
 		FROM conversations c
 		INNER JOIN users ou ON ou.id = CASE WHEN c.participant_a = ? THEN c.participant_b ELSE c.participant_a END
@@ -354,6 +354,7 @@ func (s *SQLiteStore) ListConversationsByUser(ctx context.Context, params models
 			messageContent            sql.NullString
 			messageKind               sql.NullString
 			messageJSONRenderSpec     sql.NullString
+			messageAttachmentsJSON    sql.NullString
 			messageAttachmentURL      sql.NullString
 			messageAttachmentType     sql.NullString
 			messageEdited             sql.NullInt64
@@ -380,6 +381,7 @@ func (s *SQLiteStore) ListConversationsByUser(ctx context.Context, params models
 			&messageContent,
 			&messageKind,
 			&messageJSONRenderSpec,
+			&messageAttachmentsJSON,
 			&messageAttachmentURL,
 			&messageAttachmentType,
 			&messageEdited,
@@ -415,6 +417,7 @@ func (s *SQLiteStore) ListConversationsByUser(ctx context.Context, params models
 				messageContent,
 				messageKind,
 				messageJSONRenderSpec,
+				messageAttachmentsJSON,
 				messageAttachmentURL,
 				messageAttachmentType,
 				messageEdited,
@@ -632,7 +635,7 @@ func (s *SQLiteStore) ListMessagesByConversation(ctx context.Context, params mod
 
 	query := `
 		SELECT
-			m.id, m.conversation_id, m.sender_id, m.content, m.kind, m.json_render_spec, m.attachment_url, m.attachment_type, m.edited, m.deleted, m.created_at, m.updated_at,
+			m.id, m.conversation_id, m.sender_id, m.content, m.kind, m.json_render_spec, m.attachments_json, m.attachment_url, m.attachment_type, m.edited, m.deleted, m.created_at, m.updated_at,
 			u.id, u.account_id, u.username, u.created_at
 		FROM messages m
 		INNER JOIN users u ON u.id = m.sender_id
@@ -667,6 +670,7 @@ func (s *SQLiteStore) ListMessagesByConversation(ctx context.Context, params mod
 			content             sql.NullString
 			kind                sql.NullString
 			jsonRenderSpec      sql.NullString
+			attachmentsJSON     sql.NullString
 			attachmentURL       sql.NullString
 			attachmentType      sql.NullString
 			edited              int
@@ -682,6 +686,7 @@ func (s *SQLiteStore) ListMessagesByConversation(ctx context.Context, params mod
 			&content,
 			&kind,
 			&jsonRenderSpec,
+			&attachmentsJSON,
 			&attachmentURL,
 			&attachmentType,
 			&edited,
@@ -703,10 +708,8 @@ func (s *SQLiteStore) ListMessagesByConversation(ctx context.Context, params mod
 		if jsonRenderSpec.Valid {
 			details.Message.JSONRenderSpec = json.RawMessage(jsonRenderSpec.String)
 		}
-		details.Message.AttachmentURL = nullStringPointer(attachmentURL)
-		if attachmentType.Valid {
-			typed := models.AttachmentType(attachmentType.String)
-			details.Message.AttachmentType = &typed
+		if err := applyMessageAttachments(&details.Message, attachmentsJSON, attachmentURL, attachmentType); err != nil {
+			return nil, fmt.Errorf("decode message attachments: %w", err)
 		}
 		details.Message.Edited = edited != 0
 		details.Message.Deleted = deleted != 0
@@ -832,9 +835,9 @@ func (s *SQLiteStore) CreateMessage(ctx context.Context, params models.CreateMes
 
 	const query = `
 		INSERT INTO messages (
-			id, conversation_id, sender_id, content, kind, json_render_spec, attachment_url, attachment_type, edited, deleted, created_at, updated_at
+			id, conversation_id, sender_id, content, kind, json_render_spec, attachments_json, attachment_url, attachment_type, edited, deleted, created_at, updated_at
 		)
-		VALUES (?, ?, ?, ?, ?, ?, ?, ?, 0, 0, ?, ?)
+		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 0, 0, ?, ?)
 	`
 
 	var attachmentType any
@@ -849,7 +852,11 @@ func (s *SQLiteStore) CreateMessage(ctx context.Context, params models.CreateMes
 	if len(params.JSONRenderSpec) > 0 {
 		jsonRenderSpec = string(params.JSONRenderSpec)
 	}
-	_, err := s.db.ExecContext(
+	attachmentsJSON, err := encodeMessageAttachments(params.Attachments)
+	if err != nil {
+		return models.Message{}, err
+	}
+	_, err = s.db.ExecContext(
 		ctx,
 		query,
 		params.ID,
@@ -858,6 +865,7 @@ func (s *SQLiteStore) CreateMessage(ctx context.Context, params models.CreateMes
 		params.Content,
 		kind,
 		jsonRenderSpec,
+		attachmentsJSON,
 		params.AttachmentURL,
 		attachmentType,
 		formatTime(params.CreatedAt),
@@ -905,7 +913,7 @@ func (s *SQLiteStore) UpdateMessage(ctx context.Context, params models.UpdateMes
 func (s *SQLiteStore) SoftDeleteMessage(ctx context.Context, params models.SoftDeleteMessageParams) (models.Message, error) {
 	const query = `
 		UPDATE messages
-		SET content = NULL, json_render_spec = NULL, attachment_url = NULL, attachment_type = NULL, deleted = 1, updated_at = ?
+		SET content = NULL, json_render_spec = NULL, attachments_json = NULL, attachment_url = NULL, attachment_type = NULL, deleted = 1, updated_at = ?
 		WHERE id = ? AND sender_id = ?
 	`
 	res, err := s.db.ExecContext(
@@ -1073,23 +1081,24 @@ func nullIfBlank(value string) any {
 
 func (s *SQLiteStore) getMessageByID(ctx context.Context, messageID string) (models.Message, error) {
 	const query = `
-		SELECT id, conversation_id, sender_id, content, kind, json_render_spec, attachment_url, attachment_type, edited, deleted, created_at, updated_at
+		SELECT id, conversation_id, sender_id, content, kind, json_render_spec, attachments_json, attachment_url, attachment_type, edited, deleted, created_at, updated_at
 		FROM messages
 		WHERE id = ?
 	`
 	row := s.db.QueryRowContext(ctx, query, messageID)
 
 	var (
-		message        models.Message
-		content        sql.NullString
-		kind           sql.NullString
-		jsonRenderSpec sql.NullString
-		attachmentURL  sql.NullString
-		attachmentType sql.NullString
-		edited         int
-		deleted        int
-		createdAtText  string
-		updatedAtText  string
+		message         models.Message
+		content         sql.NullString
+		kind            sql.NullString
+		jsonRenderSpec  sql.NullString
+		attachmentsJSON sql.NullString
+		attachmentURL   sql.NullString
+		attachmentType  sql.NullString
+		edited          int
+		deleted         int
+		createdAtText   string
+		updatedAtText   string
 	)
 	if err := row.Scan(
 		&message.ID,
@@ -1098,6 +1107,7 @@ func (s *SQLiteStore) getMessageByID(ctx context.Context, messageID string) (mod
 		&content,
 		&kind,
 		&jsonRenderSpec,
+		&attachmentsJSON,
 		&attachmentURL,
 		&attachmentType,
 		&edited,
@@ -1118,10 +1128,8 @@ func (s *SQLiteStore) getMessageByID(ctx context.Context, messageID string) (mod
 	if jsonRenderSpec.Valid {
 		message.JSONRenderSpec = json.RawMessage(jsonRenderSpec.String)
 	}
-	message.AttachmentURL = nullStringPointer(attachmentURL)
-	if attachmentType.Valid {
-		typed := models.AttachmentType(attachmentType.String)
-		message.AttachmentType = &typed
+	if err := applyMessageAttachments(&message, attachmentsJSON, attachmentURL, attachmentType); err != nil {
+		return models.Message{}, fmt.Errorf("decode message attachments: %w", err)
 	}
 	message.Edited = edited != 0
 	message.Deleted = deleted != 0
@@ -1280,6 +1288,7 @@ func nullableMessageToModel(
 	messageContent sql.NullString,
 	messageKind sql.NullString,
 	messageJSONRenderSpec sql.NullString,
+	messageAttachmentsJSON sql.NullString,
 	messageAttachmentURL sql.NullString,
 	messageAttachmentType sql.NullString,
 	messageEdited sql.NullInt64,
@@ -1292,7 +1301,6 @@ func nullableMessageToModel(
 		ConversationID: messageConversationID.String,
 		SenderID:       messageSenderID.String,
 		Content:        nullStringPointer(messageContent),
-		AttachmentURL:  nullStringPointer(messageAttachmentURL),
 		Edited:         messageEdited.Int64 != 0,
 		Deleted:        messageDeleted.Int64 != 0,
 	}
@@ -1302,9 +1310,8 @@ func nullableMessageToModel(
 	if messageJSONRenderSpec.Valid {
 		message.JSONRenderSpec = json.RawMessage(messageJSONRenderSpec.String)
 	}
-	if messageAttachmentType.Valid {
-		typed := models.AttachmentType(messageAttachmentType.String)
-		message.AttachmentType = &typed
+	if err := applyMessageAttachments(&message, messageAttachmentsJSON, messageAttachmentURL, messageAttachmentType); err != nil {
+		return models.Message{}, err
 	}
 
 	if !messageCreatedAtText.Valid || !messageUpdatedAtText.Valid {

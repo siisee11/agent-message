@@ -1,4 +1,12 @@
-import type { ConversationSummary, JsonRenderSpec, Message, MessageDetails, MessageKind } from './types'
+import type {
+  AttachmentType,
+  ConversationSummary,
+  JsonRenderSpec,
+  Message,
+  MessageAttachment,
+  MessageDetails,
+  MessageKind,
+} from './types'
 
 export const DEFAULT_MESSAGE_KIND: MessageKind = 'text'
 
@@ -17,10 +25,43 @@ export function resolveJsonRenderSpec(message: Pick<Message, 'json_render_spec'>
   return message.json_render_spec ?? null
 }
 
+function isObject(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null
+}
+
+function normalizeMessageAttachments(message: Message): MessageAttachment[] | undefined {
+  if (Array.isArray(message.attachments) && message.attachments.length > 0) {
+    const normalized = message.attachments.filter(
+      (attachment): attachment is MessageAttachment =>
+        isObject(attachment) &&
+        typeof attachment.url === 'string' &&
+        (attachment.type === 'image' || attachment.type === 'file'),
+    )
+    return normalized.length > 0 ? normalized : undefined
+  }
+
+  if (typeof message.attachment_url === 'string' && (message.attachment_type === 'image' || message.attachment_type === 'file')) {
+    return [
+      {
+        url: message.attachment_url,
+        type: message.attachment_type as AttachmentType,
+      },
+    ]
+  }
+
+  return undefined
+}
+
 export function normalizeMessageProtocol(message: Message): Message {
+  const attachments = normalizeMessageAttachments(message)
+  const firstAttachment = attachments?.[0]
+
   return {
     ...message,
     kind: resolveMessageKind(message),
+    attachments,
+    attachment_url: firstAttachment?.url,
+    attachment_type: firstAttachment?.type,
   }
 }
 

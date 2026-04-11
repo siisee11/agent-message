@@ -92,6 +92,7 @@ type CreateMessageParams struct {
 	Content        *string
 	Kind           MessageKind
 	JSONRenderSpec json.RawMessage
+	Attachments    []MessageAttachment
 	AttachmentURL  *string
 	AttachmentType *AttachmentType
 	CreatedAt      time.Time

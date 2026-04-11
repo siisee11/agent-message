@@ -58,6 +58,28 @@ function getRealtimeStatusBadgeClass(status: ReturnType<typeof useRealtime>['sta
   return styles.statusBadgeOffline
 }
 
+function LogoutIcon() {
+  return (
+    <svg aria-hidden="true" className={styles.logoutIcon} viewBox="0 0 24 24">
+      <path
+        d="M14 4h-4.75A2.25 2.25 0 0 0 7 6.25v11.5A2.25 2.25 0 0 0 9.25 20H14"
+        fill="none"
+        stroke="currentColor"
+        strokeLinecap="round"
+        strokeWidth="1.8"
+      />
+      <path
+        d="M10.5 12h9M16.5 8.5 20 12l-3.5 3.5"
+        fill="none"
+        stroke="currentColor"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        strokeWidth="1.8"
+      />
+    </svg>
+  )
+}
+
 export function ChatShellPage() {
   const { themeColor } = useTheme()
 
@@ -242,12 +264,15 @@ export function ChatShellPage() {
             <div className={styles.headerActions}>
               <ThemeToggleButton />
               <button
+                aria-label={logoutMutation.isPending ? 'Signing out' : 'Logout'}
                 className={styles.logoutButton}
                 disabled={logoutMutation.isPending}
                 onClick={() => logoutMutation.mutate()}
+                title={logoutMutation.isPending ? 'Signing out...' : 'Logout'}
                 type="button"
               >
-                {logoutMutation.isPending ? 'Signing out...' : 'Logout'}
+                <LogoutIcon />
+                <span className={styles.srOnly}>{logoutMutation.isPending ? 'Signing out...' : 'Logout'}</span>
               </button>
             </div>
           </div>

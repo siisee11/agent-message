@@ -10,3 +10,4 @@ claude-message/npm/runtime/
 claude-message/target/
 *.tgz
 ref/codex/
+.env

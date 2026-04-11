@@ -141,7 +141,9 @@
 
 .heroCopy {
   display: grid;
+  grid-template-columns: minmax(0, 1fr);
   gap: 1.3rem;
+  min-width: 0;
 }
 
 .eyebrow,
@@ -163,6 +165,7 @@
   line-height: 0.92;
   letter-spacing: -0.06em;
   text-transform: uppercase;
+  text-wrap: balance;
 }
 
 .description,
@@ -189,7 +192,9 @@
 }
 
 .installCard {
-  width: min(100%, 36rem);
+  width: 100%;
+  max-width: 36rem;
+  min-width: 0;
   padding: 1rem 1.15rem;
   border: 1px solid color-mix(in srgb, var(--border-strong) 80%, transparent);
   background: color-mix(in srgb, var(--surface-elevated) 92%, transparent);
@@ -219,11 +224,17 @@
 
 .heroVisual {
   position: relative;
+  min-width: 0;
 }
 
 .visualBackdrop {
   position: relative;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  align-items: start;
+  gap: clamp(1rem, 2vw, 1.5rem);
   min-height: 38rem;
+  min-width: 0;
   padding: clamp(1rem, 2vw, 1.6rem);
   border: 1px solid color-mix(in srgb, var(--border-strong) 80%, transparent);
   background:
@@ -244,10 +255,14 @@
 
 .terminalWindow {
   position: relative;
-  width: min(100%, 31rem);
+  width: 100%;
+  max-width: 31rem;
+  min-width: 0;
   border: 1px solid color-mix(in srgb, var(--border-strong) 82%, transparent);
   background: color-mix(in srgb, var(--background) 94%, black 6%);
   box-shadow: 0 24px 80px color-mix(in srgb, var(--foreground) 10%, transparent);
+  justify-self: start;
+  z-index: 1;
 }
 
 .windowChrome {
@@ -307,12 +322,16 @@
 }
 
 .statusPanel {
-  position: absolute;
-  right: clamp(0.75rem, 1.8vw, 1.25rem);
-  bottom: clamp(0.75rem, 1.8vw, 1.25rem);
-  width: min(100%, 18.5rem);
+  position: relative;
+  width: 100%;
+  max-width: none;
+  min-width: 0;
   display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 0.85rem;
+  justify-self: stretch;
+  align-self: stretch;
+  z-index: 1;
 }
 
 .statusCard,
@@ -460,6 +479,7 @@
   .title {
     max-width: none;
     font-size: clamp(2.8rem, 17vw, 4.6rem);
+    line-height: 0.96;
   }
 
   .visualBackdrop {
@@ -469,8 +489,9 @@
   }
 
   .statusPanel {
-    position: static;
+    grid-template-columns: 1fr;
     width: 100%;
+    max-width: none;
   }
 
   .featureGrid,

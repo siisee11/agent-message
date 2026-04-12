@@ -391,6 +391,7 @@
 }
 
 .conversationMenuItemDanger {
+  background: var(--status-badge-error-bg);
   color: var(--status-badge-error-text);
 }
 

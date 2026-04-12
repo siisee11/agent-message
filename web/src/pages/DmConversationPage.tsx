@@ -721,11 +721,14 @@ export function DmConversationPage() {
     approvalResponseMutation.isPending ||
     editMessageMutation.isPending ||
     deleteMessageMutation.isPending
+  const conversationTitle = conversationQuery.data?.conversation.title?.trim() ?? ''
   const headerTitle = conversationQuery.isLoading
     ? 'Loading conversation...'
     : conversationQuery.isError
       ? 'Conversation unavailable'
-      : otherParticipant
+      : conversationTitle
+        ? conversationTitle
+        : otherParticipant
         ? `@${otherParticipant.username}`
         : 'Conversation'
   const watcherPresence = conversationQuery.data?.watcher_presence

@@ -1,6 +1,6 @@
-import { useEffect, useState } from 'react'
-import { useMutation, useQuery } from '@tanstack/react-query'
-import { NavLink, useNavigate } from 'react-router-dom'
+import { useEffect, useRef, useState } from 'react'
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { NavLink, useLocation, useNavigate } from 'react-router-dom'
 import { ApiError, type ConversationSummary, type Message } from '../api'
 import { apiClient } from '../api/runtime'
 import { useAuth } from '../auth'
@@ -80,6 +80,16 @@ function LogoutIcon() {
   )
 }
 
+function MoreIcon() {
+  return (
+    <svg aria-hidden="true" className={styles.conversationMenuIcon} viewBox="0 0 24 24">
+      <circle cx="5" cy="12" r="1.8" fill="currentColor" />
+      <circle cx="12" cy="12" r="1.8" fill="currentColor" />
+      <circle cx="19" cy="12" r="1.8" fill="currentColor" />
+    </svg>
+  )
+}
+
 export function ChatShellPage() {
   const { themeColor } = useTheme()
 
@@ -88,9 +98,11 @@ export function ChatShellPage() {
     themeColor,
   })
 
+  const location = useLocation()
   const navigate = useNavigate()
   const { user, logout } = useAuth()
   const realtime = useRealtime()
+  const queryClient = useQueryClient()
 
   const [pageError, setPageError] = useState<string | null>(null)
   const [pushState, setPushState] = useState<PushState>({
@@ -101,11 +113,18 @@ export function ChatShellPage() {
   })
   const [pushError, setPushError] = useState<string | null>(null)
   const [pushLoading, setPushLoading] = useState(true)
+  const [openConversationMenuId, setOpenConversationMenuId] = useState<string | null>(null)
+
+  const conversationMenuRef = useRef<HTMLDivElement | null>(null)
 
   const conversationsQuery = useQuery({
     queryKey: ['conversations'],
     queryFn: () => apiClient.listConversations(),
   })
+  const conversations = conversationsQuery.data ?? []
+  const activeConversationId = location.pathname.startsWith('/dm/')
+    ? location.pathname.slice('/dm/'.length)
+    : null
 
   const logoutMutation = useMutation({
     mutationFn: () => logout(),
@@ -135,6 +154,25 @@ export function ChatShellPage() {
     },
   })
 
+  const deleteConversationMutation = useMutation({
+    mutationFn: async (conversationId: string) => {
+      await apiClient.deleteConversation(conversationId)
+    },
+    onSuccess: async (_data, deletedConversationId) => {
+      setPageError(null)
+      setOpenConversationMenuId((current) => (current === deletedConversationId ? null : current))
+      queryClient.removeQueries({ queryKey: ['conversation', deletedConversationId] })
+      queryClient.removeQueries({ queryKey: ['messages', deletedConversationId] })
+      await queryClient.invalidateQueries({ queryKey: ['conversations'] })
+      if (activeConversationId === deletedConversationId) {
+        void navigate('/app', { replace: true })
+      }
+    },
+    onError: (error: unknown) => {
+      setPageError(resolveErrorMessage(error, 'Failed to delete the conversation.'))
+    },
+  })
+
   useEffect(() => {
     let cancelled = false
 
@@ -158,6 +196,46 @@ export function ChatShellPage() {
       cancelled = true
     }
   }, [])
+
+  useEffect(() => {
+    if (!openConversationMenuId) {
+      return
+    }
+
+    const handleWindowMouseDown = (event: MouseEvent) => {
+      const target = event.target as Node | null
+      if (target && conversationMenuRef.current?.contains(target)) {
+        return
+      }
+      setOpenConversationMenuId(null)
+    }
+
+    const handleWindowKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        setOpenConversationMenuId(null)
+      }
+    }
+
+    window.addEventListener('mousedown', handleWindowMouseDown)
+    window.addEventListener('keydown', handleWindowKeyDown)
+    return () => {
+      window.removeEventListener('mousedown', handleWindowMouseDown)
+      window.removeEventListener('keydown', handleWindowKeyDown)
+    }
+  }, [openConversationMenuId])
+
+  useEffect(() => {
+    if (!openConversationMenuId) {
+      return
+    }
+
+    const menuConversationExists = conversations.some(
+      (summary) => summary.conversation.id === openConversationMenuId,
+    )
+    if (!menuConversationExists) {
+      setOpenConversationMenuId(null)
+    }
+  }, [conversations, openConversationMenuId])
 
   function resolvePushButtonLabel(): string {
     if (pushMutation.isPending || pushLoading) {
@@ -217,39 +295,98 @@ export function ChatShellPage() {
     !pushState.configured ||
     (pushState.permission === 'denied' && !pushState.enabled)
 
+  function toggleConversationMenu(conversationId: string): void {
+    setOpenConversationMenuId((current) => (current === conversationId ? null : conversationId))
+  }
+
+  function handleDeleteConversation(conversationId: string): void {
+    if (deleteConversationMutation.isPending) {
+      return
+    }
+
+    const confirmed = window.confirm(
+      'Delete this chat from your list? It will reappear if a new message arrives or you open the chat again.',
+    )
+    if (!confirmed) {
+      return
+    }
+
+    deleteConversationMutation.mutate(conversationId)
+  }
+
   function renderConversationItem(summary: ConversationSummary) {
+    const conversationId = summary.conversation.id
     const preview = summarizeLastMessagePreview(summary.last_message)
     const timestamp = formatLastMessageTime(summary.last_message)
     const title = summary.conversation.title?.trim() ?? ''
+    const isMenuOpen = openConversationMenuId === conversationId
+    const isActive = activeConversationId === conversationId
+    const isDeletingConversation = deleteConversationMutation.isPending && isMenuOpen
 
     return (
-      <NavLink
-        className={({ isActive }) =>
-          `${styles.conversationItem}${isActive ? ` ${styles.conversationItemActive}` : ''}`
-        }
-        key={summary.conversation.id}
-        to={`/dm/${summary.conversation.id}`}
+      <div
+        className={`${styles.conversationItem}${isActive ? ` ${styles.conversationItemActive}` : ''}`}
+        key={conversationId}
       >
-        <ChatAvatar className={styles.conversationAvatar} size="md" username={summary.other_user.username} />
-        <div className={styles.conversationBody}>
-          {title ? (
-            <p className={styles.conversationTitle} title={title}>
-              {title}
+        <NavLink
+          className={styles.conversationLink}
+          onClick={() => setOpenConversationMenuId(null)}
+          to={`/dm/${conversationId}`}
+        >
+          <ChatAvatar className={styles.conversationAvatar} size="md" username={summary.other_user.username} />
+          <div className={styles.conversationBody}>
+            {title ? (
+              <p className={styles.conversationTitle} title={title}>
+                {title}
+              </p>
+            ) : null}
+            <div className={styles.conversationMeta}>
+              <span className={styles.conversationName}>{summary.other_user.username}</span>
+              <span className={styles.conversationTime}>{timestamp}</span>
+            </div>
+            <p className={styles.conversationPreview} title={preview}>
+              {preview}
             </p>
-          ) : null}
-          <div className={styles.conversationMeta}>
-            <span className={styles.conversationName}>{summary.other_user.username}</span>
-            <span className={styles.conversationTime}>{timestamp}</span>
           </div>
-          <p className={styles.conversationPreview} title={preview}>
-            {preview}
-          </p>
+        </NavLink>
+        <div className={styles.conversationActions} ref={isMenuOpen ? conversationMenuRef : undefined}>
+          <button
+            aria-expanded={isMenuOpen}
+            aria-haspopup="menu"
+            aria-label={`Conversation actions for @${summary.other_user.username}`}
+            className={styles.conversationMenuTrigger}
+            disabled={deleteConversationMutation.isPending}
+            onClick={(event) => {
+              event.preventDefault()
+              event.stopPropagation()
+              toggleConversationMenu(conversationId)
+            }}
+            type="button"
+          >
+            <MoreIcon />
+          </button>
+          {isMenuOpen ? (
+            <div aria-label="Conversation actions" className={styles.conversationMenu} role="menu">
+              <button
+                className={`${styles.conversationMenuItem} ${styles.conversationMenuItemDanger}`}
+                disabled={deleteConversationMutation.isPending}
+                onClick={(event) => {
+                  event.preventDefault()
+                  event.stopPropagation()
+                  handleDeleteConversation(conversationId)
+                }}
+                role="menuitem"
+                type="button"
+              >
+                {isDeletingConversation ? 'Deleting...' : 'Delete chat'}
+              </button>
+            </div>
+          ) : null}
         </div>
-      </NavLink>
+      </div>
     )
   }
 
-  const conversations = conversationsQuery.data ?? []
   const realtimeStatusBadgeClassName = `${styles.statusBadge} ${getRealtimeStatusBadgeClass(realtime.status)}`
 
   return (

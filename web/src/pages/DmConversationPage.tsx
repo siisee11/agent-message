@@ -35,6 +35,7 @@ import {
   prependMessageToPages,
   replaceMessageInPages,
 } from '../realtime/state'
+import { buildSelectedFileKey, mergeSelectedFiles } from './dmComposerFiles'
 import styles from './DmConversationPage.module.css'
 
 const MESSAGE_PAGE_SIZE = 20
@@ -104,10 +105,6 @@ function formatMessageTimestamp(message: Message): string {
 
 function getWatcherPresenceClass(online: boolean): string {
   return `${styles.headerPresence} ${online ? styles.headerPresenceOnline : styles.headerPresenceOffline}`
-}
-
-function buildSelectedFileKey(file: File): string {
-  return `${file.name}-${file.size}-${file.lastModified}`
 }
 
 function PlusIcon() {
@@ -614,7 +611,8 @@ export function DmConversationPage() {
 
   function handleSelectAttachment(event: React.ChangeEvent<HTMLInputElement>): void {
     const files = Array.from(event.target.files ?? [])
-    setSelectedFiles(files)
+    setSelectedFiles((current) => mergeSelectedFiles(current, files))
+    event.target.value = ''
   }
 
   function clearSelectedAttachment(fileKey: string): void {

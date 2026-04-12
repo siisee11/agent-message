@@ -23,11 +23,12 @@ type eventStreamHandler struct {
 	store           store.Store
 	hub             *realtime.Hub
 	watcherPresence *realtime.WatcherPresence
+	authn           *authenticator
 }
 
 const eventStreamHeartbeatInterval = 25 * time.Second
 
-func newEventStreamHandler(s store.Store, hub *realtime.Hub, watcherPresence *realtime.WatcherPresence) *eventStreamHandler {
+func newEventStreamHandler(s store.Store, hub *realtime.Hub, watcherPresence *realtime.WatcherPresence, cfg AuthConfig) *eventStreamHandler {
 	if hub == nil {
 		hub = realtime.NewHub()
 	}
@@ -39,6 +40,7 @@ func newEventStreamHandler(s store.Store, hub *realtime.Hub, watcherPresence *re
 		store:           s,
 		hub:             hub,
 		watcherPresence: watcherPresence,
+		authn:           newAuthenticator(s, cfg),
 	}
 }
 
@@ -54,15 +56,11 @@ func (h *eventStreamHandler) handleEventStream(w http.ResponseWriter, r *http.Re
 		return
 	}
 
-	token := strings.TrimSpace(r.URL.Query().Get("token"))
-	if token == "" {
-		writeError(w, http.StatusUnauthorized, "missing or invalid bearer token")
-		return
-	}
-
-	user, err := h.store.GetUserBySessionToken(r.Context(), token)
+	user, _, _, err := h.authn.authenticateRequest(r, true)
 	if err != nil {
 		switch {
+		case errors.Is(err, errAuthTokenRequired), errors.Is(err, errAuthTokenInvalid):
+			writeError(w, http.StatusUnauthorized, "missing or invalid bearer token")
 		case errors.Is(err, store.ErrNotFound):
 			writeError(w, http.StatusUnauthorized, "invalid session token")
 		default:

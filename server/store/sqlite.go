@@ -121,11 +121,16 @@ func (s *SQLiteStore) UpdateUsername(ctx context.Context, params models.UpdateUs
 
 func (s *SQLiteStore) CreateSession(ctx context.Context, params models.CreateSessionParams) (models.Session, error) {
 	const query = `
-		INSERT INTO sessions (token, user_id, created_at)
-		VALUES (?, ?, ?)
+		INSERT INTO sessions (token, user_id, created_at, expires_at)
+		VALUES (?, ?, ?, ?)
 	`
 
-	_, err := s.db.ExecContext(ctx, query, params.Token, params.UserID, formatTime(params.CreatedAt))
+	tokenHash := hashSessionToken(params.Token)
+	var expiresAtValue any
+	if !params.ExpiresAt.IsZero() {
+		expiresAtValue = formatTime(params.ExpiresAt)
+	}
+	_, err := s.db.ExecContext(ctx, query, tokenHash, params.UserID, formatTime(params.CreatedAt), expiresAtValue)
 	if err != nil {
 		return models.Session{}, fmt.Errorf("insert session: %w", err)
 	}
@@ -135,16 +140,18 @@ func (s *SQLiteStore) CreateSession(ctx context.Context, params models.CreateSes
 
 func (s *SQLiteStore) GetSessionByToken(ctx context.Context, token string) (models.Session, error) {
 	const query = `
-		SELECT token, user_id, created_at
+		SELECT user_id, created_at, expires_at
 		FROM sessions
-		WHERE token = ?
+		WHERE token = ? OR token = ?
 	`
 
-	row := s.db.QueryRowContext(ctx, query, token)
+	trimmedToken := strings.TrimSpace(token)
+	row := s.db.QueryRowContext(ctx, query, trimmedToken, hashSessionToken(trimmedToken))
 
 	var session models.Session
 	var createdAtText string
-	if err := row.Scan(&session.Token, &session.UserID, &createdAtText); err != nil {
+	var expiresAtText sql.NullString
+	if err := row.Scan(&session.UserID, &createdAtText, &expiresAtText); err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			return models.Session{}, ErrNotFound
 		}
@@ -155,14 +162,23 @@ func (s *SQLiteStore) GetSessionByToken(ctx context.Context, token string) (mode
 	if err != nil {
 		return models.Session{}, fmt.Errorf("parse session created_at: %w", err)
 	}
+	if expiresAtText.Valid {
+		expiresAt, err := parseStoredTime(expiresAtText.String)
+		if err != nil {
+			return models.Session{}, fmt.Errorf("parse session expires_at: %w", err)
+		}
+		session.ExpiresAt = expiresAt
+	}
+	session.Token = trimmedToken
 	session.CreatedAt = createdAt
 
 	return session, nil
 }
 
 func (s *SQLiteStore) DeleteSessionByToken(ctx context.Context, token string) error {
-	const query = `DELETE FROM sessions WHERE token = ?`
-	res, err := s.db.ExecContext(ctx, query, token)
+	const query = `DELETE FROM sessions WHERE token = ? OR token = ?`
+	trimmedToken := strings.TrimSpace(token)
+	res, err := s.db.ExecContext(ctx, query, trimmedToken, hashSessionToken(trimmedToken))
 	if err != nil {
 		return fmt.Errorf("delete session: %w", err)
 	}
@@ -183,10 +199,11 @@ func (s *SQLiteStore) GetUserBySessionToken(ctx context.Context, token string) (
 		SELECT u.id, u.account_id, u.username, u.password_hash, u.created_at
 		FROM users u
 		INNER JOIN sessions s ON s.user_id = u.id
-		WHERE s.token = ?
+		WHERE s.token = ? OR s.token = ?
 	`
 
-	return s.getUserByQuery(ctx, query, token)
+	trimmedToken := strings.TrimSpace(token)
+	return s.getUserByQuery(ctx, query, trimmedToken, hashSessionToken(trimmedToken))
 }
 
 func (s *SQLiteStore) UpsertPushSubscription(ctx context.Context, params models.UpsertPushSubscriptionParams) (models.PushSubscription, error) {
@@ -1086,8 +1103,8 @@ func (s *SQLiteStore) configure(ctx context.Context) error {
 	return nil
 }
 
-func (s *SQLiteStore) getUserByQuery(ctx context.Context, query string, arg string) (models.User, error) {
-	row := s.db.QueryRowContext(ctx, query, arg)
+func (s *SQLiteStore) getUserByQuery(ctx context.Context, query string, args ...any) (models.User, error) {
+	row := s.db.QueryRowContext(ctx, query, args...)
 
 	var user models.User
 	var createdAtText string

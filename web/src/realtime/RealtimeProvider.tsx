@@ -174,7 +174,7 @@ export function RealtimeProvider({ children }: PropsWithChildren) {
 
   const eventStream = useEventStream({
     token,
-    enabled: Boolean(isAuthenticated && token),
+    enabled: isAuthenticated,
     onMessageNew: handleMessageNewEvent,
     onMessageEdited: handleMessageEditedEvent,
     onMessageDeleted: handleMessageDeletedEvent,

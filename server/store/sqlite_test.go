@@ -73,6 +73,7 @@ func TestSQLiteStoreUserAndSessionAuthFlow(t *testing.T) {
 		Token:     "token-1",
 		UserID:    user.ID,
 		CreatedAt: now,
+		ExpiresAt: now.Add(24 * time.Hour),
 	})
 	if err != nil {
 		t.Fatalf("CreateSession() error = %v", err)
@@ -80,6 +81,24 @@ func TestSQLiteStoreUserAndSessionAuthFlow(t *testing.T) {
 
 	if session.Token != "token-1" || session.UserID != user.ID {
 		t.Fatalf("unexpected session: %+v", session)
+	}
+	if got, want := session.ExpiresAt, now.Add(24*time.Hour); !got.Equal(want) {
+		t.Fatalf("session expiry mismatch: got %s want %s", got, want)
+	}
+
+	var storedToken string
+	var storedExpiresAt string
+	if err := s.db.QueryRowContext(ctx, `SELECT token, expires_at FROM sessions WHERE user_id = ?`, user.ID).Scan(&storedToken, &storedExpiresAt); err != nil {
+		t.Fatalf("query stored session: %v", err)
+	}
+	if storedToken == "token-1" {
+		t.Fatalf("expected stored session token to be hashed, got plaintext")
+	}
+	if storedToken != hashSessionToken("token-1") {
+		t.Fatalf("unexpected stored session token hash: got %q want %q", storedToken, hashSessionToken("token-1"))
+	}
+	if storedExpiresAt == "" {
+		t.Fatalf("expected stored session expiry")
 	}
 
 	resolvedUser, err := s.GetUserBySessionToken(ctx, "token-1")

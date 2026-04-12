@@ -21,6 +21,7 @@ const sessionTokenByteLen = 32
 
 type authHandler struct {
 	store    store.Store
+	config   AuthConfig
 	nowFn    func() time.Time
 	tokenFn  func() (string, error)
 	bcryptFn func(password string) (string, error)
@@ -29,6 +30,7 @@ type authHandler struct {
 func newAuthHandler(s store.Store) *authHandler {
 	return &authHandler{
 		store:    s,
+		config:   normalizeAuthConfig(AuthConfig{}, nil),
 		nowFn:    time.Now,
 		tokenFn:  generateSessionToken,
 		bcryptFn: hashPassword,
@@ -98,6 +100,7 @@ func (h *authHandler) handleRegister(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	h.writeSessionCookie(w, r, token, now.Add(h.config.SessionTTL))
 	writeJSON(w, http.StatusCreated, models.AuthResponse{
 		Token: token,
 		User:  user.Profile(),
@@ -139,12 +142,14 @@ func (h *authHandler) handleLogin(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	token, err := h.issueSession(r, user.ID, h.nowFn().UTC())
+	now := h.nowFn().UTC()
+	token, err := h.issueSession(r, user.ID, now)
 	if err != nil {
 		writeError(w, http.StatusInternalServerError, "failed to login")
 		return
 	}
 
+	h.writeSessionCookie(w, r, token, now.Add(h.config.SessionTTL))
 	writeJSON(w, http.StatusOK, models.AuthResponse{
 		Token: token,
 		User:  user.Profile(),
@@ -168,6 +173,7 @@ func (h *authHandler) handleLogout(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	h.clearSessionCookie(w, r)
 	w.WriteHeader(http.StatusNoContent)
 }
 
@@ -181,12 +187,56 @@ func (h *authHandler) issueSession(r *http.Request, userID string, now time.Time
 		Token:     token,
 		UserID:    userID,
 		CreatedAt: now,
+		ExpiresAt: now.Add(h.config.SessionTTL),
 	})
 	if err != nil {
 		return "", err
 	}
 
 	return token, nil
+}
+
+func (h *authHandler) writeSessionCookie(w http.ResponseWriter, r *http.Request, token string, expiresAt time.Time) {
+	http.SetCookie(w, &http.Cookie{
+		Name:     h.config.SessionCookie,
+		Value:    token,
+		Path:     "/",
+		HttpOnly: true,
+		Secure:   requestIsSecure(r),
+		SameSite: sessionCookieSameSite(),
+		Expires:  expiresAt,
+		MaxAge:   int(time.Until(expiresAt).Seconds()),
+	})
+	w.Header().Set("Cache-Control", "no-store")
+}
+
+func (h *authHandler) clearSessionCookie(w http.ResponseWriter, r *http.Request) {
+	http.SetCookie(w, &http.Cookie{
+		Name:     h.config.SessionCookie,
+		Value:    "",
+		Path:     "/",
+		HttpOnly: true,
+		Secure:   requestIsSecure(r),
+		SameSite: sessionCookieSameSite(),
+		Expires:  time.Unix(0, 0).UTC(),
+		MaxAge:   -1,
+	})
+	w.Header().Set("Cache-Control", "no-store")
+}
+
+func requestIsSecure(r *http.Request) bool {
+	if r.TLS != nil {
+		return true
+	}
+
+	proto := strings.TrimSpace(r.Header.Get("X-Forwarded-Proto"))
+	if proto == "" {
+		return false
+	}
+	if comma := strings.IndexByte(proto, ','); comma >= 0 {
+		proto = strings.TrimSpace(proto[:comma])
+	}
+	return strings.EqualFold(proto, "https")
 }
 
 func decodeJSONBody(r *http.Request, dst any) error {

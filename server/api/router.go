@@ -17,6 +17,7 @@ type Dependencies struct {
 	Push               *push.Service
 	CORSAllowedOrigins []string
 	UploadDir          string
+	Auth               AuthConfig
 }
 
 func NewRouter(deps Dependencies) http.Handler {
@@ -43,12 +44,14 @@ func NewRouter(deps Dependencies) http.Handler {
 	conversationsHandler := newConversationsHandler(deps.Store, hub, watcherPresence)
 	messagesHandler := newMessagesHandler(deps.Store, hub, watcherPresence)
 	messagesHandler.notifier = deps.Push
-	eventStreamHandler := newEventStreamHandler(deps.Store, hub, watcherPresence)
+	authConfig := normalizeAuthConfig(deps.Auth, deps.CORSAllowedOrigins)
+	authHandler.config = authConfig
+	eventStreamHandler := newEventStreamHandler(deps.Store, hub, watcherPresence, authConfig)
 	watcherPresenceHandler := newWatcherPresenceHandler(watcherPresence, hub)
 	pushHandler := newPushHandler(deps.Store, deps.Push)
 	messagesHandler.uploadDir = uploadDir
 	uploadHandler := newUploadHandler(uploadDir)
-	authRequired := BearerAuthMiddleware(deps.Store)
+	authRequired := BearerAuthMiddleware(deps.Store, authConfig)
 
 	mux.HandleFunc("/api/auth/register", authHandler.handleRegister)
 	mux.HandleFunc("/api/auth/login", authHandler.handleLogin)

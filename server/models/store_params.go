@@ -25,6 +25,7 @@ type CreateSessionParams struct {
 	Token     string
 	UserID    string
 	CreatedAt time.Time
+	ExpiresAt time.Time
 }
 
 type UpsertPushSubscriptionParams struct {

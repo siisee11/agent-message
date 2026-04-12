@@ -9,22 +9,27 @@ import (
 	"agent-message/server/store"
 )
 
-func BearerAuthMiddleware(dataStore store.Store) func(http.Handler) http.Handler {
+func BearerAuthMiddleware(dataStore store.Store, cfg AuthConfig) func(http.Handler) http.Handler {
+	authn := newAuthenticator(dataStore, cfg)
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			token, err := parseBearerToken(r.Header.Get("Authorization"))
+			user, token, source, err := authn.authenticateRequest(r, false)
 			if err != nil {
-				writeError(w, http.StatusUnauthorized, "missing or invalid bearer token")
-				return
-			}
-
-			user, err := dataStore.GetUserBySessionToken(r.Context(), token)
-			if err != nil {
-				if errors.Is(err, store.ErrNotFound) {
+				switch {
+				case errors.Is(err, errAuthTokenRequired), errors.Is(err, errAuthTokenInvalid):
+					writeError(w, http.StatusUnauthorized, "missing or invalid bearer token")
+					return
+				case errors.Is(err, store.ErrNotFound):
 					writeError(w, http.StatusUnauthorized, "invalid session token")
 					return
+				default:
+					writeError(w, http.StatusInternalServerError, "failed to validate bearer token")
+					return
 				}
-				writeError(w, http.StatusInternalServerError, "failed to validate bearer token")
+			}
+
+			if err := authn.validateStateChangingCookieRequest(r, source); err != nil {
+				writeError(w, http.StatusForbidden, "invalid origin")
 				return
 			}
 
@@ -50,6 +55,7 @@ func CORSMiddleware(allowedOrigins []string) func(http.Handler) http.Handler {
 				w.Header().Set("Access-Control-Allow-Origin", "*")
 			} else if origin != "" && slices.Contains(origins, origin) {
 				w.Header().Set("Access-Control-Allow-Origin", origin)
+				w.Header().Set("Access-Control-Allow-Credentials", "true")
 			}
 
 			w.Header().Set("Access-Control-Allow-Methods", "GET,POST,PATCH,DELETE,OPTIONS")

@@ -180,6 +180,13 @@ var sqliteMigrations = []migration{
 			CREATE INDEX idx_conversation_hidden_users_user_id ON conversation_hidden_users(user_id);
 		`,
 	},
+	{
+		version: 15,
+		name:    "add_session_expires_at",
+		sql: `
+			ALTER TABLE sessions ADD COLUMN expires_at TEXT NULL;
+		`,
+	},
 }
 
 func (s *SQLiteStore) migrate(ctx context.Context) error {

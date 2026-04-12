@@ -69,6 +69,30 @@ func TestEventStreamBroadcastsMessageEvents(t *testing.T) {
 	}
 }
 
+func TestEventStreamSupportsSessionCookieAuth(t *testing.T) {
+	server, _ := newEventStreamTestServer(t)
+	bob := registerAndLoginUser(t, server.Config.Handler, "bob", "1234")
+
+	req, err := http.NewRequest(http.MethodGet, server.URL+"/api/events", nil)
+	if err != nil {
+		t.Fatalf("new request: %v", err)
+	}
+	req.AddCookie(&http.Cookie{
+		Name:  defaultSessionCookieName,
+		Value: bob.Token,
+		Path:  "/",
+	})
+
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		t.Fatalf("connect event stream with cookie: %v", err)
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode != http.StatusOK {
+		t.Fatalf("expected status %d, got %d", http.StatusOK, resp.StatusCode)
+	}
+}
+
 func TestEventStreamReceivesNewConversationEventsAfterBootstrap(t *testing.T) {
 	server, _ := newEventStreamTestServer(t)
 	alice := registerAndLoginUser(t, server.Config.Handler, "alice", "1234")

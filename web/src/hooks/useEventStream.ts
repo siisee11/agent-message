@@ -156,7 +156,7 @@ export function useEventStream(options: UseEventStreamOptions): UseEventStreamRe
   const eventSourceRef = useRef<EventSource | null>(null)
 
   useEffect(() => {
-    if (!enabled || !token) {
+    if (!enabled) {
       eventSourceRef.current?.close()
       eventSourceRef.current = null
       setStatus('idle')
@@ -164,22 +164,18 @@ export function useEventStream(options: UseEventStreamOptions): UseEventStreamRe
       return
     }
 
-    const normalizedToken = token.trim()
-    if (normalizedToken === '') {
-      setStatus('idle')
-      setLastEvent(null)
-      return
-    }
-
     const params = new URLSearchParams()
-    params.set('token', normalizedToken)
+    const normalizedToken = token?.trim() ?? ''
+    if (normalizedToken !== '') {
+      params.set('token', normalizedToken)
+    }
     params.set('client_kind', clientKind)
     const normalizedURL = eventURL.includes('?')
       ? `${eventURL}&${params.toString()}`
       : `${eventURL}?${params.toString()}`
 
     setStatus('connecting')
-    const source = new EventSource(normalizedURL)
+    const source = new EventSource(normalizedURL, { withCredentials: true })
     eventSourceRef.current = source
 
     const isActiveSource = (): boolean => eventSourceRef.current === source

@@ -379,6 +379,7 @@ export class ApiClient {
       method: request.method,
       headers,
       body: request.body,
+      credentials: 'include',
     })
 
     if (response.ok) {

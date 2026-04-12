@@ -13,9 +13,9 @@ var (
 	ErrUsernameRequired  = errors.New("username is required")
 	ErrUsernameInvalid   = errors.New("username may contain only letters, numbers, dot, underscore, and hyphen")
 	ErrUsernameLength    = errors.New("username must be 3-32 characters")
-	ErrPasswordRequired = errors.New("password is required")
-	ErrPasswordLength   = errors.New("password must be 4-72 characters")
-	ErrTokenRequired    = errors.New("token is required")
+	ErrPasswordRequired  = errors.New("password is required")
+	ErrPasswordLength    = errors.New("password must be 4-72 characters")
+	ErrTokenRequired     = errors.New("token is required")
 )
 
 const (

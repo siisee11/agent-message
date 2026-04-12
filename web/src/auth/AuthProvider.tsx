@@ -11,8 +11,6 @@ import { ApiError, type AuthResponse, type UserProfile } from '../api'
 import { apiClient } from '../api/runtime'
 import { disablePushNotifications } from '../notifications/push'
 
-const AUTH_TOKEN_STORAGE_KEY = 'agent_message.auth_token'
-
 type AuthStatus = 'loading' | 'authenticated' | 'unauthenticated'
 
 export interface LoginCredentials {
@@ -35,57 +33,28 @@ interface AuthContextValue {
 
 const AuthContext = createContext<AuthContextValue | undefined>(undefined)
 
-function readStoredToken(): string | null {
-  try {
-    return window.localStorage.getItem(AUTH_TOKEN_STORAGE_KEY)
-  } catch {
-    return null
-  }
-}
-
-function writeStoredToken(token: string | null): void {
-  try {
-    if (token === null) {
-      window.localStorage.removeItem(AUTH_TOKEN_STORAGE_KEY)
-      return
-    }
-    window.localStorage.setItem(AUTH_TOKEN_STORAGE_KEY, token)
-  } catch {
-    // Local storage may be unavailable in private mode or restricted contexts.
-  }
-}
-
 export function AuthProvider({ children }: PropsWithChildren) {
   const [status, setStatus] = useState<AuthStatus>('loading')
   const [token, setToken] = useState<string | null>(null)
   const [user, setUser] = useState<UserProfile | null>(null)
 
   const applyAuthenticatedState = useCallback((response: AuthResponse) => {
-    apiClient.setAuthToken(response.token)
-    writeStoredToken(response.token)
-    setToken(response.token)
+    apiClient.setAuthToken(null)
+    setToken(null)
     setUser(response.user)
     setStatus('authenticated')
   }, [])
 
   const clearAuthState = useCallback(() => {
     apiClient.setAuthToken(null)
-    writeStoredToken(null)
     setToken(null)
     setUser(null)
     setStatus('unauthenticated')
   }, [])
 
   useEffect(() => {
-    const storedToken = readStoredToken()
-    if (!storedToken) {
-      setStatus('unauthenticated')
-      return
-    }
-
     let cancelled = false
-    apiClient.setAuthToken(storedToken)
-    setToken(storedToken)
+    apiClient.setAuthToken(null)
 
     void apiClient
       .getMe()

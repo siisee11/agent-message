@@ -37,6 +37,10 @@ func TestAuthRegisterLoginLogoutFlow(t *testing.T) {
 	if registerResult.Token == "" {
 		t.Fatalf("register token should not be empty")
 	}
+	registerCookies := registerResp.Result().Cookies()
+	if len(registerCookies) == 0 || registerCookies[0].Name != defaultSessionCookieName {
+		t.Fatalf("expected auth session cookie on register, got %+v", registerCookies)
+	}
 	if registerResult.User.Username != "alice" {
 		t.Fatalf("expected username alice, got %q", registerResult.User.Username)
 	}
@@ -77,6 +81,18 @@ func TestAuthRegisterLoginLogoutFlow(t *testing.T) {
 	if loginResult.Token == "" {
 		t.Fatalf("login token should not be empty")
 	}
+	loginCookies := loginResp.Result().Cookies()
+	if len(loginCookies) == 0 || loginCookies[0].Name != defaultSessionCookieName {
+		t.Fatalf("expected auth session cookie on login, got %+v", loginCookies)
+	}
+
+	meReq := httptest.NewRequest(http.MethodGet, "/api/users/me", nil)
+	meReq.AddCookie(loginCookies[0])
+	meResp := httptest.NewRecorder()
+	router.ServeHTTP(meResp, meReq)
+	if meResp.Code != http.StatusOK {
+		t.Fatalf("expected cookie-auth me status %d, got %d body=%s", http.StatusOK, meResp.Code, meResp.Body.String())
+	}
 
 	logoutWithoutBearerReq := httptest.NewRequest(http.MethodDelete, "/api/auth/logout", nil)
 	logoutWithoutBearerResp := httptest.NewRecorder()
@@ -91,6 +107,10 @@ func TestAuthRegisterLoginLogoutFlow(t *testing.T) {
 	router.ServeHTTP(logoutResp, logoutReq)
 	if logoutResp.Code != http.StatusNoContent {
 		t.Fatalf("expected logout status %d, got %d", http.StatusNoContent, logoutResp.Code)
+	}
+	logoutCookies := logoutResp.Result().Cookies()
+	if len(logoutCookies) == 0 || logoutCookies[0].Name != defaultSessionCookieName || logoutCookies[0].MaxAge != -1 {
+		t.Fatalf("expected session cookie clear on logout, got %+v", logoutCookies)
 	}
 
 	logoutAgainReq := httptest.NewRequest(http.MethodDelete, "/api/auth/logout", nil)

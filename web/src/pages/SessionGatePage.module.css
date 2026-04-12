@@ -1,0 +1,41 @@
+.page {
+  min-height: 100vh;
+  display: grid;
+  place-items: center;
+  padding: 32px;
+  background:
+    radial-gradient(circle at top, color-mix(in srgb, var(--surface-hover) 92%, transparent) 0%, transparent 48%),
+    var(--app-surface-background);
+}
+
+.panel {
+  width: min(100%, 520px);
+  padding: 32px;
+  border: 1px solid var(--border);
+  background: color-mix(in srgb, var(--surface-elevated) 88%, transparent);
+  box-shadow: 0 24px 64px rgba(0, 0, 0, 0.08);
+}
+
+.eyebrow {
+  margin: 0 0 12px;
+  color: var(--text-secondary);
+  font-family: var(--font-display);
+  font-size: 0.8rem;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+}
+
+.title {
+  margin: 0;
+  color: var(--text-primary);
+  font-size: clamp(2rem, 5vw, 3.5rem);
+  line-height: 0.95;
+}
+
+.description {
+  margin: 16px 0 0;
+  max-width: 34rem;
+  color: var(--text-secondary);
+  font-size: 1rem;
+  line-height: 1.6;
+}

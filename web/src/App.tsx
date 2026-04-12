@@ -1,9 +1,9 @@
 import { Route, Routes, useLocation } from 'react-router-dom'
 import { ChatShellPage } from './pages/ChatShellPage'
 import { DmConversationPage } from './pages/DmConversationPage'
-import { LandingPage } from './pages/LandingPage'
 import { LoginPage } from './pages/LoginPage'
 import { NotFoundPage } from './pages/NotFoundPage'
+import { SessionGatePage } from './pages/SessionGatePage'
 import { RealtimeProvider } from './realtime'
 import { ProtectedRoute } from './routes'
 import styles from './App.module.css'
@@ -16,7 +16,7 @@ export function App() {
     <div className={`${styles.app} ${isFixedShellRoute ? styles.appShell : styles.appDocument}`}>
       <RealtimeProvider>
         <Routes>
-          <Route element={<LandingPage />} path="/" />
+          <Route element={<SessionGatePage />} path="/" />
           <Route element={<LoginPage />} path="/login" />
           <Route element={<ProtectedRoute />}>
             <Route element={<ChatShellPage />} path="/app" />

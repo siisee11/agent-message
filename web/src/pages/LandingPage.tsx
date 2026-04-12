@@ -1,5 +1,4 @@
-import { useEffect } from 'react'
-import { Link, useNavigate } from 'react-router-dom'
+import { Link } from 'react-router-dom'
 import { useAuth } from '../auth'
 import { useDocumentSurface } from '../hooks'
 import { useTheme } from '../theme'
@@ -79,18 +78,11 @@ function TerminalWindow() {
 export function LandingPage() {
   const { isAuthenticated, status } = useAuth()
   const { themeColor } = useTheme()
-  const navigate = useNavigate()
 
   useDocumentSurface({
     backgroundColor: 'var(--app-surface-background)',
     themeColor,
   })
-
-  useEffect(() => {
-    if (status === 'authenticated') {
-      void navigate('/app', { replace: true })
-    }
-  }, [navigate, status])
 
   const primaryHref = isAuthenticated ? '/app' : '/login'
   const primaryLabel = isAuthenticated ? 'Open App' : 'Sign In'

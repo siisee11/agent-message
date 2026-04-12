@@ -165,6 +165,21 @@ var sqliteMigrations = []migration{
 			ALTER TABLE messages ADD COLUMN attachments_json TEXT NULL;
 		`,
 	},
+	{
+		version: 14,
+		name:    "create_conversation_hidden_users",
+		sql: `
+			CREATE TABLE conversation_hidden_users (
+				conversation_id TEXT NOT NULL,
+				user_id TEXT NOT NULL,
+				hidden_at TEXT NOT NULL,
+				PRIMARY KEY (conversation_id, user_id),
+				FOREIGN KEY(conversation_id) REFERENCES conversations(id) ON DELETE CASCADE,
+				FOREIGN KEY(user_id) REFERENCES users(id) ON DELETE CASCADE
+			);
+			CREATE INDEX idx_conversation_hidden_users_user_id ON conversation_hidden_users(user_id);
+		`,
+	},
 }
 
 func (s *SQLiteStore) migrate(ctx context.Context) error {

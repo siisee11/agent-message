@@ -183,6 +183,31 @@ func (p *WatcherPresence) SubscribeUser(userID, conversationID string) error {
 	return nil
 }
 
+func (p *WatcherPresence) UnsubscribeUser(userID, conversationID string) error {
+	userID = strings.TrimSpace(userID)
+	if userID == "" {
+		return ErrWatcherPresenceUserIDRequired
+	}
+	conversationID = strings.TrimSpace(conversationID)
+	if conversationID == "" {
+		return ErrConversationIDMissing
+	}
+
+	p.mu.Lock()
+	defer p.mu.Unlock()
+
+	for sessionID := range p.userSessions[userID] {
+		key := watcherPresenceKey(userID, sessionID)
+		session, ok := p.sessions[key]
+		if !ok {
+			continue
+		}
+		delete(session.conversations, conversationID)
+		p.sessions[key] = session
+	}
+	return nil
+}
+
 func (p *WatcherPresence) IsOnline(userID string) bool {
 	userID = strings.TrimSpace(userID)
 	if userID == "" {

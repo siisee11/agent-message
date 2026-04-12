@@ -41,7 +41,7 @@ func NewRouter(deps Dependencies) http.Handler {
 	catalogHandler := newCatalogHandler()
 	usersHandler := newUsersHandler(deps.Store)
 	conversationsHandler := newConversationsHandler(deps.Store, hub, watcherPresence)
-	messagesHandler := newMessagesHandler(deps.Store, hub)
+	messagesHandler := newMessagesHandler(deps.Store, hub, watcherPresence)
 	messagesHandler.notifier = deps.Push
 	eventStreamHandler := newEventStreamHandler(deps.Store, hub, watcherPresence)
 	watcherPresenceHandler := newWatcherPresenceHandler(watcherPresence, hub)

@@ -212,6 +212,13 @@ export class ApiClient {
     })
   }
 
+  async deleteConversation(conversationId: string): Promise<void> {
+    await this.requestVoid({
+      method: 'DELETE',
+      path: `/api/conversations/${encodeURIComponent(conversationId)}`,
+    })
+  }
+
   async listMessages(conversationId: string, query: ListMessagesQuery = {}): Promise<MessageDetails[]> {
     const detailsList = await this.requestJSON<MessageDetails[]>({
       method: 'GET',

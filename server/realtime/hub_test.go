@@ -92,6 +92,21 @@ func TestHubSubscribeUserAddsConversationToExistingConnections(t *testing.T) {
 	assertEvent(t, clientA.Send, EventTypeMessageNew)
 	assertEvent(t, clientB.Send, EventTypeMessageNew)
 	assertNoEvent(t, clientC.Send)
+
+	if err := hub.UnsubscribeUser("u1", "conv-new"); err != nil {
+		t.Fatalf("unsubscribe user: %v", err)
+	}
+
+	result, err = hub.BroadcastToConversation("conv-new", Event{Type: EventTypeMessageNew})
+	if err != nil {
+		t.Fatalf("broadcast conv-new after unsubscribe: %v", err)
+	}
+	if result.Delivered != 0 || result.Dropped != 0 {
+		t.Fatalf("unexpected post-unsubscribe broadcast result: %+v", result)
+	}
+
+	assertNoEvent(t, clientA.Send)
+	assertNoEvent(t, clientB.Send)
 }
 
 func TestHubValidationAndDropSemantics(t *testing.T) {

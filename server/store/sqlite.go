@@ -317,6 +317,7 @@ func (s *SQLiteStore) ListConversationsByUser(ctx context.Context, params models
 			sm.content
 		FROM conversations c
 		INNER JOIN users ou ON ou.id = CASE WHEN c.participant_a = ? THEN c.participant_b ELSE c.participant_a END
+		LEFT JOIN conversation_hidden_users chu ON chu.conversation_id = c.id AND chu.user_id = ?
 		LEFT JOIN messages m ON m.id = (
 			SELECT m2.id
 			FROM messages m2
@@ -331,12 +332,12 @@ func (s *SQLiteStore) ListConversationsByUser(ctx context.Context, params models
 			ORDER BY m3.created_at ASC, m3.id ASC
 			LIMIT 1
 		)
-		WHERE c.participant_a = ? OR c.participant_b = ?
+		WHERE (c.participant_a = ? OR c.participant_b = ?) AND chu.user_id IS NULL
 		ORDER BY COALESCE(m.created_at, c.created_at) DESC, c.id DESC
 		LIMIT ?
 	`
 
-	rows, err := s.db.QueryContext(ctx, query, params.UserID, params.UserID, params.UserID, limit)
+	rows, err := s.db.QueryContext(ctx, query, params.UserID, params.UserID, params.UserID, params.UserID, limit)
 	if err != nil {
 		return nil, fmt.Errorf("list conversations by user: %w", err)
 	}
@@ -462,6 +463,9 @@ func (s *SQLiteStore) GetOrCreateDirectConversation(ctx context.Context, params 
 
 	conversation, err := getConversationByParticipantsTx(ctx, tx, participantA, participantB)
 	if err == nil {
+		if err := clearConversationHiddenForUserTx(ctx, tx, conversation.ID, params.CurrentUserID); err != nil {
+			return models.Conversation{}, err
+		}
 		if err := tx.Commit(); err != nil {
 			return models.Conversation{}, fmt.Errorf("commit existing conversation tx: %w", err)
 		}
@@ -499,6 +503,9 @@ func (s *SQLiteStore) GetOrCreateDirectConversation(ctx context.Context, params 
 	if err != nil {
 		return models.Conversation{}, err
 	}
+	if err := clearConversationHiddenForUserTx(ctx, tx, conversation.ID, params.CurrentUserID); err != nil {
+		return models.Conversation{}, err
+	}
 
 	if err := tx.Commit(); err != nil {
 		return models.Conversation{}, fmt.Errorf("commit created conversation tx: %w", err)
@@ -507,7 +514,7 @@ func (s *SQLiteStore) GetOrCreateDirectConversation(ctx context.Context, params 
 }
 
 func (s *SQLiteStore) UpdateConversationTitle(ctx context.Context, params models.UpdateConversationTitleParams) (models.Conversation, error) {
-	if err := s.ensureConversationParticipant(ctx, params.ConversationID, params.ActorUserID); err != nil {
+	if err := s.ensureConversationVisibleToUser(ctx, params.ConversationID, params.ActorUserID); err != nil {
 		return models.Conversation{}, err
 	}
 
@@ -529,6 +536,13 @@ func (s *SQLiteStore) UpdateConversationTitle(ctx context.Context, params models
 	}
 
 	return s.getConversationByID(ctx, params.ConversationID)
+}
+
+func (s *SQLiteStore) DeleteConversationForUser(ctx context.Context, params models.DeleteConversationForUserParams) error {
+	if err := s.ensureConversationParticipant(ctx, params.ConversationID, params.ActorUserID); err != nil {
+		return err
+	}
+	return hideConversationForUser(ctx, s.db.ExecContext, params.ConversationID, params.ActorUserID, params.HiddenAt)
 }
 
 func (s *SQLiteStore) GetConversationByIDForUser(ctx context.Context, params models.GetConversationForUserParams) (models.ConversationDetails, error) {
@@ -577,6 +591,13 @@ func (s *SQLiteStore) GetConversationByIDForUser(ctx context.Context, params mod
 	if params.UserID != details.Conversation.ParticipantA && params.UserID != details.Conversation.ParticipantB {
 		return models.ConversationDetails{}, ErrForbidden
 	}
+	hidden, err := s.isConversationHiddenForUser(ctx, params.ConversationID, params.UserID)
+	if err != nil {
+		return models.ConversationDetails{}, err
+	}
+	if hidden {
+		return models.ConversationDetails{}, ErrNotFound
+	}
 	if conversationTitle.Valid {
 		details.Conversation.Title = conversationTitle.String
 	}
@@ -605,7 +626,7 @@ func (s *SQLiteStore) GetConversationByIDForUser(ctx context.Context, params mod
 }
 
 func (s *SQLiteStore) ListMessagesByConversation(ctx context.Context, params models.ListConversationMessagesParams) ([]models.MessageDetails, error) {
-	if err := s.ensureConversationParticipant(ctx, params.ConversationID, params.UserID); err != nil {
+	if err := s.ensureConversationVisibleToUser(ctx, params.ConversationID, params.UserID); err != nil {
 		return nil, err
 	}
 
@@ -822,14 +843,14 @@ func (s *SQLiteStore) GetMessageByIDForUser(ctx context.Context, params models.G
 	if err != nil {
 		return models.Message{}, err
 	}
-	if err := s.ensureConversationParticipant(ctx, message.ConversationID, params.UserID); err != nil {
+	if err := s.ensureConversationVisibleToUser(ctx, message.ConversationID, params.UserID); err != nil {
 		return models.Message{}, err
 	}
 	return message, nil
 }
 
 func (s *SQLiteStore) CreateMessage(ctx context.Context, params models.CreateMessageParams) (models.Message, error) {
-	if err := s.ensureConversationParticipant(ctx, params.ConversationID, params.SenderID); err != nil {
+	if err := s.ensureConversationVisibleToUser(ctx, params.ConversationID, params.SenderID); err != nil {
 		return models.Message{}, err
 	}
 
@@ -856,7 +877,15 @@ func (s *SQLiteStore) CreateMessage(ctx context.Context, params models.CreateMes
 	if err != nil {
 		return models.Message{}, err
 	}
-	_, err = s.db.ExecContext(
+	tx, err := s.db.BeginTx(ctx, nil)
+	if err != nil {
+		return models.Message{}, fmt.Errorf("begin create message tx: %w", err)
+	}
+	defer func() {
+		_ = tx.Rollback()
+	}()
+
+	_, err = tx.ExecContext(
 		ctx,
 		query,
 		params.ID,
@@ -873,6 +902,12 @@ func (s *SQLiteStore) CreateMessage(ctx context.Context, params models.CreateMes
 	)
 	if err != nil {
 		return models.Message{}, fmt.Errorf("insert message: %w", err)
+	}
+	if err := clearConversationHiddenForOtherUsersTx(ctx, tx, params.ConversationID, params.SenderID); err != nil {
+		return models.Message{}, err
+	}
+	if err := tx.Commit(); err != nil {
+		return models.Message{}, fmt.Errorf("commit create message tx: %w", err)
 	}
 
 	return s.getMessageByID(ctx, params.ID)
@@ -946,7 +981,7 @@ func (s *SQLiteStore) ToggleMessageReaction(ctx context.Context, params models.T
 	if err != nil {
 		return models.ToggleReactionResult{}, err
 	}
-	if err := s.ensureConversationParticipant(ctx, message.ConversationID, params.ActorUserID); err != nil {
+	if err := s.ensureConversationVisibleToUser(ctx, message.ConversationID, params.ActorUserID); err != nil {
 		return models.ToggleReactionResult{}, err
 	}
 
@@ -1015,7 +1050,7 @@ func (s *SQLiteStore) RemoveMessageReaction(ctx context.Context, params models.R
 	if err != nil {
 		return models.Reaction{}, err
 	}
-	if err := s.ensureConversationParticipant(ctx, message.ConversationID, params.ActorUserID); err != nil {
+	if err := s.ensureConversationVisibleToUser(ctx, message.ConversationID, params.ActorUserID); err != nil {
 		return models.Reaction{}, err
 	}
 
@@ -1160,6 +1195,20 @@ func (s *SQLiteStore) ensureConversationParticipant(ctx context.Context, convers
 	return nil
 }
 
+func (s *SQLiteStore) ensureConversationVisibleToUser(ctx context.Context, conversationID, userID string) error {
+	if err := s.ensureConversationParticipant(ctx, conversationID, userID); err != nil {
+		return err
+	}
+	hidden, err := s.isConversationHiddenForUser(ctx, conversationID, userID)
+	if err != nil {
+		return err
+	}
+	if hidden {
+		return ErrNotFound
+	}
+	return nil
+}
+
 func (s *SQLiteStore) getConversationByID(ctx context.Context, conversationID string) (models.Conversation, error) {
 	return getConversationByIDQuery(ctx, s.db.QueryRowContext(ctx, `
 		SELECT id, participant_a, participant_b, title, created_at
@@ -1244,6 +1293,60 @@ func getConversationByParticipantsTx(ctx context.Context, tx *sql.Tx, participan
 		FROM conversations
 		WHERE participant_a = ? AND participant_b = ?
 	`, participantA, participantB))
+}
+
+func (s *SQLiteStore) isConversationHiddenForUser(ctx context.Context, conversationID, userID string) (bool, error) {
+	row := s.db.QueryRowContext(ctx, `
+		SELECT 1
+		FROM conversation_hidden_users
+		WHERE conversation_id = ? AND user_id = ?
+	`, conversationID, userID)
+
+	var exists int
+	if err := row.Scan(&exists); err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return false, nil
+		}
+		return false, fmt.Errorf("select hidden conversation state: %w", err)
+	}
+	return true, nil
+}
+
+func hideConversationForUser(
+	ctx context.Context,
+	execFn func(context.Context, string, ...any) (sql.Result, error),
+	conversationID, userID string,
+	hiddenAt time.Time,
+) error {
+	_, err := execFn(ctx, `
+		INSERT INTO conversation_hidden_users (conversation_id, user_id, hidden_at)
+		VALUES (?, ?, ?)
+		ON CONFLICT(conversation_id, user_id) DO UPDATE SET hidden_at = excluded.hidden_at
+	`, conversationID, userID, formatTime(hiddenAt))
+	if err != nil {
+		return fmt.Errorf("hide conversation for user: %w", err)
+	}
+	return nil
+}
+
+func clearConversationHiddenForUserTx(ctx context.Context, tx *sql.Tx, conversationID, userID string) error {
+	if _, err := tx.ExecContext(ctx, `
+		DELETE FROM conversation_hidden_users
+		WHERE conversation_id = ? AND user_id = ?
+	`, conversationID, userID); err != nil {
+		return fmt.Errorf("clear hidden conversation for user: %w", err)
+	}
+	return nil
+}
+
+func clearConversationHiddenForOtherUsersTx(ctx context.Context, tx *sql.Tx, conversationID, actorUserID string) error {
+	if _, err := tx.ExecContext(ctx, `
+		DELETE FROM conversation_hidden_users
+		WHERE conversation_id = ? AND user_id <> ?
+	`, conversationID, actorUserID); err != nil {
+		return fmt.Errorf("clear hidden conversation for other users: %w", err)
+	}
+	return nil
 }
 
 func nullStringPointer(v sql.NullString) *string {

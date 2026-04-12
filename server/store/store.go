@@ -33,6 +33,7 @@ type Store interface {
 	GetOrCreateDirectConversation(ctx context.Context, params models.GetOrCreateDirectConversationParams) (models.Conversation, error)
 	GetConversationByIDForUser(ctx context.Context, params models.GetConversationForUserParams) (models.ConversationDetails, error)
 	UpdateConversationTitle(ctx context.Context, params models.UpdateConversationTitleParams) (models.Conversation, error)
+	DeleteConversationForUser(ctx context.Context, params models.DeleteConversationForUserParams) error
 	ListMessagesByConversation(ctx context.Context, params models.ListConversationMessagesParams) ([]models.MessageDetails, error)
 	GetMessageByIDForUser(ctx context.Context, params models.GetMessageForUserParams) (models.Message, error)
 	CreateMessage(ctx context.Context, params models.CreateMessageParams) (models.Message, error)
@@ -122,6 +123,10 @@ func (s *NoopStore) GetConversationByIDForUser(_ context.Context, _ models.GetCo
 
 func (s *NoopStore) UpdateConversationTitle(_ context.Context, _ models.UpdateConversationTitleParams) (models.Conversation, error) {
 	return models.Conversation{}, ErrNotImplemented
+}
+
+func (s *NoopStore) DeleteConversationForUser(_ context.Context, _ models.DeleteConversationForUserParams) error {
+	return ErrNotImplemented
 }
 
 func (s *NoopStore) ListMessagesByConversation(_ context.Context, _ models.ListConversationMessagesParams) ([]models.MessageDetails, error) {

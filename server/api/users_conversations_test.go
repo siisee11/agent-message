@@ -221,6 +221,54 @@ func TestConversationsEndpoints(t *testing.T) {
 		t.Fatalf("expected cleared title, got %+v", cleared.Conversation)
 	}
 
+	reqDelete := httptest.NewRequest(http.MethodDelete, "/api/conversations/"+created.Conversation.ID, nil)
+	reqDelete.Header.Set("Authorization", "Bearer "+alice.Token)
+	respDelete := httptest.NewRecorder()
+	router.ServeHTTP(respDelete, reqDelete)
+	if respDelete.Code != http.StatusNoContent {
+		t.Fatalf("expected delete status %d, got %d body=%s", http.StatusNoContent, respDelete.Code, respDelete.Body.String())
+	}
+
+	reqListAfterDelete := httptest.NewRequest(http.MethodGet, "/api/conversations", nil)
+	reqListAfterDelete.Header.Set("Authorization", "Bearer "+alice.Token)
+	respListAfterDelete := httptest.NewRecorder()
+	router.ServeHTTP(respListAfterDelete, reqListAfterDelete)
+	if respListAfterDelete.Code != http.StatusOK {
+		t.Fatalf("expected list after delete status %d, got %d body=%s", http.StatusOK, respListAfterDelete.Code, respListAfterDelete.Body.String())
+	}
+
+	var afterDeleteSummaries []models.ConversationSummary
+	if err := json.NewDecoder(respListAfterDelete.Body).Decode(&afterDeleteSummaries); err != nil {
+		t.Fatalf("decode conversation list after delete: %v", err)
+	}
+	if len(afterDeleteSummaries) != 0 {
+		t.Fatalf("expected no visible conversations for alice after delete, got %+v", afterDeleteSummaries)
+	}
+
+	reqGetAfterDelete := httptest.NewRequest(http.MethodGet, "/api/conversations/"+created.Conversation.ID, nil)
+	reqGetAfterDelete.Header.Set("Authorization", "Bearer "+alice.Token)
+	respGetAfterDelete := httptest.NewRecorder()
+	router.ServeHTTP(respGetAfterDelete, reqGetAfterDelete)
+	if respGetAfterDelete.Code != http.StatusNotFound {
+		t.Fatalf("expected hidden conversation to return %d, got %d", http.StatusNotFound, respGetAfterDelete.Code)
+	}
+
+	reqBobGet := httptest.NewRequest(http.MethodGet, "/api/conversations/"+created.Conversation.ID, nil)
+	reqBobGet.Header.Set("Authorization", "Bearer "+bob.Token)
+	respBobGet := httptest.NewRecorder()
+	router.ServeHTTP(respBobGet, reqBobGet)
+	if respBobGet.Code != http.StatusOK {
+		t.Fatalf("expected bob to retain conversation access, got %d body=%s", respBobGet.Code, respBobGet.Body.String())
+	}
+
+	status, reopened := startConversation(alice.Token, "bob")
+	if status != http.StatusOK {
+		t.Fatalf("expected reopen status %d, got %d", http.StatusOK, status)
+	}
+	if reopened.Conversation.ID != created.Conversation.ID {
+		t.Fatalf("expected reopen to restore conversation %q, got %q", created.Conversation.ID, reopened.Conversation.ID)
+	}
+
 	reqForbidden := httptest.NewRequest(http.MethodGet, "/api/conversations/"+created.Conversation.ID, nil)
 	reqForbidden.Header.Set("Authorization", "Bearer "+charlie.Token)
 	respForbidden := httptest.NewRecorder()

@@ -617,6 +617,135 @@ func TestSQLiteStoreReactionPersistence(t *testing.T) {
 	}
 }
 
+func TestSQLiteStoreConversationHideAndRestore(t *testing.T) {
+	ctx := context.Background()
+	dbPath := filepath.Join(t.TempDir(), "conversation-hide.sqlite")
+
+	s, err := NewSQLiteStore(ctx, dbPath)
+	if err != nil {
+		t.Fatalf("NewSQLiteStore() error = %v", err)
+	}
+	t.Cleanup(func() {
+		_ = s.Close()
+	})
+
+	base := time.Now().UTC().Truncate(time.Microsecond)
+
+	alice := mustCreateUser(t, ctx, s, models.CreateUserParams{
+		ID:           "user-alice",
+		Username:     "alice",
+		PasswordHash: "hash",
+		CreatedAt:    base,
+	})
+	bob := mustCreateUser(t, ctx, s, models.CreateUserParams{
+		ID:           "user-bob",
+		Username:     "bob",
+		PasswordHash: "hash",
+		CreatedAt:    base.Add(time.Second),
+	})
+
+	conversation, err := s.GetOrCreateDirectConversation(ctx, models.GetOrCreateDirectConversationParams{
+		ConversationID: "conv-ab",
+		CurrentUserID:  alice.ID,
+		TargetUserID:   bob.ID,
+		CreatedAt:      base.Add(2 * time.Second),
+	})
+	if err != nil {
+		t.Fatalf("GetOrCreateDirectConversation() error = %v", err)
+	}
+
+	if _, err := s.CreateMessage(ctx, models.CreateMessageParams{
+		ID:             "msg-initial",
+		ConversationID: conversation.ID,
+		SenderID:       alice.ID,
+		Content:        stringPtr("hello"),
+		CreatedAt:      base.Add(3 * time.Second),
+		UpdatedAt:      base.Add(3 * time.Second),
+	}); err != nil {
+		t.Fatalf("CreateMessage(initial) error = %v", err)
+	}
+
+	if err := s.DeleteConversationForUser(ctx, models.DeleteConversationForUserParams{
+		ConversationID: conversation.ID,
+		ActorUserID:    alice.ID,
+		HiddenAt:       base.Add(4 * time.Second),
+	}); err != nil {
+		t.Fatalf("DeleteConversationForUser() error = %v", err)
+	}
+
+	aliceConversations, err := s.ListConversationsByUser(ctx, models.ListUserConversationsParams{
+		UserID: alice.ID,
+		Limit:  10,
+	})
+	if err != nil {
+		t.Fatalf("ListConversationsByUser(alice after hide) error = %v", err)
+	}
+	if len(aliceConversations) != 0 {
+		t.Fatalf("expected hidden conversation to disappear for alice, got %+v", aliceConversations)
+	}
+
+	if _, err := s.GetConversationByIDForUser(ctx, models.GetConversationForUserParams{
+		ConversationID: conversation.ID,
+		UserID:         alice.ID,
+	}); !errors.Is(err, ErrNotFound) {
+		t.Fatalf("expected ErrNotFound for hidden conversation detail, got %v", err)
+	}
+
+	if _, err := s.ListMessagesByConversation(ctx, models.ListConversationMessagesParams{
+		ConversationID: conversation.ID,
+		UserID:         alice.ID,
+		Limit:          10,
+	}); !errors.Is(err, ErrNotFound) {
+		t.Fatalf("expected ErrNotFound for hidden conversation messages, got %v", err)
+	}
+
+	bobConversations, err := s.ListConversationsByUser(ctx, models.ListUserConversationsParams{
+		UserID: bob.ID,
+		Limit:  10,
+	})
+	if err != nil {
+		t.Fatalf("ListConversationsByUser(bob after alice hide) error = %v", err)
+	}
+	if len(bobConversations) != 1 || bobConversations[0].Conversation.ID != conversation.ID {
+		t.Fatalf("expected bob to retain conversation visibility, got %+v", bobConversations)
+	}
+
+	if _, err := s.CreateMessage(ctx, models.CreateMessageParams{
+		ID:             "msg-restore",
+		ConversationID: conversation.ID,
+		SenderID:       bob.ID,
+		Content:        stringPtr("welcome back"),
+		CreatedAt:      base.Add(5 * time.Second),
+		UpdatedAt:      base.Add(5 * time.Second),
+	}); err != nil {
+		t.Fatalf("CreateMessage(restore) error = %v", err)
+	}
+
+	aliceRestored, err := s.ListConversationsByUser(ctx, models.ListUserConversationsParams{
+		UserID: alice.ID,
+		Limit:  10,
+	})
+	if err != nil {
+		t.Fatalf("ListConversationsByUser(alice restored) error = %v", err)
+	}
+	if len(aliceRestored) != 1 || aliceRestored[0].Conversation.ID != conversation.ID {
+		t.Fatalf("expected conversation to reappear for alice after incoming message, got %+v", aliceRestored)
+	}
+
+	reopened, err := s.GetOrCreateDirectConversation(ctx, models.GetOrCreateDirectConversationParams{
+		ConversationID: "conv-ab-reopen",
+		CurrentUserID:  alice.ID,
+		TargetUserID:   bob.ID,
+		CreatedAt:      base.Add(6 * time.Second),
+	})
+	if err != nil {
+		t.Fatalf("GetOrCreateDirectConversation(reopen) error = %v", err)
+	}
+	if reopened.ID != conversation.ID {
+		t.Fatalf("expected reopen to reuse conversation %q, got %q", conversation.ID, reopened.ID)
+	}
+}
+
 func mustCreateUser(t *testing.T, ctx context.Context, s *SQLiteStore, params models.CreateUserParams) models.User {
 	t.Helper()
 	user, err := s.CreateUser(ctx, params)

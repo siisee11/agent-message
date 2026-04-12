@@ -69,3 +69,24 @@ func TestWatcherPresenceSubscribeUserUpdatesTrackedConversations(t *testing.T) {
 		t.Fatalf("unexpected offline conversations: %+v", transition.ConversationIDs)
 	}
 }
+
+func TestWatcherPresenceUnsubscribeUserRemovesTrackedConversation(t *testing.T) {
+	now := time.Date(2026, time.January, 1, 0, 0, 0, 0, time.UTC)
+	presence := NewWatcherPresence(30 * time.Second)
+	presence.SetNowFnForTests(func() time.Time { return now })
+
+	if _, err := presence.Register("u1", "session-1", []string{"conv-a", "conv-b"}); err != nil {
+		t.Fatalf("register: %v", err)
+	}
+	if err := presence.UnsubscribeUser("u1", "conv-b"); err != nil {
+		t.Fatalf("unsubscribe user conversation: %v", err)
+	}
+
+	transition := presence.Unregister("u1", "session-1")
+	if transition == nil || transition.Online {
+		t.Fatalf("expected offline transition on unregister, got %+v", transition)
+	}
+	if !reflect.DeepEqual(transition.ConversationIDs, []string{"conv-a"}) {
+		t.Fatalf("unexpected offline conversations after unsubscribe: %+v", transition.ConversationIDs)
+	}
+}

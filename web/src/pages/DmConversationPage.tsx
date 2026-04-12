@@ -6,7 +6,7 @@ import {
   useQueryClient,
 } from '@tanstack/react-query'
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
-import { useParams } from 'react-router-dom'
+import { useNavigate, useParams } from 'react-router-dom'
 import {
   ApiError,
   type MessageAttachment,
@@ -186,6 +186,7 @@ export function DmConversationPage() {
   })
 
   const { conversationId } = useParams()
+  const navigate = useNavigate()
   const { user } = useAuth()
   const queryClient = useQueryClient()
 
@@ -380,6 +381,33 @@ export function DmConversationPage() {
     },
     onError: (error: unknown) => {
       setComposerError(resolveErrorMessage(error, 'Failed to delete the message.'))
+    },
+  })
+
+  const deleteConversationMutation = useMutation({
+    mutationFn: async () => {
+      if (!conversationId) {
+        throw new Error('Conversation id is missing.')
+      }
+      await apiClient.deleteConversation(conversationId)
+    },
+    onSuccess: async () => {
+      if (!conversationId) {
+        return
+      }
+
+      setActionMenu(null)
+      setEditingTarget(null)
+      setComposerText('')
+      setSelectedFiles([])
+      setComposerError(null)
+      queryClient.removeQueries({ queryKey: ['conversation', conversationId] })
+      queryClient.removeQueries({ queryKey: ['messages', conversationId] })
+      await queryClient.invalidateQueries({ queryKey: ['conversations'] })
+      void navigate('/app', { replace: true })
+    },
+    onError: (error: unknown) => {
+      setComposerError(resolveErrorMessage(error, 'Failed to delete the conversation.'))
     },
   })
 
@@ -696,6 +724,21 @@ export function DmConversationPage() {
     composerInputRef.current?.focus()
   }
 
+  function handleDeleteConversation(): void {
+    if (deleteConversationMutation.isPending) {
+      return
+    }
+
+    const confirmed = window.confirm(
+      'Delete this chat from your list? It will reappear if a new message arrives or you open the chat again.',
+    )
+    if (!confirmed) {
+      return
+    }
+
+    deleteConversationMutation.mutate()
+  }
+
   const handleApprovalAction = useCallback(
     async (value: string) => {
       await approvalResponseMutation.mutateAsync(value)
@@ -722,7 +765,8 @@ export function DmConversationPage() {
     sendMessageMutation.isPending ||
     approvalResponseMutation.isPending ||
     editMessageMutation.isPending ||
-    deleteMessageMutation.isPending
+    deleteMessageMutation.isPending ||
+    deleteConversationMutation.isPending
   const headerTitle = conversationQuery.isLoading
     ? 'Loading conversation...'
     : conversationQuery.isError
@@ -778,6 +822,14 @@ export function DmConversationPage() {
                 <span className={styles.sessionMetaLabel}>{`hostname: ${headerHostnameValue}`}</span>
               </div>
             </div>
+            <button
+              className={styles.deleteConversationButton}
+              disabled={deleteConversationMutation.isPending || conversationQuery.isLoading || conversationQuery.isError}
+              onClick={handleDeleteConversation}
+              type="button"
+            >
+              {deleteConversationMutation.isPending ? 'Deleting...' : 'Delete chat'}
+            </button>
           </div>
         </header>
 

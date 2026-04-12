@@ -21,19 +21,21 @@ import (
 )
 
 type messagesHandler struct {
-	store     store.Store
-	hub       *realtime.Hub
-	notifier  *push.Service
-	nowFn     func() time.Time
-	uploadDir string
+	store           store.Store
+	hub             *realtime.Hub
+	watcherPresence *realtime.WatcherPresence
+	notifier        *push.Service
+	nowFn           func() time.Time
+	uploadDir       string
 }
 
-func newMessagesHandler(s store.Store, hub *realtime.Hub) *messagesHandler {
+func newMessagesHandler(s store.Store, hub *realtime.Hub, watcherPresence *realtime.WatcherPresence) *messagesHandler {
 	return &messagesHandler{
-		store:     s,
-		hub:       hub,
-		nowFn:     time.Now,
-		uploadDir: defaultUploadDir,
+		store:           s,
+		hub:             hub,
+		watcherPresence: watcherPresence,
+		nowFn:           time.Now,
+		uploadDir:       defaultUploadDir,
 	}
 }
 
@@ -267,6 +269,7 @@ func (h *messagesHandler) handleCreateMessage(w http.ResponseWriter, r *http.Req
 	}
 
 	log.Printf("message created conversation=%s message=%s sender=%s attachment=%t", conversationID, message.ID, user.ID, message.AttachmentURL != nil)
+	h.subscribeConversationParticipants(r.Context(), conversationID, user.ID)
 	h.broadcastConversationEvent(conversationID, realtime.EventTypeMessageNew, message)
 	h.notifyConversationMessage(conversationID, user, message)
 	writeJSON(w, http.StatusCreated, message)
@@ -459,6 +462,35 @@ func truncateNotificationText(value string, limit int) string {
 		return value
 	}
 	return strings.TrimSpace(string(runes[:limit])) + "…"
+}
+
+func (h *messagesHandler) subscribeConversationParticipants(ctx context.Context, conversationID, actorUserID string) {
+	if h.hub == nil && h.watcherPresence == nil {
+		return
+	}
+
+	details, err := h.store.GetConversationByIDForUser(ctx, models.GetConversationForUserParams{
+		ConversationID: conversationID,
+		UserID:         actorUserID,
+	})
+	if err != nil {
+		log.Printf("conversation subscribe refresh failed conversation=%s actor=%s: %v", conversationID, actorUserID, err)
+		return
+	}
+
+	participants := []string{details.ParticipantA.ID, details.ParticipantB.ID}
+	for _, participantID := range participants {
+		if h.hub != nil {
+			if err := h.hub.SubscribeUser(participantID, conversationID); err != nil {
+				log.Printf("conversation subscribe refresh failed user=%s conversation=%s: %v", participantID, conversationID, err)
+			}
+		}
+		if h.watcherPresence != nil {
+			if err := h.watcherPresence.SubscribeUser(participantID, conversationID); err != nil {
+				log.Printf("watcher presence subscribe refresh failed user=%s conversation=%s: %v", participantID, conversationID, err)
+			}
+		}
+	}
 }
 
 func (h *messagesHandler) parseCreateMessagePayload(

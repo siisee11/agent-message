@@ -70,6 +70,12 @@ type UpdateConversationTitleParams struct {
 	Title          string
 }
 
+type DeleteConversationForUserParams struct {
+	ConversationID string
+	ActorUserID    string
+	HiddenAt       time.Time
+}
+
 // ListConversationMessagesParams defines participant-scoped message pagination.
 type ListConversationMessagesParams struct {
 	ConversationID  string

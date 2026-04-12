@@ -147,6 +147,36 @@ func (h *Hub) SubscribeUser(userID, conversationID string) error {
 	return nil
 }
 
+func (h *Hub) UnsubscribeUser(userID, conversationID string) error {
+	userID = strings.TrimSpace(userID)
+	if userID == "" {
+		return ErrClientUserIDRequired
+	}
+	conversationID = strings.TrimSpace(conversationID)
+	if conversationID == "" {
+		return ErrConversationIDMissing
+	}
+
+	h.mu.Lock()
+	defer h.mu.Unlock()
+
+	for client := range h.userClients[userID] {
+		state, ok := h.clients[client]
+		if !ok {
+			continue
+		}
+		if _, exists := state.conversations[conversationID]; !exists {
+			continue
+		}
+
+		delete(state.conversations, conversationID)
+		h.clients[client] = state
+		h.removeConversationClientLocked(conversationID, client)
+	}
+
+	return nil
+}
+
 func (h *Hub) BroadcastToConversation(conversationID string, event Event) (BroadcastResult, error) {
 	conversationID = strings.TrimSpace(conversationID)
 	if conversationID == "" {

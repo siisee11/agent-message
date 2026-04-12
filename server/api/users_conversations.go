@@ -182,8 +182,10 @@ func (h *conversationsHandler) handleConversationDetail(w http.ResponseWriter, r
 		h.handleGetConversationDetail(w, r)
 	case http.MethodPatch:
 		h.handlePatchConversationDetail(w, r)
+	case http.MethodDelete:
+		h.handleDeleteConversationDetail(w, r)
 	default:
-		w.Header().Set("Allow", "GET, PATCH")
+		w.Header().Set("Allow", "GET, PATCH, DELETE")
 		writeError(w, http.StatusMethodNotAllowed, "method not allowed")
 	}
 }
@@ -272,6 +274,49 @@ func (h *conversationsHandler) handlePatchConversationDetail(w http.ResponseWrit
 
 	h.decorateWatcherPresence(&details, user.ID)
 	writeJSON(w, http.StatusOK, details)
+}
+
+func (h *conversationsHandler) handleDeleteConversationDetail(w http.ResponseWriter, r *http.Request) {
+	user, ok := userFromContext(r.Context())
+	if !ok {
+		writeError(w, http.StatusUnauthorized, "missing or invalid bearer token")
+		return
+	}
+
+	conversationID, valid := conversationIDFromPath(r.URL.Path)
+	if !valid {
+		writeError(w, http.StatusNotFound, "conversation not found")
+		return
+	}
+
+	if err := h.store.DeleteConversationForUser(r.Context(), models.DeleteConversationForUserParams{
+		ConversationID: conversationID,
+		ActorUserID:    user.ID,
+		HiddenAt:       h.nowFn().UTC(),
+	}); err != nil {
+		switch {
+		case errors.Is(err, store.ErrNotFound):
+			writeError(w, http.StatusNotFound, "conversation not found")
+		case errors.Is(err, store.ErrForbidden):
+			writeError(w, http.StatusForbidden, "forbidden")
+		default:
+			writeError(w, http.StatusInternalServerError, "failed to delete conversation")
+		}
+		return
+	}
+
+	if h.hub != nil {
+		if err := h.hub.UnsubscribeUser(user.ID, conversationID); err != nil {
+			log.Printf("conversation unsubscribe failed user=%s conversation=%s: %v", user.ID, conversationID, err)
+		}
+	}
+	if h.watcherPresence != nil {
+		if err := h.watcherPresence.UnsubscribeUser(user.ID, conversationID); err != nil {
+			log.Printf("watcher presence unsubscribe failed user=%s conversation=%s: %v", user.ID, conversationID, err)
+		}
+	}
+
+	w.WriteHeader(http.StatusNoContent)
 }
 
 func (h *conversationsHandler) handleListConversations(w http.ResponseWriter, r *http.Request) {

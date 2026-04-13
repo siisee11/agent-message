@@ -154,6 +154,11 @@ function summarizeElement(element: BareUIElement): { primary?: string; secondary
           ]) ?? undefined,
         secondary: readStringProp(props, 'badge') ?? undefined,
       }
+    case 'AskQuestion':
+      return {
+        primary: readStringProp(props, 'question') ?? undefined,
+        secondary: readStringProp(props, 'freeformPlaceholder') ?? undefined,
+      }
     case 'Card':
       return {
         primary:
@@ -187,6 +192,7 @@ function summarizeElement(element: BareUIElement): { primary?: string; secondary
             readStringProp(props, 'text'),
             readStringProp(props, 'label'),
             readStringProp(props, 'message'),
+            readStringProp(props, 'question'),
           ]) ?? undefined,
       }
   }
@@ -240,6 +246,7 @@ function extractJsonRenderCwd(spec: JsonRenderSpec | null): string | null {
       typeof props?.description === 'string' ? props.description : null,
       typeof props?.label === 'string' ? props.label : null,
       typeof props?.content === 'string' ? props.content : null,
+      typeof props?.question === 'string' ? props.question : null,
       ...(Array.isArray(props?.details)
         ? props.details.filter((value): value is string => typeof value === 'string')
         : []),
@@ -292,6 +299,7 @@ function extractJsonRenderHostname(spec: JsonRenderSpec | null): string | null {
       typeof props?.description === 'string' ? props.description : null,
       typeof props?.label === 'string' ? props.label : null,
       typeof props?.content === 'string' ? props.content : null,
+      typeof props?.question === 'string' ? props.question : null,
       ...(Array.isArray(props?.details)
         ? props.details.filter((value): value is string => typeof value === 'string')
         : []),

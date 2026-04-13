@@ -311,6 +311,124 @@
   color: var(--text-primary);
 }
 
+.askQuestionCard {
+  display: grid;
+  gap: 0.8rem;
+  width: 100%;
+  min-width: 0;
+  padding: 0.95rem 1rem;
+  border: 1px solid var(--border);
+  box-sizing: border-box;
+  background: var(--surface-elevated);
+}
+
+.askQuestionPrompt {
+  margin: 0;
+  color: var(--text-primary);
+  font-size: 0.98rem;
+  font-weight: 500;
+  line-height: 1.4;
+}
+
+.askQuestionOptions {
+  display: grid;
+  gap: 0.55rem;
+}
+
+.askQuestionOption,
+.askQuestionConfirm {
+  appearance: none;
+  width: 100%;
+  border: 1px solid var(--border-strong);
+  padding: 0.85rem 0.95rem;
+  background: transparent;
+  color: var(--text-primary);
+  font: inherit;
+  font-family: var(--font-display);
+  font-size: 0.82rem;
+  font-weight: 400;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  text-align: left;
+  cursor: pointer;
+  transition:
+    opacity 120ms ease,
+    background-color 120ms ease,
+    color 120ms ease,
+    border-color 120ms ease;
+}
+
+.askQuestionConfirm {
+  background: var(--button-primary-bg);
+  color: var(--button-primary-fg);
+  border-color: var(--button-primary-border);
+  text-align: center;
+}
+
+.askQuestionOption:focus-visible,
+.askQuestionConfirm:focus-visible,
+.askQuestionTextarea:focus-visible {
+  outline: 2px solid var(--ring);
+  outline-offset: 2px;
+}
+
+.askQuestionOption:disabled,
+.askQuestionConfirm:disabled,
+.askQuestionTextarea:disabled {
+  cursor: default;
+  opacity: 0.64;
+}
+
+.askQuestionFreeform {
+  display: grid;
+  gap: 0.48rem;
+}
+
+.askQuestionLabel,
+.askQuestionHint,
+.askQuestionStatus,
+.askQuestionError {
+  margin: 0;
+  font-size: 0.78rem;
+  line-height: 1.45;
+}
+
+.askQuestionLabel {
+  color: var(--text-tertiary);
+  font-family: var(--font-display);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.askQuestionTextarea {
+  width: 100%;
+  min-height: 6.5rem;
+  resize: vertical;
+  border: 1px solid var(--border);
+  background: var(--surface-background);
+  color: var(--text-primary);
+  padding: 0.78rem 0.82rem;
+  font: inherit;
+  box-sizing: border-box;
+}
+
+.askQuestionHint {
+  color: var(--text-tertiary);
+}
+
+.askQuestionStatus {
+  color: var(--text-primary);
+  font-family: var(--font-display);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.askQuestionError {
+  color: var(--text-primary);
+  font-family: var(--font-display);
+  letter-spacing: 0.08em;
+}
+
 .alertCard {
   display: grid;
   gap: 0.42rem;

@@ -46,10 +46,11 @@ For lists where users can add/remove items (todos, carts, etc.), use pushState a
 
 IMPORTANT: State paths use RFC 6901 JSON Pointer syntax (e.g. "/todos/0/title"). Do NOT use JavaScript-style dot notation (e.g. "/todos.length" is WRONG). To generate unique IDs for new items, use "$id" instead of trying to read array length.
 
-AVAILABLE COMPONENTS (19):
+AVAILABLE COMPONENTS (20):
 
 - ApprovalCard: { badge?: string, title: string, details?: Array<string>, replyHint?: string, actions?: Array<{ label: string, value: string, variant?: "primary" | "secondary" | "destructive" }> } - Approval request card with quick response buttons
 - Alert: { title: string, message?: string, type?: "info" | "success" | "warning" | "error" } - Alert banner
+- AskQuestion: { confirmLabel?: string, freeformPlaceholder?: string, options?: Array<{ label: string, value?: string }>, question: string } - Question prompt with quick-reply buttons and a freeform text area
 - Avatar: { src?: string, name: string, size?: "sm" | "md" | "lg" } - User avatar with fallback initials
 - Badge: { text: string, variant?: "default" | "secondary" | "destructive" | "outline" } - Status badge
 - BarGraph: { currency?: string, data: Array<{ color?: string, label: string, value: number }>, description?: string, format?: "currency" | "number" | "percent", maxValue?: number, title?: string } - Compact bar chart for labeled numeric series

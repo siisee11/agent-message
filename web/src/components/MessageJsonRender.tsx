@@ -6,8 +6,8 @@ import { messageJsonRenderRegistry } from './messageJsonRenderRegistry'
 import { MessageJsonRenderRuntimeContext } from './messageJsonRenderRuntime'
 
 interface MessageJsonRenderProps {
-  approvalDisabled?: boolean
-  onApprovalAction?: (value: string) => Promise<void>
+  interactionDisabled?: boolean
+  onReplyAction?: (value: string) => Promise<void>
   spec: JsonRenderSpec | null
 }
 
@@ -66,7 +66,7 @@ const messageJsonRenderFallback: ComponentRenderer = ({ element }) => {
   return <p className={styles.fallback}>Unsupported component: {typedElement.type}</p>
 }
 
-export function MessageJsonRender({ approvalDisabled = false, onApprovalAction, spec }: MessageJsonRenderProps) {
+export function MessageJsonRender({ interactionDisabled = false, onReplyAction, spec }: MessageJsonRenderProps) {
   const parsedSpec = toSpec(spec)
   if (!parsedSpec) {
     return <p className={styles.fallback}>[json-render message]</p>
@@ -76,8 +76,8 @@ export function MessageJsonRender({ approvalDisabled = false, onApprovalAction, 
     <div className={styles.root}>
       <MessageJsonRenderRuntimeContext.Provider
         value={{
-          approvalDisabled,
-          onApprovalAction,
+          interactionDisabled,
+          onReplyAction,
         }}
       >
         <JSONUIProvider initialState={parsedSpec.state} registry={messageJsonRenderRegistry}>

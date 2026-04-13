@@ -48,6 +48,22 @@ export const messageJsonRenderCatalog = defineCatalog(schema, {
         }),
     },
     Alert: shadcnComponentDefinitions.Alert,
+    AskQuestion: {
+      description: 'Question prompt with quick-reply buttons and a freeform text area',
+      props: z.object({
+        confirmLabel: z.string().optional(),
+        freeformPlaceholder: z.string().optional(),
+        options: z
+          .array(
+            z.object({
+              label: z.string(),
+              value: z.string().optional(),
+            }),
+          )
+          .optional(),
+        question: z.string(),
+      }),
+    },
     Avatar: shadcnComponentDefinitions.Avatar,
     Badge: shadcnComponentDefinitions.Badge,
     BarGraph: {

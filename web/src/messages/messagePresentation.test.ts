@@ -157,6 +157,26 @@ describe('message presentation helpers', () => {
     expect(summarizeLastMessagePreview(message)).toBe('Release history - agent-message - main - Ship commit log component')
   })
 
+  it('extracts a useful preview from ask-question json render messages', () => {
+    const message = createMessage({
+      kind: 'json_render',
+      json_render_spec: {
+        root: 'question-1',
+        elements: {
+          'question-1': {
+            type: 'AskQuestion',
+            props: {
+              question: 'Which environment should I use?',
+              freeformPlaceholder: 'Type a custom environment',
+            },
+          },
+        },
+      },
+    })
+
+    expect(summarizeLastMessagePreview(message)).toBe('Which environment should I use?')
+  })
+
   it('falls back to placeholder when json render has no extractable text', () => {
     const message = createMessage({
       kind: 'json_render',

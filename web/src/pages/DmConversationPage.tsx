@@ -694,7 +694,7 @@ export function DmConversationPage() {
     composerInputRef.current?.focus()
   }
 
-  const handleApprovalAction = useCallback(
+  const handleReplyAction = useCallback(
     async (value: string) => {
       await approvalResponseMutation.mutateAsync(value)
     },
@@ -867,8 +867,8 @@ export function DmConversationPage() {
 
                           {renderContent.variant === 'json_render' ? (
                             <MessageJsonRender
-                              approvalDisabled={approvalResponseMutation.isPending || sendMessageMutation.isPending}
-                              onApprovalAction={handleApprovalAction}
+                              interactionDisabled={approvalResponseMutation.isPending || sendMessageMutation.isPending}
+                              onReplyAction={handleReplyAction}
                               spec={renderContent.jsonRenderSpec}
                             />
                           ) : null}

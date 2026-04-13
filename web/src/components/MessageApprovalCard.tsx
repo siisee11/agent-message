@@ -50,7 +50,7 @@ function resolveActionClassName(variant: ApprovalAction['variant']): string {
 }
 
 export function MessageApprovalCard({ props }: BaseComponentProps<ApprovalCardProps>) {
-  const { approvalDisabled, onApprovalAction } = useMessageJsonRenderRuntime()
+  const { interactionDisabled, onReplyAction } = useMessageJsonRenderRuntime()
   const [pendingValue, setPendingValue] = useState<string | null>(null)
   const [submittedValue, setSubmittedValue] = useState<string | null>(null)
   const [submitError, setSubmitError] = useState<string | null>(null)
@@ -63,17 +63,17 @@ export function MessageApprovalCard({ props }: BaseComponentProps<ApprovalCardPr
   const title = typeof props.title === 'string' && props.title.trim() !== '' ? props.title : 'Approval requested'
   const badge = typeof props.badge === 'string' && props.badge.trim() !== '' ? props.badge : null
 
-  const isBusy = approvalDisabled || pendingValue !== null || submittedValue !== null
+  const isBusy = interactionDisabled || pendingValue !== null || submittedValue !== null
 
   async function handleAction(value: string): Promise<void> {
-    if (!onApprovalAction || isBusy) {
+    if (!onReplyAction || isBusy) {
       return
     }
 
     setPendingValue(value)
     setSubmitError(null)
     try {
-      await onApprovalAction(value)
+      await onReplyAction(value)
       setSubmittedValue(value)
     } catch (error) {
       setSubmitError(resolveErrorMessage(error))
@@ -99,7 +99,7 @@ export function MessageApprovalCard({ props }: BaseComponentProps<ApprovalCardPr
           {actions.map((action) => (
             <button
               className={`${styles.approvalAction} ${resolveActionClassName(action.variant)}`}
-              disabled={isBusy || !onApprovalAction}
+              disabled={isBusy || !onReplyAction}
               key={`${action.value}:${action.label}`}
               onClick={() => {
                 void handleAction(action.value)
@@ -113,7 +113,7 @@ export function MessageApprovalCard({ props }: BaseComponentProps<ApprovalCardPr
       ) : null}
       {submittedValue ? <p className={styles.approvalStatus}>Sent response: {submittedValue}</p> : null}
       {submitError ? <p className={styles.approvalError}>{submitError}</p> : null}
-      {!onApprovalAction && actions.length > 0 ? (
+      {!onReplyAction && actions.length > 0 ? (
         <p className={styles.approvalHint}>Buttons are unavailable in this view.</p>
       ) : null}
     </section>

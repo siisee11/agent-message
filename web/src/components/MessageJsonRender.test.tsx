@@ -60,6 +60,37 @@ describe('MessageJsonRender', () => {
     expect(html).toContain('Fallback reply: approve | session | deny | cancel')
   })
 
+  it('renders ask-question cards with options and a freeform response area', () => {
+    const html = ReactDOMServer.renderToStaticMarkup(
+      <MessageJsonRender
+        spec={{
+          root: 'question-1',
+          elements: {
+            'question-1': {
+              type: 'AskQuestion',
+              props: {
+                question: 'Which environment should I use?',
+                options: [
+                  { label: 'Production', value: 'production' },
+                  { label: 'Staging', value: 'staging' },
+                ],
+                freeformPlaceholder: 'Type a custom environment',
+                confirmLabel: 'Send answer',
+              },
+            },
+          },
+        }}
+      />,
+    )
+
+    expect(html).toContain('Which environment should I use?')
+    expect(html).toContain('Production')
+    expect(html).toContain('Staging')
+    expect(html).toContain('Type a custom environment')
+    expect(html).toContain('Send answer')
+    expect(html).toContain('<textarea')
+  })
+
   it('renders alerts with title and message', () => {
     const html = ReactDOMServer.renderToStaticMarkup(
       <MessageJsonRender

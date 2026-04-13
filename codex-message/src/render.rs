@@ -1,5 +1,7 @@
 use serde_json::{Map, Value, json};
 
+use crate::json_render_validation::ValidationIssue;
+
 pub(crate) struct ApprovalAction<'a> {
     pub(crate) label: &'a str,
     pub(crate) value: &'a str,
@@ -73,6 +75,61 @@ pub(crate) fn approval_spec(
                     "replyHint": reply_hint,
                     "actions": action_values,
                 },
+            },
+        },
+    })
+}
+
+pub(crate) fn invalid_json_render_spec(
+    title: &str,
+    summary: &str,
+    issues: &[ValidationIssue],
+) -> Value {
+    let rows: Vec<Vec<String>> = issues
+        .iter()
+        .map(|issue| vec![issue.path.clone(), issue.message.clone()])
+        .collect();
+
+    json!({
+        "root": "root",
+        "elements": {
+            "root": {
+                "type": "Stack",
+                "props": { "gap": "sm" },
+                "children": ["badge", "title", "summary", "table"],
+            },
+            "badge": {
+                "type": "Badge",
+                "props": {
+                    "text": "Invalid",
+                    "variant": "destructive",
+                },
+                "children": [],
+            },
+            "title": {
+                "type": "Text",
+                "props": {
+                    "text": title,
+                    "variant": "lead",
+                },
+                "children": [],
+            },
+            "summary": {
+                "type": "Text",
+                "props": {
+                    "text": summary,
+                    "variant": "muted",
+                },
+                "children": [],
+            },
+            "table": {
+                "type": "Table",
+                "props": {
+                    "caption": "Validation issues",
+                    "columns": ["Path", "Issue"],
+                    "rows": rows,
+                },
+                "children": [],
             },
         },
     })
@@ -179,6 +236,24 @@ mod tests {
         assert_eq!(
             spec["elements"]["approval"]["props"]["actions"][0]["value"],
             "approve"
+        );
+    }
+
+    #[test]
+    fn invalid_json_render_spec_renders_issue_table() {
+        let spec = invalid_json_render_spec(
+            "Invalid json-render input",
+            "The payload was ignored.",
+            &[ValidationIssue {
+                path: "/elements/main/props/title".to_string(),
+                message: "required".to_string(),
+            }],
+        );
+
+        assert_eq!(spec["elements"]["table"]["type"], "Table");
+        assert_eq!(
+            spec["elements"]["table"]["props"]["rows"][0][0],
+            "/elements/main/props/title"
         );
     }
 }

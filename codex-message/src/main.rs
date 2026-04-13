@@ -1,6 +1,8 @@
 mod agent_message;
 mod app;
 mod codex;
+#[path = "../../shared/json_render_validation.rs"]
+mod json_render_validation;
 mod log_ui;
 mod render;
 

@@ -214,7 +214,9 @@ impl AgentMessageClient {
 pub(crate) struct Message {
     pub(crate) id: String,
     pub(crate) sender_username: String,
+    pub(crate) kind: String,
     pub(crate) text: String,
+    pub(crate) json_render_spec: Option<Value>,
 }
 
 pub(crate) struct MessageWatch {
@@ -271,7 +273,9 @@ fn parse_watch_event(line: &str, server_url: &str) -> Result<Option<Message>> {
     Ok(Some(Message {
         id: message.id.trim().to_string(),
         sender_username: message.sender.username.trim().to_string(),
+        kind: message.kind.trim().to_string(),
         text: watch_message_text(&message, server_url),
+        json_render_spec: message.json_render_spec,
     }))
 }
 
@@ -288,6 +292,8 @@ struct WatchJSONMessage {
     sender: WatchJSONSender,
     content: Option<String>,
     kind: String,
+    #[serde(default)]
+    json_render_spec: Option<Value>,
     attachment_url: Option<String>,
     attachment_type: Option<String>,
     deleted: bool,

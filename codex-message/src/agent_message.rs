@@ -289,6 +289,7 @@ pub(crate) struct Message {
     pub(crate) sender_username: String,
     pub(crate) kind: String,
     pub(crate) text: String,
+    pub(crate) json_render_spec: Option<Value>,
 }
 
 pub(crate) struct MessageWatch {
@@ -400,6 +401,7 @@ fn parse_watch_event(line: &str, server_url: &str) -> Result<Option<Message>> {
         sender_username: message.sender.username.trim().to_string(),
         kind: message.kind.trim().to_string(),
         text: watch_message_text(&message, server_url),
+        json_render_spec: message.json_render_spec,
     }))
 }
 
@@ -416,6 +418,8 @@ struct WatchJSONMessage {
     sender: WatchJSONSender,
     content: Option<String>,
     kind: String,
+    #[serde(default)]
+    json_render_spec: Option<Value>,
     attachment_url: Option<String>,
     attachment_type: Option<String>,
     deleted: bool,
@@ -557,6 +561,7 @@ mod tests {
                 sender_username: "jay".to_string(),
                 kind: "text".to_string(),
                 text: "hello world".to_string(),
+                json_render_spec: None,
             }
         );
     }
@@ -585,7 +590,7 @@ mod tests {
     #[test]
     fn parses_watch_json_render_message() {
         let parsed = parse_watch_event(
-            r#"{"type":"message.new","conversation_id":"c-1","message":{"id":"m-124","conversation_id":"c-1","sender":{"id":"u-1","username":"jay"},"kind":"json_render","deleted":false,"created_at":"2026-01-01T00:00:00Z","updated_at":"2026-01-01T00:00:00Z"}}"#,
+            r#"{"type":"message.new","conversation_id":"c-1","message":{"id":"m-124","conversation_id":"c-1","sender":{"id":"u-1","username":"jay"},"kind":"json_render","json_render_spec":{"root":"main","elements":{"main":{"type":"Stack"}}},"deleted":false,"created_at":"2026-01-01T00:00:00Z","updated_at":"2026-01-01T00:00:00Z"}}"#,
             "https://agent.example.test",
         )
         .expect("parse watch event")
@@ -595,6 +600,17 @@ mod tests {
         assert_eq!(parsed.sender_username, "jay");
         assert_eq!(parsed.kind, "json_render");
         assert_eq!(parsed.text, "[json-render]");
+        assert_eq!(
+            parsed.json_render_spec,
+            Some(serde_json::json!({
+                "root": "main",
+                "elements": {
+                    "main": {
+                        "type": "Stack"
+                    }
+                }
+            }))
+        );
     }
 
     #[test]

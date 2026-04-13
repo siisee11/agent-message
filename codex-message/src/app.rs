@@ -10,8 +10,9 @@ use crate::Config;
 use crate::SandboxArg;
 use crate::agent_message::{AgentMessageClient, Message, MessageWatch};
 use crate::codex::{CodexAppServer, IncomingMessage};
+use crate::json_render_validation::{ValidationIssue, validate_json_render_spec};
 use crate::log_ui::LogUi;
-use crate::render::{ApprovalAction, approval_spec, report_spec};
+use crate::render::{ApprovalAction, approval_spec, invalid_json_render_spec, report_spec};
 
 fn request_suffix(to_username: &str, from_username: &str) -> String {
     format!(
@@ -272,6 +273,9 @@ impl Runtime {
             {
                 continue;
             }
+            if self.handle_invalid_json_render_message(&message).await? {
+                continue;
+            }
             if extract_request_text(&message).is_none() {
                 continue;
             }
@@ -300,6 +304,44 @@ impl Runtime {
             }
             return Ok(message);
         }
+    }
+
+    async fn handle_invalid_json_render_message(&self, message: &Message) -> Result<bool> {
+        if !message.kind.eq_ignore_ascii_case("json_render") {
+            return Ok(false);
+        }
+
+        let issues = match message.json_render_spec.as_ref() {
+            Some(spec) => validate_json_render_spec(spec),
+            None => vec![ValidationIssue {
+                path: "/json_render_spec".to_string(),
+                message: "missing from watch payload".to_string(),
+            }],
+        };
+        if issues.is_empty() {
+            return Ok(false);
+        }
+
+        self.logger.warning(
+            "Invalid json-render message received",
+            issues
+                .iter()
+                .take(5)
+                .map(|issue| format!("{}: {}", issue.path, issue.message))
+                .collect::<Vec<_>>(),
+        );
+
+        let spec = invalid_json_render_spec(
+            "Invalid json-render input",
+            "The incoming json_render payload was ignored because it does not match the current catalog contract.",
+            &issues,
+        );
+        self.agent_client
+            .send_json_render_message(&self.to_username, spec)
+            .await
+            .context("send invalid json-render notice")?;
+
+        Ok(true)
     }
 
     async fn reconnect_message_watch(
@@ -867,11 +909,14 @@ fn sandbox_policy(config: &Config) -> Value {
 }
 
 fn extract_request_text(message: &Message) -> Option<String> {
+    if message.kind.eq_ignore_ascii_case("json_render") {
+        return None;
+    }
     let trimmed = message.text.trim();
     if trimmed.is_empty() {
         return None;
     }
-    if trimmed == "[json-render]" || trimmed == "deleted message" {
+    if trimmed == "deleted message" {
         return None;
     }
     Some(trimmed.to_string())
@@ -1203,6 +1248,7 @@ mod tests {
                 sender_username: "jay".to_string(),
                 kind: "json_render".to_string(),
                 text: "[json-render]".to_string(),
+                json_render_spec: None,
             }),
             None
         );

@@ -159,7 +159,7 @@ func TestRegisterCommandSupportsRawPayload(t *testing.T) {
 	}
 }
 
-func TestRunLoginRestoresStoredMasterForProfile(t *testing.T) {
+func TestRunLoginPreservesGlobalMaster(t *testing.T) {
 	t.Parallel()
 
 	rt, _, _ := newTestRuntime(t, "http://example.test", "", func(req *http.Request, body []byte) (*http.Response, error) {
@@ -175,11 +175,11 @@ func TestRunLoginRestoresStoredMasterForProfile(t *testing.T) {
 		}
 		return jsonResponse(http.StatusOK, `{"token":"login-token","user":{"id":"u1","account_id":"alice","username":"alice","created_at":"2026-01-01T00:00:00Z"}}`), nil
 	})
+	rt.Config.Master = "jay"
 	rt.Config.Profiles = map[string]config.Profile{
 		"alice": {
 			Username:  "alice",
 			ServerURL: "http://example.test",
-			Master:    "jay",
 		},
 	}
 	if err := rt.ConfigStore.Save(rt.Config); err != nil {
@@ -227,7 +227,6 @@ func TestRunOnboardLogsInAndSetsMaster(t *testing.T) {
 		"alice": {
 			Username:  "alice",
 			ServerURL: "http://example.test",
-			Master:    "stale-master",
 		},
 	}
 	if err := rt.ConfigStore.Save(rt.Config); err != nil {
@@ -261,9 +260,6 @@ func TestRunOnboardLogsInAndSetsMaster(t *testing.T) {
 	}
 	if got, want := persisted.Master, "alice"; got != want {
 		t.Fatalf("persisted master mismatch: got %q want %q", got, want)
-	}
-	if got, want := persisted.Profiles["alice"].Master, "alice"; got != want {
-		t.Fatalf("persisted profile master mismatch: got %q want %q", got, want)
 	}
 }
 
@@ -473,9 +469,6 @@ func TestRunOnboardUsesConfiguredServerURLInsteadOfActiveProfileServerURL(t *tes
 	}
 	if got, want := persisted.Profiles["alice"].ServerURL, "https://am.namjaeyoun.com"; got != want {
 		t.Fatalf("onboarded profile server_url mismatch: got %q want %q", got, want)
-	}
-	if got, want := persisted.Profiles["alice"].Master, "alice"; got != want {
-		t.Fatalf("onboarded profile master mismatch: got %q want %q", got, want)
 	}
 }
 

@@ -1,6 +1,8 @@
 package config
 
 import (
+	"encoding/json"
+	"os"
 	"path/filepath"
 	"testing"
 )
@@ -89,7 +91,6 @@ func TestSaveLoadRoundTripWithActiveProfile(t *testing.T) {
 				Username:  "alice",
 				ServerURL: DefaultServerURL(),
 				Token:     "stale-token",
-				Master:    "stale-master",
 				ReadSessions: map[string]ReadSession{
 					" conv-1 ": {
 						ConversationID: "conv-1",
@@ -160,7 +161,6 @@ func TestLoadPreservesConfiguredServerURLSeparatelyFromActiveProfileServerURL(t 
 				Username:  "alice",
 				ServerURL: "http://127.0.0.1:45180/",
 				Token:     "local-token",
-				Master:    "jay",
 			},
 		},
 	}
@@ -185,5 +185,71 @@ func TestLoadPreservesConfiguredServerURLSeparatelyFromActiveProfileServerURL(t 
 	}
 	if got, want := cfg.ActiveServerURL(), "http://127.0.0.1:45180"; got != want {
 		t.Fatalf("active server resolution mismatch: got %q want %q", got, want)
+	}
+}
+
+func TestLoadPromotesLegacyActiveProfileMasterToGlobalMaster(t *testing.T) {
+	t.Parallel()
+
+	store := NewStore(filepath.Join(t.TempDir(), "config"))
+	rawLegacyConfig := `{
+  "server_url": "https://chat.example.test/api/",
+  "active_profile": "alice",
+  "profiles": {
+    "alice": {
+      "username": "alice",
+      "server_url": "https://chat.example.test/api/",
+      "token": "alice-token",
+      "master": "jay"
+    },
+    "bob": {
+      "username": "bob",
+      "server_url": "https://chat.example.test/api/",
+      "token": "bob-token",
+      "master": "boss"
+    }
+  }
+}`
+	if err := os.WriteFile(store.Path(), []byte(rawLegacyConfig), 0o600); err != nil {
+		t.Fatalf("write legacy config: %v", err)
+	}
+
+	cfg, err := store.Load()
+	if err != nil {
+		t.Fatalf("load config: %v", err)
+	}
+
+	if got, want := cfg.Master, "jay"; got != want {
+		t.Fatalf("global master mismatch: got %q want %q", got, want)
+	}
+	if err := store.Save(cfg); err != nil {
+		t.Fatalf("save migrated config: %v", err)
+	}
+
+	rawSaved, err := os.ReadFile(store.Path())
+	if err != nil {
+		t.Fatalf("read migrated config: %v", err)
+	}
+	var decoded map[string]any
+	if err := json.Unmarshal(rawSaved, &decoded); err != nil {
+		t.Fatalf("decode migrated config: %v", err)
+	}
+	profiles, ok := decoded["profiles"].(map[string]any)
+	if !ok {
+		t.Fatalf("expected profiles object in migrated config")
+	}
+	alice, ok := profiles["alice"].(map[string]any)
+	if !ok {
+		t.Fatalf("expected alice profile object in migrated config")
+	}
+	if _, exists := alice["master"]; exists {
+		t.Fatalf("expected migrated alice profile to omit master")
+	}
+	bob, ok := profiles["bob"].(map[string]any)
+	if !ok {
+		t.Fatalf("expected bob profile object in migrated config")
+	}
+	if _, exists := bob["master"]; exists {
+		t.Fatalf("expected migrated bob profile to omit master")
 	}
 }

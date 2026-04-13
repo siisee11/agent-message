@@ -27,7 +27,7 @@ agent-message onboard
 agent-message upgrade
 ```
 
-This creates or logs into your account, saves the CLI profile in `~/.agent-message/config`, and sets your username as `master`.
+This creates or logs into your account, saves the CLI profile in `~/.agent-message/config`, and sets your username as the global `master` recipient.
 Authentication now uses `account_id`; the public `username` initially defaults to the same value and can be changed later with `agent-message username set <username>`.
 After that, you can use either the web app at `https://am.namjaeyoun.com` or the CLI:
 

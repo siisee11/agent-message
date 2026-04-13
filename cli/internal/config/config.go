@@ -21,7 +21,6 @@ type Profile struct {
 	Username               string                 `json:"username"`
 	ServerURL              string                 `json:"server_url"`
 	Token                  string                 `json:"token,omitempty"`
-	Master                 string                 `json:"master,omitempty"`
 	LastReadConversationID string                 `json:"last_read_conversation_id,omitempty"`
 	ReadSessions           map[string]ReadSession `json:"read_sessions,omitempty"`
 }
@@ -49,6 +48,16 @@ type Config struct {
 // Store provides disk persistence for Config.
 type Store struct {
 	path string
+}
+
+type legacyConfig struct {
+	Master        string                         `json:"master,omitempty"`
+	ActiveProfile string                         `json:"active_profile,omitempty"`
+	Profiles      map[string]legacyProfileConfig `json:"profiles,omitempty"`
+}
+
+type legacyProfileConfig struct {
+	Master string `json:"master,omitempty"`
 }
 
 func DefaultPath() string {
@@ -91,6 +100,10 @@ func (s *Store) Load() (Config, error) {
 	}
 	if err := json.Unmarshal(data, &cfg); err != nil {
 		return Config{}, fmt.Errorf("decode config %q: %w", s.path, err)
+	}
+	legacyMaster := extractLegacyProfileMaster(data, cfg.Master, cfg.ActiveProfile)
+	if strings.TrimSpace(cfg.Master) == "" && legacyMaster != "" {
+		cfg.Master = legacyMaster
 	}
 
 	if err := cfg.normalizeLoaded(); err != nil {
@@ -155,7 +168,6 @@ func (c *Config) prepareForSave() error {
 			Username:               c.ActiveProfile,
 			ServerURL:              profileServerURL,
 			Token:                  c.Token,
-			Master:                 strings.TrimSpace(c.Master),
 			LastReadConversationID: c.LastReadConversationID,
 			ReadSessions:           cloneReadSessions(c.ReadSessions),
 		}
@@ -213,7 +225,6 @@ func (c *Config) normalizeLoaded() error {
 
 	c.ActiveProfileServerURL = profile.ServerURL
 	c.Token = profile.Token
-	c.Master = profile.Master
 	c.ReadSessions = cloneReadSessions(profile.ReadSessions)
 	c.LastReadConversationID = normalizeLastReadConversationID(profile.LastReadConversationID, c.ReadSessions)
 	return nil
@@ -243,10 +254,32 @@ func normalizeProfile(name string, profile Profile) (Profile, error) {
 	}
 	profile.ServerURL = serverURL
 	profile.Token = strings.TrimSpace(profile.Token)
-	profile.Master = strings.TrimSpace(profile.Master)
 	profile.ReadSessions = normalizeReadSessions(profile.ReadSessions)
 	profile.LastReadConversationID = normalizeLastReadConversationID(profile.LastReadConversationID, profile.ReadSessions)
 	return profile, nil
+}
+
+func extractLegacyProfileMaster(data []byte, globalMaster string, activeProfile string) string {
+	if strings.TrimSpace(globalMaster) != "" {
+		return ""
+	}
+	trimmedActiveProfile := strings.TrimSpace(activeProfile)
+	if trimmedActiveProfile == "" {
+		return ""
+	}
+
+	var legacy legacyConfig
+	if err := json.Unmarshal(data, &legacy); err != nil {
+		return ""
+	}
+	if strings.TrimSpace(legacy.Master) != "" {
+		return ""
+	}
+	profile, ok := legacy.Profiles[trimmedActiveProfile]
+	if !ok {
+		return ""
+	}
+	return strings.TrimSpace(profile.Master)
 }
 
 func normalizeServerURL(raw string) (string, error) {

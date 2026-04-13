@@ -43,7 +43,7 @@ const bundledCliFallbackCommands = [
   ['login', 'Log in with username and password'],
   ['logout', 'Log out and clear local token'],
   ['ls', 'List your direct-message conversations'],
-  ['onboard', 'Interactively log in or create an account, then set that account as master'],
+  ['onboard', 'Interactively log in or create an account, then set that account as the global master'],
   ['open', 'Open a conversation with a user'],
   ['profile', 'Manage saved login profiles'],
   ['react', 'React to a message by explicit message ID or by index from the last read'],

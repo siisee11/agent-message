@@ -49,7 +49,7 @@ func newRegisterCommand(rt *Runtime) *cobra.Command {
 func newOnboardCommand(rt *Runtime) *cobra.Command {
 	return &cobra.Command{
 		Use:   "onboard",
-		Short: "Interactively log in or create an account, then set that account as master",
+		Short: "Interactively log in or create an account, then set that account as the global master",
 		Args:  cobra.NoArgs,
 		RunE: func(_ *cobra.Command, _ []string) error {
 			return runOnboard(rt)
@@ -326,7 +326,6 @@ func activateAuthenticatedProfile(rt *Runtime, accountID, serverURL, token strin
 	cfg.ActiveProfile = profileName
 	cfg.ActiveProfileServerURL = serverURL
 	cfg.Token = strings.TrimSpace(token)
-	cfg.Master = existingProfile.Master
 	cfg.ReadSessions = cloneReadSessionsMap(existingProfile.ReadSessions)
 	cfg.LastReadConversationID = existingProfile.LastReadConversationID
 

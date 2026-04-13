@@ -1,8 +1,9 @@
 #!/usr/bin/env node
 
 import { spawn, spawnSync } from 'node:child_process'
-import { accessSync, constants, existsSync, readFileSync } from 'node:fs'
+import { accessSync, closeSync, constants, existsSync, mkdirSync, openSync, readFileSync, writeFileSync } from 'node:fs'
 import { delimiter, dirname, join, resolve } from 'node:path'
+import { homedir } from 'node:os'
 import process from 'node:process'
 import { fileURLToPath } from 'node:url'
 
@@ -14,6 +15,7 @@ const upgradeSpinner = {
 const scriptDir = dirname(fileURLToPath(import.meta.url))
 const packageRoot = resolve(scriptDir, '..', '..')
 const runtimeBinDir = resolve(packageRoot, 'npm', 'runtime', 'bin')
+const backgroundCommand = 'bg'
 const upgradeCommand = 'upgrade'
 const packageJsonPath = resolve(packageRoot, 'package.json')
 
@@ -26,6 +28,23 @@ if (process.argv[2] === upgradeCommand) {
 
 if (process.argv[2] === '--version') {
   printVersion(packageJsonPath)
+}
+
+if (process.argv[2] === backgroundCommand) {
+  const backgroundArgs = process.argv.slice(3)
+  if (backgroundArgs.includes('--help') || backgroundArgs.includes('-h')) {
+    printBackgroundHelp('codex-message')
+    process.exit(0)
+  }
+  const binaryPath = resolveBinaryPath()
+  requireCommand('agent-message', 'Install it first with `npm install -g agent-message`.')
+  requireCommand('codex', 'Install the Codex CLI before running codex-message.')
+  runInBackground({
+    appName: 'codex-message',
+    binaryPath,
+    forwardedArgs: backgroundArgs,
+    argv0: 'codex-message',
+  })
 }
 
 function resolveBinaryPath() {
@@ -253,6 +272,75 @@ function printVersion(path) {
   const packageJson = JSON.parse(readFileSync(path, 'utf8'))
   console.log(`${packageJson.name} ${packageJson.version}`)
   process.exit(0)
+}
+
+function printBackgroundHelp(appName) {
+  console.log(`Run ${appName} detached in the background`)
+  console.log('')
+  console.log(`Usage: ${appName} bg [wrapper flags...]`)
+  console.log('')
+  console.log('Examples:')
+  console.log(`  ${appName} bg --model gpt-5.4 --cwd /path/to/worktree`)
+  console.log(`  ${appName} bg --to alice --model gpt-5.4 --yolo`)
+  console.log('')
+  console.log('All flags after `bg` are forwarded to the wrapper binary.')
+}
+
+function runInBackground({ appName, binaryPath, forwardedArgs, argv0 }) {
+  if (!existsSync(binaryPath)) {
+    console.error(`packaged ${appName} binary is missing at ${binaryPath}. Reinstall the package or rebuild the npm bundle.`)
+    process.exit(1)
+  }
+
+  const wrapperDir = join(homedir(), '.agent-message', 'wrappers', appName)
+  mkdirSync(wrapperDir, { recursive: true })
+
+  const sessionId = `${new Date().toISOString().replace(/[:.]/g, '-')}-${process.pid}`
+  const logFile = join(wrapperDir, `${sessionId}.log`)
+  const metadataFile = join(wrapperDir, `${sessionId}.json`)
+  const stdoutFd = openSync(logFile, 'a')
+  const stderrFd = openSync(logFile, 'a')
+
+  try {
+    const child = spawn(binaryPath, forwardedArgs, {
+      argv0,
+      cwd: process.cwd(),
+      detached: true,
+      env: process.env,
+      stdio: ['ignore', stdoutFd, stderrFd],
+    })
+    child.unref()
+
+    if (!Number.isInteger(child.pid) || child.pid <= 0) {
+      throw new Error(`failed to launch background process: ${binaryPath}`)
+    }
+
+    writeFileSync(
+      metadataFile,
+      `${JSON.stringify(
+        {
+          appName,
+          pid: child.pid,
+          cwd: process.cwd(),
+          command: binaryPath,
+          args: forwardedArgs,
+          logFile,
+          startedAt: new Date().toISOString(),
+        },
+        null,
+        2,
+      )}\n`,
+    )
+
+    console.log(`Started ${appName} in background.`)
+    console.log(`PID: ${child.pid}`)
+    console.log(`Log: ${logFile}`)
+    console.log(`Metadata: ${metadataFile}`)
+    process.exit(0)
+  } finally {
+    closeSync(stdoutFd)
+    closeSync(stderrFd)
+  }
 }
 
 const binaryPath = resolveBinaryPath()

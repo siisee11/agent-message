@@ -37,6 +37,7 @@ Example:
 agent-message config set master jay
 claude-message --model sonnet --permission-mode accept-edits
 claude-message --to alice --model sonnet --permission-mode accept-edits
+claude-message bg --to alice --model sonnet --permission-mode accept-edits
 claude-message upgrade
 ```
 
@@ -55,6 +56,11 @@ Useful flags:
 - `--permission-mode accept-edits`
 - `--allowed-tools Read,Edit`
 - `--bare`
+
+Background run:
+
+- `claude-message bg ...` detaches the wrapper and prints the PID, log path, and metadata path.
+- Logs and metadata are written under `~/.agent-message/wrappers/claude-message/`.
 
 Notes:
 

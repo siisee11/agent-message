@@ -278,6 +278,7 @@ describe('message presentation helpers', () => {
   it('summarizes conversation labels from session folder and hostname', () => {
     expect(
       summarizeConversationLabel({
+        conversation: { id: 'c1', participant_a: 'u1', participant_b: 'u2', created_at: '2026-03-30T00:00:00.000Z' },
         other_user: { id: 'u2', account_id: 'agent-123', username: 'agent-123', created_at: '2026-03-30T00:00:00.000Z' },
         session_folder: 'agent-message',
         session_hostname: 'devbox.local',
@@ -288,8 +289,26 @@ describe('message presentation helpers', () => {
   it('falls back to other username when session metadata is missing', () => {
     expect(
       summarizeConversationLabel({
+        conversation: { id: 'c1', participant_a: 'u1', participant_b: 'u2', created_at: '2026-03-30T00:00:00.000Z' },
         other_user: { id: 'u2', account_id: 'agent-123', username: 'agent-123', created_at: '2026-03-30T00:00:00.000Z' },
       }),
     ).toBe('agent-123')
+  })
+
+  it('prefers conversation title over username and session metadata', () => {
+    expect(
+      summarizeConversationLabel({
+        conversation: {
+          id: 'c1',
+          participant_a: 'u1',
+          participant_b: 'u2',
+          title: 'Janet Agent Message',
+          created_at: '2026-03-30T00:00:00.000Z',
+        },
+        other_user: { id: 'u2', account_id: 'agent-123', username: 'agent-123', created_at: '2026-03-30T00:00:00.000Z' },
+        session_folder: 'agent-message',
+        session_hostname: 'devbox.local',
+      }),
+    ).toBe('Janet Agent Message')
   })
 })

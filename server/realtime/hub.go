@@ -2,7 +2,6 @@ package realtime
 
 import (
 	"errors"
-	"sort"
 	"strings"
 	"sync"
 )
@@ -203,46 +202,6 @@ func (h *Hub) BroadcastToConversation(conversationID string, event Event) (Broad
 	return result, nil
 }
 
-func (h *Hub) ConnectionsForUser(userID string) int {
-	userID = strings.TrimSpace(userID)
-	if userID == "" {
-		return 0
-	}
-
-	h.mu.RLock()
-	defer h.mu.RUnlock()
-	return len(h.userClients[userID])
-}
-
-func (h *Hub) ConnectionsForUserKind(userID, clientKind string) int {
-	userID = strings.TrimSpace(userID)
-	if userID == "" {
-		return 0
-	}
-	clientKind = NormalizeClientKind(clientKind)
-
-	h.mu.RLock()
-	defer h.mu.RUnlock()
-
-	count := 0
-	for client := range h.userClients[userID] {
-		state, ok := h.clients[client]
-		if !ok {
-			continue
-		}
-		if state.kind == clientKind {
-			count++
-		}
-	}
-	return count
-}
-
-func (h *Hub) ConnectionCount() int {
-	h.mu.RLock()
-	defer h.mu.RUnlock()
-	return len(h.clients)
-}
-
 func (h *Hub) removeClientLocked(client *Client, state clientState) {
 	for conversationID := range state.conversations {
 		h.removeConversationClientLocked(conversationID, client)
@@ -317,24 +276,4 @@ func NormalizeClientKind(clientKind string) string {
 	default:
 		return ClientKindUnknown
 	}
-}
-
-func (h *Hub) ConversationIDs(client *Client) ([]string, error) {
-	if client == nil {
-		return nil, ErrClientNil
-	}
-
-	h.mu.RLock()
-	state, ok := h.clients[client]
-	h.mu.RUnlock()
-	if !ok {
-		return nil, ErrClientNotRegistered
-	}
-
-	out := make([]string, 0, len(state.conversations))
-	for conversationID := range state.conversations {
-		out = append(out, conversationID)
-	}
-	sort.Strings(out)
-	return out, nil
 }

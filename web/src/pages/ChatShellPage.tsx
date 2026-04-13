@@ -7,7 +7,7 @@ import { useAuth } from '../auth'
 import { ChatAvatar } from '../components/ChatAvatar'
 import { ThemeToggleButton } from '../components/ThemeToggleButton'
 import { useDocumentSurface } from '../hooks'
-import { summarizeLastMessagePreview } from '../messages/messagePresentation'
+import { summarizeConversationLabel, summarizeLastMessagePreview } from '../messages/messagePresentation'
 import {
   disablePushNotifications,
   enablePushNotifications,
@@ -318,7 +318,7 @@ export function ChatShellPage() {
     const conversationId = summary.conversation.id
     const preview = summarizeLastMessagePreview(summary.last_message)
     const timestamp = formatLastMessageTime(summary.last_message)
-    const title = summary.conversation.title?.trim() ?? ''
+    const conversationLabel = summarizeConversationLabel(summary)
     const isMenuOpen = openConversationMenuId === conversationId
     const isActive = activeConversationId === conversationId
     const isDeletingConversation = deleteConversationMutation.isPending && isMenuOpen
@@ -335,13 +335,10 @@ export function ChatShellPage() {
         >
           <ChatAvatar className={styles.conversationAvatar} size="md" username={summary.other_user.username} />
           <div className={styles.conversationBody}>
-            {title ? (
-              <p className={styles.conversationTitle} title={title}>
-                {title}
-              </p>
-            ) : null}
             <div className={styles.conversationMeta}>
-              <span className={styles.conversationName}>{summary.other_user.username}</span>
+              <span className={styles.conversationName} title={conversationLabel}>
+                {conversationLabel}
+              </span>
               <span className={styles.conversationTime}>{timestamp}</span>
             </div>
             <p className={styles.conversationPreview} title={preview}>

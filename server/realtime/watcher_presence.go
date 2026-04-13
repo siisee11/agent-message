@@ -48,15 +48,6 @@ func NewWatcherPresence(ttl time.Duration) *WatcherPresence {
 	}
 }
 
-func (p *WatcherPresence) SetNowFnForTests(nowFn func() time.Time) {
-	if nowFn == nil {
-		return
-	}
-	p.mu.Lock()
-	defer p.mu.Unlock()
-	p.nowFn = nowFn
-}
-
 func (p *WatcherPresence) Register(userID, sessionID string, conversationIDs []string) (*WatcherPresenceTransition, error) {
 	userID = strings.TrimSpace(userID)
 	if userID == "" {

@@ -448,7 +448,13 @@ export function extractMessageHostname(message: Message): string | null {
   return extractHostnameFromText(parsed.textContent)
 }
 
-export function summarizeConversationLabel(summary: Pick<ConversationSummary, 'other_user' | 'session_folder' | 'session_hostname'>): string {
+export function summarizeConversationLabel(
+  summary: Pick<ConversationSummary, 'conversation' | 'other_user' | 'session_folder' | 'session_hostname'>,
+): string {
+  const title = summary.conversation.title?.trim()
+  if (title) {
+    return title
+  }
   const displayLabel = joinCandidateParts([summary.session_folder, summary.session_hostname], ' · ')
   return displayLabel ?? summary.other_user.username
 }

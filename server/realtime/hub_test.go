@@ -3,6 +3,7 @@ package realtime
 import (
 	"errors"
 	"reflect"
+	"sort"
 	"testing"
 )
 
@@ -23,10 +24,10 @@ func TestHubRegisterBroadcastAndUnregister(t *testing.T) {
 		t.Fatalf("register clientC: %v", err)
 	}
 
-	if got := hub.ConnectionCount(); got != 3 {
+	if got := len(hub.clients); got != 3 {
 		t.Fatalf("expected 3 connected clients, got %d", got)
 	}
-	if got := hub.ConnectionsForUser("u1"); got != 1 {
+	if got := len(hub.userClients["u1"]); got != 1 {
 		t.Fatalf("expected 1 connection for u1, got %d", got)
 	}
 
@@ -44,10 +45,10 @@ func TestHubRegisterBroadcastAndUnregister(t *testing.T) {
 	assertNoEvent(t, clientC.Send)
 
 	hub.Unregister(clientB)
-	if got := hub.ConnectionCount(); got != 2 {
+	if got := len(hub.clients); got != 2 {
 		t.Fatalf("expected 2 connected clients after unregister, got %d", got)
 	}
-	if got := hub.ConnectionsForUser("u2"); got != 0 {
+	if got := len(hub.userClients["u2"]); got != 0 {
 		t.Fatalf("expected 0 connections for u2 after unregister, got %d", got)
 	}
 
@@ -154,10 +155,15 @@ func TestHubConversationIDs(t *testing.T) {
 		t.Fatalf("register: %v", err)
 	}
 
-	conversationIDs, err := hub.ConversationIDs(client)
-	if err != nil {
-		t.Fatalf("conversation ids: %v", err)
+	state, ok := hub.clients[client]
+	if !ok {
+		t.Fatalf("expected client to be registered")
 	}
+	conversationIDs := make([]string, 0, len(state.conversations))
+	for conversationID := range state.conversations {
+		conversationIDs = append(conversationIDs, conversationID)
+	}
+	sort.Strings(conversationIDs)
 	if !reflect.DeepEqual(conversationIDs, []string{"conv-a", "conv-b"}) {
 		t.Fatalf("unexpected conversation ids: %#v", conversationIDs)
 	}
@@ -179,15 +185,27 @@ func TestHubConnectionsForUserKind(t *testing.T) {
 		t.Fatalf("register watcherB: %v", err)
 	}
 
-	if got, want := hub.ConnectionsForUser("u1"), 3; got != want {
+	if got, want := len(hub.userClients["u1"]), 3; got != want {
 		t.Fatalf("connections for user mismatch: got %d want %d", got, want)
 	}
-	if got, want := hub.ConnectionsForUserKind("u1", ClientKindWatcher), 2; got != want {
+	if got, want := countConnectionsForUserKind(hub, "u1", ClientKindWatcher), 2; got != want {
 		t.Fatalf("watcher connections mismatch: got %d want %d", got, want)
 	}
-	if got, want := hub.ConnectionsForUserKind("u1", ClientKindWeb), 1; got != want {
+	if got, want := countConnectionsForUserKind(hub, "u1", ClientKindWeb), 1; got != want {
 		t.Fatalf("web connections mismatch: got %d want %d", got, want)
 	}
+}
+
+func countConnectionsForUserKind(hub *Hub, userID, clientKind string) int {
+	clientKind = NormalizeClientKind(clientKind)
+
+	count := 0
+	for client := range hub.userClients[userID] {
+		if state, ok := hub.clients[client]; ok && state.kind == clientKind {
+			count++
+		}
+	}
+	return count
 }
 
 func assertEvent(t *testing.T, ch <-chan Event, eventType string) {

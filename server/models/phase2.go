@@ -86,24 +86,6 @@ func (r ToggleReactionRequest) Validate() error {
 	return nil
 }
 
-// ListMessagesQuery defines cursor pagination inputs for message history.
-type ListMessagesQuery struct {
-	Before string `json:"before"`
-	Limit  int    `json:"limit"`
-}
-
-// Normalize sets defaults and validates bounds.
-func (q *ListMessagesQuery) Normalize() error {
-	q.Before = strings.TrimSpace(q.Before)
-	if q.Limit == 0 {
-		q.Limit = DefaultMessagePageLimit
-	}
-	if q.Limit < 1 || q.Limit > MaxMessagePageLimit {
-		return ErrPageLimitOutOfRange
-	}
-	return nil
-}
-
 // ConversationSummary is a list projection for GET /api/conversations.
 type ConversationSummary struct {
 	Conversation    Conversation `json:"conversation"`

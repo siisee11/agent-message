@@ -100,26 +100,3 @@ func TestSendMessageRequestValidateJSONRender(t *testing.T) {
 		t.Fatalf("expected validation error for non-object json_render_spec")
 	}
 }
-
-func TestListMessagesQueryNormalize(t *testing.T) {
-	query := &ListMessagesQuery{}
-	if err := query.Normalize(); err != nil {
-		t.Fatalf("Normalize() error = %v", err)
-	}
-	if query.Limit != DefaultMessagePageLimit {
-		t.Fatalf("expected default limit %d, got %d", DefaultMessagePageLimit, query.Limit)
-	}
-
-	query = &ListMessagesQuery{Before: " msg-1 ", Limit: 101}
-	if err := query.Normalize(); err == nil {
-		t.Fatalf("expected out-of-range limit validation error")
-	}
-
-	query = &ListMessagesQuery{Before: " msg-2 ", Limit: 10}
-	if err := query.Normalize(); err != nil {
-		t.Fatalf("Normalize() error = %v", err)
-	}
-	if query.Before != "msg-2" {
-		t.Fatalf("expected trimmed before value, got %q", query.Before)
-	}
-}

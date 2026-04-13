@@ -9,7 +9,7 @@ import (
 func TestWatcherPresenceRegisterHeartbeatAndExpire(t *testing.T) {
 	now := time.Date(2026, time.January, 1, 0, 0, 0, 0, time.UTC)
 	presence := NewWatcherPresence(30 * time.Second)
-	presence.SetNowFnForTests(func() time.Time { return now })
+	setWatcherPresenceNowFn(presence, func() time.Time { return now })
 
 	transition, err := presence.Register("u1", "session-1", []string{"conv-a"})
 	if err != nil {
@@ -52,7 +52,7 @@ func TestWatcherPresenceRegisterHeartbeatAndExpire(t *testing.T) {
 func TestWatcherPresenceSubscribeUserUpdatesTrackedConversations(t *testing.T) {
 	now := time.Date(2026, time.January, 1, 0, 0, 0, 0, time.UTC)
 	presence := NewWatcherPresence(30 * time.Second)
-	presence.SetNowFnForTests(func() time.Time { return now })
+	setWatcherPresenceNowFn(presence, func() time.Time { return now })
 
 	if _, err := presence.Register("u1", "session-1", []string{"conv-a"}); err != nil {
 		t.Fatalf("register: %v", err)
@@ -73,7 +73,7 @@ func TestWatcherPresenceSubscribeUserUpdatesTrackedConversations(t *testing.T) {
 func TestWatcherPresenceUnsubscribeUserRemovesTrackedConversation(t *testing.T) {
 	now := time.Date(2026, time.January, 1, 0, 0, 0, 0, time.UTC)
 	presence := NewWatcherPresence(30 * time.Second)
-	presence.SetNowFnForTests(func() time.Time { return now })
+	setWatcherPresenceNowFn(presence, func() time.Time { return now })
 
 	if _, err := presence.Register("u1", "session-1", []string{"conv-a", "conv-b"}); err != nil {
 		t.Fatalf("register: %v", err)
@@ -89,4 +89,10 @@ func TestWatcherPresenceUnsubscribeUserRemovesTrackedConversation(t *testing.T) 
 	if !reflect.DeepEqual(transition.ConversationIDs, []string{"conv-a"}) {
 		t.Fatalf("unexpected offline conversations after unsubscribe: %+v", transition.ConversationIDs)
 	}
+}
+
+func setWatcherPresenceNowFn(presence *WatcherPresence, nowFn func() time.Time) {
+	presence.mu.Lock()
+	defer presence.mu.Unlock()
+	presence.nowFn = nowFn
 }

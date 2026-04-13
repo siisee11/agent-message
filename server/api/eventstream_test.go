@@ -184,9 +184,8 @@ func TestEventStreamBroadcastsWatcherPresenceTransitions(t *testing.T) {
 }
 
 func TestWatcherPresenceLeaseExtendsOnHeartbeatAndExpiresInConversationDetail(t *testing.T) {
-	now := time.Date(2026, time.January, 1, 0, 0, 0, 0, time.UTC)
-	watcherPresence := realtime.NewWatcherPresence(30 * time.Second)
-	watcherPresence.SetNowFnForTests(func() time.Time { return now })
+	const ttl = 40 * time.Millisecond
+	watcherPresence := realtime.NewWatcherPresence(ttl)
 
 	server, _ := newEventStreamTestServerWithWatcherPresence(t, watcherPresence)
 	alice := registerAndLoginUser(t, server.Config.Handler, "alice", "1234")
@@ -196,7 +195,7 @@ func TestWatcherPresenceLeaseExtendsOnHeartbeatAndExpiresInConversationDetail(t 
 	watcherResp := mustOpenEventStreamWithSession(t, server.URL, bob.Token, "watcher", "session-1")
 	defer watcherResp.Body.Close()
 
-	now = now.Add(20 * time.Second)
+	time.Sleep(ttl / 2)
 	heartbeatReq := httptest.NewRequest(http.MethodPost, "/api/watchers/heartbeat", strings.NewReader(`{"session_id":"session-1"}`))
 	heartbeatReq.Header.Set("Authorization", "Bearer "+bob.Token)
 	heartbeatReq.Header.Set("Content-Type", "application/json")
@@ -206,13 +205,13 @@ func TestWatcherPresenceLeaseExtendsOnHeartbeatAndExpiresInConversationDetail(t 
 		t.Fatalf("heartbeat expected %d, got %d body=%s", http.StatusNoContent, heartbeatResp.Code, heartbeatResp.Body.String())
 	}
 
-	now = now.Add(15 * time.Second)
+	time.Sleep(ttl / 2)
 	details := mustGetConversationDetails(t, server.Config.Handler, alice.Token, conversationID)
 	if details.WatcherPresence == nil || !details.WatcherPresence.Online {
 		t.Fatalf("expected watcher to stay online after heartbeat, got %+v", details.WatcherPresence)
 	}
 
-	now = now.Add(20 * time.Second)
+	time.Sleep(ttl + 20*time.Millisecond)
 	details = mustGetConversationDetails(t, server.Config.Handler, alice.Token, conversationID)
 	if details.WatcherPresence == nil || details.WatcherPresence.Online {
 		t.Fatalf("expected watcher to expire offline in conversation detail, got %+v", details.WatcherPresence)
@@ -220,9 +219,7 @@ func TestWatcherPresenceLeaseExtendsOnHeartbeatAndExpiresInConversationDetail(t 
 }
 
 func TestWatcherPresenceSessionDeleteTurnsConversationOfflineImmediately(t *testing.T) {
-	now := time.Date(2026, time.January, 1, 0, 0, 0, 0, time.UTC)
 	watcherPresence := realtime.NewWatcherPresence(30 * time.Second)
-	watcherPresence.SetNowFnForTests(func() time.Time { return now })
 
 	server, _ := newEventStreamTestServerWithWatcherPresence(t, watcherPresence)
 	alice := registerAndLoginUser(t, server.Config.Handler, "alice", "1234")

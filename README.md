@@ -289,6 +289,8 @@ You can run the same packaging step manually from the repo root:
 npm run prepare:npm-bundle
 ```
 
+GitHub Actions can publish all three npm packages (`agent-message`, `codex-message`, `claude-message`) from a release tag. The workflow is `.github/workflows/npm-release.yml` and expects a tag in the form `v<semver>` such as `v0.6.13`. On tag push it validates the package versions, builds release tarballs on macOS, creates or updates the GitHub release, and publishes the tarballs to npm. The publish job uses npm trusted publishing with provenance when available, and can also fall back to `NPM_TOKEN` if you set that repository secret.
+
 ## Claude Code Skill
 
 Install the Agent Message CLI skill to give Claude Code full knowledge of this project's CLI commands, flags, and json_render component catalog:

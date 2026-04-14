@@ -1,0 +1,249 @@
+name: NPM Release
+
+on:
+  push:
+    tags:
+      - "v*"
+
+concurrency:
+  group: ${{ github.workflow }}
+  cancel-in-progress: true
+
+jobs:
+  tag-check:
+    runs-on: ubuntu-latest
+    outputs:
+      publish_tag: ${{ steps.validate.outputs.publish_tag }}
+      version: ${{ steps.validate.outputs.version }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Validate release tag matches package versions
+        id: validate
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          [[ "${GITHUB_REF_TYPE}" == "tag" ]] \
+            || { echo "Not a tag push"; exit 1; }
+          [[ "${GITHUB_REF_NAME}" =~ ^v[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z.-]+)?$ ]] \
+            || { echo "Tag '${GITHUB_REF_NAME}' does not match v<semver>"; exit 1; }
+
+          version="${GITHUB_REF_NAME#v}"
+          root_version="$(node -p "require('./package.json').version")"
+          codex_pkg_version="$(node -p "require('./codex-message/package.json').version")"
+          claude_pkg_version="$(node -p "require('./claude-message/package.json').version")"
+          codex_cargo_version="$(sed -n 's/^version = \"\\([^\"]*\\)\"$/\\1/p' codex-message/Cargo.toml | head -n1)"
+          claude_cargo_version="$(sed -n 's/^version = \"\\([^\"]*\\)\"$/\\1/p' claude-message/Cargo.toml | head -n1)"
+
+          [[ "${version}" == "${root_version}" ]] \
+            || { echo "Tag ${version} != package.json ${root_version}"; exit 1; }
+          [[ "${version}" == "${codex_pkg_version}" ]] \
+            || { echo "Tag ${version} != codex-message/package.json ${codex_pkg_version}"; exit 1; }
+          [[ "${version}" == "${claude_pkg_version}" ]] \
+            || { echo "Tag ${version} != claude-message/package.json ${claude_pkg_version}"; exit 1; }
+          [[ "${version}" == "${codex_cargo_version}" ]] \
+            || { echo "Tag ${version} != codex-message/Cargo.toml ${codex_cargo_version}"; exit 1; }
+          [[ "${version}" == "${claude_cargo_version}" ]] \
+            || { echo "Tag ${version} != claude-message/Cargo.toml ${claude_cargo_version}"; exit 1; }
+
+          publish_tag="latest"
+          if [[ "${version}" == *"-alpha."* ]]; then
+            publish_tag="alpha"
+          elif [[ "${version}" == *"-beta."* ]]; then
+            publish_tag="beta"
+          elif [[ "${version}" == *"-"* ]]; then
+            publish_tag="next"
+          fi
+
+          echo "version=${version}" >> "${GITHUB_OUTPUT}"
+          echo "publish_tag=${publish_tag}" >> "${GITHUB_OUTPUT}"
+
+  build-tarballs:
+    needs: tag-check
+    runs-on: macos-15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          registry-url: https://registry.npmjs.org
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: server/go.mod
+
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: x86_64-apple-darwin,aarch64-apple-darwin
+
+      - name: Stage npm tarballs
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          mkdir -p dist/npm-publish
+
+          npm pack --pack-destination dist/npm-publish
+          (
+            cd codex-message
+            npm pack --pack-destination ../dist/npm-publish
+          )
+          (
+            cd claude-message
+            npm pack --pack-destination ../dist/npm-publish
+          )
+
+          ls -1 dist/npm-publish
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: npm-publish-tarballs
+          path: dist/npm-publish/*.tgz
+          if-no-files-found: error
+
+  release:
+    needs: [tag-check, build-tarballs]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: actions/download-artifact@v4
+        with:
+          name: npm-publish-tarballs
+          path: dist/npm-publish
+
+      - name: Generate release notes from tag commit message
+        id: release_notes
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          commit="$(git rev-parse "${GITHUB_SHA}^{commit}")"
+          notes_path="${RUNNER_TEMP}/release-notes.md"
+          git log -1 --format=%B "${commit}" > "${notes_path}"
+          echo >> "${notes_path}"
+          echo "path=${notes_path}" >> "${GITHUB_OUTPUT}"
+
+      - name: Create or update GitHub release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG_NAME: ${{ github.ref_name }}
+          VERSION: ${{ needs.tag-check.outputs.version }}
+          IS_PRERELEASE: ${{ contains(needs.tag-check.outputs.version, '-') }}
+          RELEASE_NOTES_PATH: ${{ steps.release_notes.outputs.path }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          shopt -s nullglob
+
+          release_assets=(dist/npm-publish/*.tgz)
+          [[ ${#release_assets[@]} -gt 0 ]] || {
+            echo "No release assets were staged"
+            exit 1
+          }
+
+          if gh release view "${TAG_NAME}" >/dev/null 2>&1; then
+            edit_args=(gh release edit "${TAG_NAME}" --title "${VERSION}" --notes-file "${RELEASE_NOTES_PATH}")
+            if [[ "${IS_PRERELEASE}" == "true" ]]; then
+              edit_args+=(--prerelease)
+            else
+              edit_args+=(--latest)
+            fi
+
+            "${edit_args[@]}"
+            gh release upload "${TAG_NAME}" "${release_assets[@]}" --clobber
+            exit 0
+          fi
+
+          create_args=(gh release create "${TAG_NAME}" "${release_assets[@]}" --verify-tag --title "${VERSION}" --notes-file "${RELEASE_NOTES_PATH}")
+          if [[ "${IS_PRERELEASE}" == "true" ]]; then
+            create_args+=(--prerelease)
+          else
+            create_args+=(--latest)
+          fi
+
+          "${create_args[@]}"
+
+  publish-npm:
+    needs: [tag-check, build-tarballs, release]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write
+    env:
+      NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
+      PUBLISH_TAG: ${{ needs.tag-check.outputs.publish_tag }}
+      VERSION: ${{ needs.tag-check.outputs.version }}
+      REPOSITORY_PRIVATE: ${{ github.event.repository.private }}
+    steps:
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          registry-url: https://registry.npmjs.org
+
+      - uses: actions/download-artifact@v4
+        with:
+          name: npm-publish-tarballs
+          path: dist/npm-publish
+
+      - name: Publish tarballs to npm
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          publish_args=(--access public)
+          if [[ -n "${NPM_TOKEN:-}" ]]; then
+            export NODE_AUTH_TOKEN="${NPM_TOKEN}"
+          elif [[ "${REPOSITORY_PRIVATE}" != "true" ]]; then
+            publish_args=(--provenance --access public)
+          fi
+
+          tarballs=(
+            "dist/npm-publish/agent-message-${VERSION}.tgz"
+            "dist/npm-publish/codex-message-${VERSION}.tgz"
+            "dist/npm-publish/claude-message-${VERSION}.tgz"
+          )
+
+          for tarball in "${tarballs[@]}"; do
+            [[ -f "${tarball}" ]] || {
+              echo "Missing tarball ${tarball}"
+              exit 1
+            }
+
+            publish_cmd=(npm publish "${tarball}" "${publish_args[@]}")
+            if [[ -n "${PUBLISH_TAG}" ]]; then
+              publish_cmd+=(--tag "${PUBLISH_TAG}")
+            fi
+
+            echo "+ ${publish_cmd[*]}"
+            set +e
+            publish_output="$("${publish_cmd[@]}" 2>&1)"
+            publish_status=$?
+            set -e
+
+            echo "${publish_output}"
+            if [[ ${publish_status} -eq 0 ]]; then
+              continue
+            fi
+
+            if grep -qiE "previously published|cannot publish over|version already exists" <<< "${publish_output}"; then
+              echo "Skipping already-published package version for ${tarball}"
+              continue
+            fi
+
+            exit "${publish_status}"
+          done

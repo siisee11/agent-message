@@ -15,7 +15,6 @@ const upgradeSpinner = {
 const scriptDir = dirname(fileURLToPath(import.meta.url))
 const packageRoot = resolve(scriptDir, '..', '..')
 const runtimeBinDir = resolve(packageRoot, 'npm', 'runtime', 'bin')
-const backgroundCommand = 'bg'
 const upgradeCommand = 'upgrade'
 const packageJsonPath = resolve(packageRoot, 'package.json')
 
@@ -30,8 +29,8 @@ if (process.argv[2] === '--version') {
   printVersion(packageJsonPath)
 }
 
-if (process.argv[2] === backgroundCommand) {
-  const backgroundArgs = process.argv.slice(3)
+if (process.argv.includes('--bg')) {
+  const backgroundArgs = process.argv.slice(2).filter((arg) => arg !== '--bg')
   if (backgroundArgs.includes('--help') || backgroundArgs.includes('-h')) {
     printBackgroundHelp('claude-message')
     process.exit(0)
@@ -277,13 +276,13 @@ function printVersion(path) {
 function printBackgroundHelp(appName) {
   console.log(`Run ${appName} detached in the background`)
   console.log('')
-  console.log(`Usage: ${appName} bg [wrapper flags...]`)
+  console.log(`Usage: ${appName} --bg [wrapper flags...]`)
   console.log('')
   console.log('Examples:')
-  console.log(`  ${appName} bg --model sonnet --permission-mode accept-edits`)
-  console.log(`  ${appName} bg --to alice --model sonnet --cwd /path/to/worktree`)
+  console.log(`  ${appName} --bg --model sonnet --permission-mode accept-edits`)
+  console.log(`  ${appName} --bg --to alice --model sonnet --cwd /path/to/worktree`)
   console.log('')
-  console.log('All flags after `bg` are forwarded to the wrapper binary.')
+  console.log('All flags except `--bg` are forwarded to the wrapper binary.')
 }
 
 function runInBackground({ appName, binaryPath, forwardedArgs, argv0 }) {

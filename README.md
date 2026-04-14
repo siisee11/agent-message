@@ -323,7 +323,7 @@ agent-message config set master jay
 codex-message --model gpt-5.4 --cwd /path/to/worktree
 codex-message --model gpt-5.4 --cwd /path/to/worktree --yolo
 codex-message --to alice --model gpt-5.4 --cwd /path/to/worktree
-codex-message bg --model gpt-5.4 --cwd /path/to/worktree
+codex-message --bg --model gpt-5.4 --cwd /path/to/worktree
 ```
 
 Build from source:
@@ -358,7 +358,7 @@ Useful flags:
 - `--yolo` = `--approval-policy never` + `--sandbox danger-full-access`
 
 Background run:
-- `codex-message bg ...` detaches the wrapper and prints the PID, log path, and metadata path.
+- `codex-message --bg ...` detaches the wrapper and prints the PID, log path, and metadata path.
 - Logs and metadata are written under `~/.agent-message/wrappers/codex-message/`.
 
 ## claude-message
@@ -388,7 +388,7 @@ Example:
 
 ```bash
 claude-message --to jay --model sonnet --permission-mode accept-edits
-claude-message bg --to jay --model sonnet --permission-mode accept-edits
+claude-message --bg --to jay --model sonnet --permission-mode accept-edits
 ```
 
 Typical setup for a Claude user:
@@ -422,7 +422,7 @@ Useful flags:
 - `--bare`
 
 Background run:
-- `claude-message bg ...` detaches the wrapper and prints the PID, log path, and metadata path.
+- `claude-message --bg ...` detaches the wrapper and prints the PID, log path, and metadata path.
 - Logs and metadata are written under `~/.agent-message/wrappers/claude-message/`.
 
 Notes:

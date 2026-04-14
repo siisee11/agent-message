@@ -36,7 +36,7 @@ agent-message config set master jay
 codex-message --model gpt-5.4
 codex-message --model gpt-5.4 --yolo
 codex-message --to alice --model gpt-5.4
-codex-message bg --model gpt-5.4 --cwd /path/to/worktree
+codex-message --bg --model gpt-5.4 --cwd /path/to/worktree
 codex-message upgrade
 ```
 
@@ -52,5 +52,5 @@ Useful flags:
 
 Background run:
 
-- `codex-message bg ...` detaches the wrapper and prints the PID, log path, and metadata path.
+- `codex-message --bg ...` detaches the wrapper and prints the PID, log path, and metadata path.
 - Logs and metadata are written under `~/.agent-message/wrappers/codex-message/`.

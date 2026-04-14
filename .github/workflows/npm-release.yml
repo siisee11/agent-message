@@ -39,8 +39,8 @@ jobs:
           root_version="$(node -p "require('./package.json').version")"
           codex_pkg_version="$(node -p "require('./codex-message/package.json').version")"
           claude_pkg_version="$(node -p "require('./claude-message/package.json').version")"
-          codex_cargo_version="$(sed -n 's/^version = \"\\([^\"]*\\)\"$/\\1/p' codex-message/Cargo.toml | head -n1)"
-          claude_cargo_version="$(sed -n 's/^version = \"\\([^\"]*\\)\"$/\\1/p' claude-message/Cargo.toml | head -n1)"
+          codex_cargo_version="$(sed -n 's/^version = \"\([^\"]*\)\"$/\1/p' codex-message/Cargo.toml | head -n1)"
+          claude_cargo_version="$(sed -n 's/^version = \"\([^\"]*\)\"$/\1/p' claude-message/Cargo.toml | head -n1)"
 
           [[ "${version}" == "${root_version}" ]] \
             || { echo "Tag ${version} != package.json ${root_version}"; exit 1; }

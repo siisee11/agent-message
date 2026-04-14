@@ -78,13 +78,6 @@ jobs:
           node-version: 22
           registry-url: https://registry.npmjs.org
 
-      - name: Upgrade npm for trusted publishing
-        shell: bash
-        run: |
-          set -euo pipefail
-          npm install -g npm@^11.10.0
-          npm --version
-
       - uses: actions/setup-go@v5
         with:
           go-version-file: server/go.mod
@@ -164,7 +157,7 @@ jobs:
           }
 
           if gh release view "${TAG_NAME}" >/dev/null 2>&1; then
-            edit_args=(gh release edit "${TAG_NAME}" --title "${VERSION}" --notes-file "${RELEASE_NOTES_PATH}")
+            edit_args=(gh release edit "${TAG_NAME}" --title "${VERSION}" --notes-file "${RELEASE_NOTES_PATH}" --draft=false)
             if [[ "${IS_PRERELEASE}" == "true" ]]; then
               edit_args+=(--prerelease)
             else
@@ -201,13 +194,6 @@ jobs:
         with:
           node-version: 22
           registry-url: https://registry.npmjs.org
-
-      - name: Upgrade npm for trusted publishing
-        shell: bash
-        run: |
-          set -euo pipefail
-          npm install -g npm@^11.10.0
-          npm --version
 
       - uses: actions/download-artifact@v4
         with:

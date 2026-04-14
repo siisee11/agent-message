@@ -20,7 +20,7 @@ jobs:
         with:
           fetch-depth: 0
 
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v6
         with:
           node-version: 22
 
@@ -73,10 +73,17 @@ jobs:
         with:
           fetch-depth: 0
 
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v6
         with:
           node-version: 22
           registry-url: https://registry.npmjs.org
+
+      - name: Upgrade npm for trusted publishing
+        shell: bash
+        run: |
+          set -euo pipefail
+          npm install -g npm@^11.10.0
+          npm --version
 
       - uses: actions/setup-go@v5
         with:
@@ -190,10 +197,17 @@ jobs:
       VERSION: ${{ needs.tag-check.outputs.version }}
       REPOSITORY_PRIVATE: ${{ github.event.repository.private }}
     steps:
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v6
         with:
           node-version: 22
           registry-url: https://registry.npmjs.org
+
+      - name: Upgrade npm for trusted publishing
+        shell: bash
+        run: |
+          set -euo pipefail
+          npm install -g npm@^11.10.0
+          npm --version
 
       - uses: actions/download-artifact@v4
         with:
@@ -208,8 +222,6 @@ jobs:
           publish_args=(--access public)
           if [[ -n "${NPM_TOKEN:-}" ]]; then
             export NODE_AUTH_TOKEN="${NPM_TOKEN}"
-          elif [[ "${REPOSITORY_PRIVATE}" != "true" ]]; then
-            publish_args=(--provenance --access public)
           fi
 
           tarballs=(

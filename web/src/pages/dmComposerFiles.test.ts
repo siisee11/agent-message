@@ -1,13 +1,55 @@
 import { describe, expect, it } from 'vitest'
-import { buildSelectedFileKey, mergeSelectedFiles } from './dmComposerFiles'
+import { buildSelectedFileKey, extractImageFilesFromClipboardData, mergeSelectedFiles } from './dmComposerFiles'
 
 function createFile(name: string, size = 100, lastModified = 1): File {
   return new File([new Uint8Array(size)], name, { lastModified, type: 'image/png' })
 }
 
+function createClipboardItem(file: File): DataTransferItem {
+  return {
+    kind: 'file',
+    type: file.type,
+    getAsFile: () => file,
+    getAsString: () => undefined,
+    webkitGetAsEntry: () => null,
+  }
+}
+
 describe('dm composer file helpers', () => {
   it('builds a stable file key from file metadata', () => {
     expect(buildSelectedFileKey(createFile('diagram.png', 42, 99))).toBe('diagram.png-42-99')
+  })
+
+  it('extracts pasted image files from clipboard items', () => {
+    const image = createFile('clipboard.png', 10, 5)
+    const nonImage = new File(['plain'], 'note.txt', { type: 'text/plain' })
+    const clipboardData = {
+      items: [createClipboardItem(image), createClipboardItem(nonImage)],
+      files: [],
+    } as unknown as DataTransfer
+
+    expect(extractImageFilesFromClipboardData(clipboardData)).toEqual([image])
+  })
+
+  it('falls back to clipboard files when items are unavailable', () => {
+    const image = createFile('fallback.png', 20, 6)
+    const nonImage = new File(['plain'], 'note.txt', { type: 'text/plain' })
+    const clipboardData = {
+      items: [],
+      files: [image, nonImage],
+    } as unknown as DataTransfer
+
+    expect(extractImageFilesFromClipboardData(clipboardData)).toEqual([image])
+  })
+
+  it('returns an empty list when no pasted images exist', () => {
+    const clipboardData = {
+      items: [],
+      files: [],
+    } as unknown as DataTransfer
+
+    expect(extractImageFilesFromClipboardData(clipboardData)).toEqual([])
+    expect(extractImageFilesFromClipboardData(null)).toEqual([])
   })
 
   it('appends newly selected files instead of replacing existing ones', () => {

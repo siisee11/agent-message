@@ -35,7 +35,7 @@ import {
   prependMessageToPages,
   replaceMessageInPages,
 } from '../realtime/state'
-import { buildSelectedFileKey, mergeSelectedFiles } from './dmComposerFiles'
+import { buildSelectedFileKey, extractImageFilesFromClipboardData, mergeSelectedFiles } from './dmComposerFiles'
 import styles from './DmConversationPage.module.css'
 
 const MESSAGE_PAGE_SIZE = 20
@@ -615,6 +615,21 @@ export function DmConversationPage() {
     event.target.value = ''
   }
 
+  function handleComposerPaste(event: React.ClipboardEvent<HTMLTextAreaElement>): void {
+    if (disableComposerActions || editingTarget) {
+      return
+    }
+
+    const pastedImages = extractImageFilesFromClipboardData(event.clipboardData)
+    if (pastedImages.length === 0) {
+      return
+    }
+
+    event.preventDefault()
+    setComposerError(null)
+    setSelectedFiles((current) => mergeSelectedFiles(current, pastedImages))
+  }
+
   function clearSelectedAttachment(fileKey: string): void {
     setSelectedFiles((current) => {
       const nextFiles = current.filter((file) => buildSelectedFileKey(file) !== fileKey)
@@ -1004,6 +1019,7 @@ export function DmConversationPage() {
                   onBlur={() => setIsComposerFocused(false)}
                   onFocus={() => setIsComposerFocused(true)}
                   onKeyDown={handleComposerKeyDown}
+                  onPaste={handleComposerPaste}
                   placeholder={editingTarget ? 'Edit message...' : 'Message'}
                   ref={composerInputRef}
                   rows={1}

@@ -885,15 +885,25 @@ a {
   background: transparent;
 }
 
-:root[data-theme='neo-brutalism'] button {
-  box-shadow: 4px 4px 0 0 var(--border-strong);
+:root[data-theme='neo-brutalism'] .card,
+:root[data-theme='neo-brutalism'] .wrapper,
+:root[data-theme='neo-brutalism'] .panel,
+:root[data-theme='neo-brutalism'] .header,
+:root[data-theme='neo-brutalism'] .conversationItem,
+:root[data-theme='neo-brutalism'] .conversationMenu,
+:root[data-theme='neo-brutalism'] .composerForm,
+:root[data-theme='neo-brutalism'] .messageBubbleOwnFull,
+:root[data-theme='neo-brutalism'] .messageBubbleAgent,
+:root[data-theme='neo-brutalism'] .approvalCard,
+:root[data-theme='neo-brutalism'] [data-slot='card'],
+:root[data-theme='neo-brutalism'] [data-slot='table-container'] {
+  box-shadow: 6px 6px 0 0 var(--border-strong);
 }
 
 :root[data-theme='neo-brutalism'] button:hover {
-  transform: translate(-1px, -1px);
+  transform: none;
 }
 
 :root[data-theme='neo-brutalism'] button:active {
-  transform: translate(2px, 2px);
-  box-shadow: 1px 1px 0 0 var(--border-strong);
+  transform: translate(1px, 1px);
 }

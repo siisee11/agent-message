@@ -1,5 +1,6 @@
 import { Link } from 'react-router-dom'
 import { useAuth } from '../auth'
+import { BrandLogo } from '../components/BrandLogo'
 import { useDocumentSurface } from '../hooks'
 import { useTheme } from '../theme'
 import styles from './LandingPage.module.css'
@@ -95,8 +96,7 @@ export function LandingPage() {
 
       <header className={styles.nav}>
         <Link className={styles.brand} to="/">
-          <span className={styles.brandMark}>AM</span>
-          <span className={styles.brandText}>Agent Message</span>
+          <BrandLogo size="sm" />
         </Link>
 
         <div className={styles.navActions}>

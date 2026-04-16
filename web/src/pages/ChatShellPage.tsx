@@ -4,6 +4,7 @@ import { NavLink, useLocation, useNavigate } from 'react-router-dom'
 import { ApiError, type ConversationSummary, type Message } from '../api'
 import { apiClient } from '../api/runtime'
 import { useAuth } from '../auth'
+import { BrandLogo } from '../components/BrandLogo'
 import { ChatAvatar } from '../components/ChatAvatar'
 import { ThemeToggleButton } from '../components/ThemeToggleButton'
 import { useDocumentSurface } from '../hooks'
@@ -393,7 +394,9 @@ export function ChatShellPage() {
           <div className={styles.headerTop}>
             <div>
               <p className={styles.eyebrow}>Messages</p>
-              <h1 className={styles.brand}>Agent Message</h1>
+              <h1 className={styles.brand}>
+                <BrandLogo size="lg" />
+              </h1>
             </div>
             <div className={styles.headerActions}>
               <ThemeToggleButton />

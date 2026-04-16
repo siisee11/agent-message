@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
 import { ApiError } from '../api'
 import { useAuth } from '../auth'
+import { BrandLogo } from '../components/BrandLogo'
 import { ThemeToggleButton } from '../components/ThemeToggleButton'
 import { useDocumentSurface } from '../hooks'
 import { useTheme } from '../theme'
@@ -75,9 +76,10 @@ export function LoginPage() {
     <section className={styles.page}>
       <div className={styles.wrapper}>
         <div className={styles.wrapperHeader}>
-          <h2 className={styles.title}>Sign in</h2>
+          <BrandLogo size="sm" />
           <ThemeToggleButton />
         </div>
+        <h1 className={styles.title}>Sign in</h1>
         <p className={styles.subtitle}>Enter your account ID and password.</p>
         <form className={styles.form} onSubmit={handleSubmit}>
           <label className={styles.field}>

@@ -1,0 +1,61 @@
+.logo {
+  --logo-mark-size: var(--brand-logo-mark-size, var(--logo-mark-size-default, 2.75rem));
+  --logo-wordmark-size: var(--brand-logo-wordmark-size, var(--logo-wordmark-size-default, 0.95rem));
+  display: inline-flex;
+  align-items: center;
+  gap: 0.85rem;
+  color: var(--text-primary);
+}
+
+.sizeSM {
+  --logo-mark-size-default: 2.5rem;
+  --logo-wordmark-size-default: 0.86rem;
+}
+
+.sizeMD {
+  --logo-mark-size-default: 2.75rem;
+  --logo-wordmark-size-default: 0.95rem;
+}
+
+.sizeLG {
+  --logo-mark-size-default: 3.5rem;
+  --logo-wordmark-size-default: 1.12rem;
+}
+
+.mark {
+  width: var(--logo-mark-size);
+  height: var(--logo-mark-size);
+  flex: none;
+}
+
+.markFrame {
+  fill: #1f2228;
+  stroke: rgba(255, 255, 255, 0.16);
+  stroke-width: 1.5;
+  shape-rendering: crispEdges;
+}
+
+.markBubble {
+  fill: none;
+  stroke: #ffffff;
+  stroke-width: 3.5;
+  stroke-linecap: square;
+  stroke-linejoin: miter;
+}
+
+.markBar,
+.markPrompt,
+.markCursor {
+  fill: #ffffff;
+}
+
+.wordmark {
+  color: currentColor;
+  font-family: var(--font-display);
+  font-size: var(--logo-wordmark-size);
+  font-weight: 400;
+  letter-spacing: 0.16em;
+  line-height: 1;
+  text-transform: uppercase;
+  white-space: nowrap;
+}

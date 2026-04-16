@@ -28,6 +28,7 @@ agent-message upgrade
 ```
 
 This creates or logs into your account, saves the CLI profile in `~/.agent-message/config`, and sets your username as the global `master` recipient.
+During onboarding, the CLI also offers to install the `agent-message-cli` skill globally for Codex and Claude Code with `npx skills add https://github.com/siisee11/agent-message --skill agent-message-cli -a codex -a claude-code -g -y`.
 Authentication now uses `account_id`; the public `username` initially defaults to the same value and can be changed later with `agent-message username set <username>`.
 After that, you can use either the web app at `https://am.namjaeyoun.com` or the CLI:
 

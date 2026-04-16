@@ -1,9 +1,11 @@
 package cmd
 
 import (
+	"context"
 	"fmt"
 	"io"
 	"os"
+	"os/exec"
 	"strings"
 
 	"agent-message/cli/internal/api"
@@ -21,6 +23,7 @@ type Runtime struct {
 	Stdin       io.Reader
 	Stdout      io.Writer
 	Stderr      io.Writer
+	RunExternal func(ctx context.Context, stdout, stderr io.Writer, name string, args ...string) error
 }
 
 func Execute() error {
@@ -29,9 +32,10 @@ func Execute() error {
 
 func NewRootCommand() *cobra.Command {
 	rt := &Runtime{
-		Stdin:  os.Stdin,
-		Stdout: os.Stdout,
-		Stderr: os.Stderr,
+		Stdin:       os.Stdin,
+		Stdout:      os.Stdout,
+		Stderr:      os.Stderr,
+		RunExternal: runExternalCommand,
 	}
 
 	var configPath string
@@ -106,6 +110,13 @@ func NewRootCommand() *cobra.Command {
 	root = cmd
 
 	return cmd
+}
+
+func runExternalCommand(ctx context.Context, stdout, stderr io.Writer, name string, args ...string) error {
+	cmd := exec.CommandContext(ctx, name, args...)
+	cmd.Stdout = stdout
+	cmd.Stderr = stderr
+	return cmd.Run()
 }
 
 func resolvedClientServerURL(cfg config.Config, command *cobra.Command, serverURLOverride string) string {

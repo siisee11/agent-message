@@ -2,6 +2,7 @@ package cmd
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"io"
 	"net/http"
@@ -232,7 +233,7 @@ func TestRunOnboardLogsInAndSetsMaster(t *testing.T) {
 	if err := rt.ConfigStore.Save(rt.Config); err != nil {
 		t.Fatalf("seed profiles: %v", err)
 	}
-	rt.Stdin = strings.NewReader("alice\nsecret123\n")
+	rt.Stdin = strings.NewReader("alice\nsecret123\nn\n")
 
 	if err := runOnboard(rt); err != nil {
 		t.Fatalf("runOnboard: %v", err)
@@ -250,7 +251,7 @@ func TestRunOnboardLogsInAndSetsMaster(t *testing.T) {
 	if got, want := rt.Config.Master, "alice"; got != want {
 		t.Fatalf("master mismatch: got %q want %q", got, want)
 	}
-	if got, want := stdout.String(), "account_id: password: onboarded alice\n"; got != want {
+	if got, want := stdout.String(), "account_id: password: Install the agent-message-cli skill globally for Codex and Claude Code? (recommended) [Y/n]: onboarded alice\n"; got != want {
 		t.Fatalf("stdout mismatch: got %q want %q", got, want)
 	}
 
@@ -294,7 +295,7 @@ func TestRunOnboardRegistersWhenLoginReturnsUnauthorized(t *testing.T) {
 			return nil, nil
 		}
 	})
-	rt.Stdin = strings.NewReader("alice\nsecret123\n")
+	rt.Stdin = strings.NewReader("alice\nsecret123\nn\n")
 
 	if err := runOnboard(rt); err != nil {
 		t.Fatalf("runOnboard: %v", err)
@@ -309,7 +310,7 @@ func TestRunOnboardRegistersWhenLoginReturnsUnauthorized(t *testing.T) {
 	if got, want := rt.Config.Master, "alice"; got != want {
 		t.Fatalf("master mismatch: got %q want %q", got, want)
 	}
-	if got, want := stdout.String(), "account_id: password: onboarded alice\n"; got != want {
+	if got, want := stdout.String(), "account_id: password: Install the agent-message-cli skill globally for Codex and Claude Code? (recommended) [Y/n]: onboarded alice\n"; got != want {
 		t.Fatalf("stdout mismatch: got %q want %q", got, want)
 	}
 }
@@ -451,7 +452,7 @@ func TestRunOnboardUsesConfiguredServerURLInsteadOfActiveProfileServerURL(t *tes
 		return jsonResponse(http.StatusOK, `{"token":"login-token","user":{"id":"u1","account_id":"alice","username":"alice","created_at":"2026-01-01T00:00:00Z"}}`), nil
 	})})
 
-	rt.Stdin = strings.NewReader("alice\n1234\n")
+	rt.Stdin = strings.NewReader("alice\n1234\nn\n")
 
 	if err := runOnboard(rt); err != nil {
 		t.Fatalf("runOnboard: %v", err)
@@ -469,6 +470,114 @@ func TestRunOnboardUsesConfiguredServerURLInsteadOfActiveProfileServerURL(t *tes
 	}
 	if got, want := persisted.Profiles["alice"].ServerURL, "https://am.namjaeyoun.com"; got != want {
 		t.Fatalf("onboarded profile server_url mismatch: got %q want %q", got, want)
+	}
+}
+
+func TestRunOnboardInstallsSkillWhenApproved(t *testing.T) {
+	t.Parallel()
+
+	rt, stdout, stderr := newTestRuntime(t, "http://example.test", "", func(req *http.Request, body []byte) (*http.Response, error) {
+		if req.URL.Path != "/api/auth/login" {
+			t.Fatalf("unexpected path: %s", req.URL.Path)
+		}
+		var payload map[string]string
+		if err := json.Unmarshal(body, &payload); err != nil {
+			t.Fatalf("decode login payload: %v", err)
+		}
+		if got, want := payload["account_id"], "alice"; got != want {
+			t.Fatalf("account_id mismatch: got %q want %q", got, want)
+		}
+		return jsonResponse(http.StatusOK, `{"token":"login-token","user":{"id":"u1","account_id":"alice","username":"alice","created_at":"2026-01-01T00:00:00Z"}}`), nil
+	})
+
+	var (
+		gotName string
+		gotArgs []string
+	)
+	rt.RunExternal = func(_ context.Context, _, _ io.Writer, name string, args ...string) error {
+		gotName = name
+		gotArgs = append([]string(nil), args...)
+		return nil
+	}
+	rt.Stdin = strings.NewReader("alice\nsecret123\ny\n")
+
+	if err := runOnboard(rt); err != nil {
+		t.Fatalf("runOnboard: %v", err)
+	}
+
+	if got, want := gotName, "npx"; got != want {
+		t.Fatalf("command name mismatch: got %q want %q", got, want)
+	}
+	if got, want := gotArgs, agentMessageSkillInstallArgs; !slices.Equal(got, want) {
+		t.Fatalf("command args mismatch: got %v want %v", got, want)
+	}
+	if got := stderr.String(); got != "" {
+		t.Fatalf("stderr mismatch: got %q", got)
+	}
+	if got, want := stdout.String(), "account_id: password: Install the agent-message-cli skill globally for Codex and Claude Code? (recommended) [Y/n]: onboarded alice\n"; got != want {
+		t.Fatalf("stdout mismatch: got %q want %q", got, want)
+	}
+}
+
+func TestRunOnboardSkipsSkillInstallWhenDeclined(t *testing.T) {
+	t.Parallel()
+
+	rt, _, _ := newTestRuntime(t, "http://example.test", "", func(req *http.Request, body []byte) (*http.Response, error) {
+		if req.URL.Path != "/api/auth/login" {
+			t.Fatalf("unexpected path: %s", req.URL.Path)
+		}
+		var payload map[string]string
+		if err := json.Unmarshal(body, &payload); err != nil {
+			t.Fatalf("decode login payload: %v", err)
+		}
+		if got, want := payload["account_id"], "alice"; got != want {
+			t.Fatalf("account_id mismatch: got %q want %q", got, want)
+		}
+		return jsonResponse(http.StatusOK, `{"token":"login-token","user":{"id":"u1","account_id":"alice","username":"alice","created_at":"2026-01-01T00:00:00Z"}}`), nil
+	})
+
+	called := false
+	rt.RunExternal = func(_ context.Context, _, _ io.Writer, _ string, _ ...string) error {
+		called = true
+		return nil
+	}
+	rt.Stdin = strings.NewReader("alice\nsecret123\nn\n")
+
+	if err := runOnboard(rt); err != nil {
+		t.Fatalf("runOnboard: %v", err)
+	}
+	if called {
+		t.Fatalf("expected skill installer to be skipped")
+	}
+}
+
+func TestRunOnboardWarnsWhenSkillInstallFails(t *testing.T) {
+	t.Parallel()
+
+	rt, _, stderr := newTestRuntime(t, "http://example.test", "", func(req *http.Request, body []byte) (*http.Response, error) {
+		if req.URL.Path != "/api/auth/login" {
+			t.Fatalf("unexpected path: %s", req.URL.Path)
+		}
+		var payload map[string]string
+		if err := json.Unmarshal(body, &payload); err != nil {
+			t.Fatalf("decode login payload: %v", err)
+		}
+		if got, want := payload["account_id"], "alice"; got != want {
+			t.Fatalf("account_id mismatch: got %q want %q", got, want)
+		}
+		return jsonResponse(http.StatusOK, `{"token":"login-token","user":{"id":"u1","account_id":"alice","username":"alice","created_at":"2026-01-01T00:00:00Z"}}`), nil
+	})
+
+	rt.RunExternal = func(_ context.Context, _, _ io.Writer, _ string, _ ...string) error {
+		return io.EOF
+	}
+	rt.Stdin = strings.NewReader("alice\nsecret123\ny\n")
+
+	if err := runOnboard(rt); err != nil {
+		t.Fatalf("runOnboard: %v", err)
+	}
+	if got := stderr.String(); !strings.Contains(got, "warning: agent-message-cli skill install failed: EOF") {
+		t.Fatalf("expected skill install warning, got %q", got)
 	}
 }
 
@@ -649,6 +758,7 @@ func newTestRuntime(
 		Stdin:       strings.NewReader(""),
 		Stdout:      stdout,
 		Stderr:      stderr,
+		RunExternal: func(context.Context, io.Writer, io.Writer, string, ...string) error { return nil },
 	}, stdout, stderr
 }
 

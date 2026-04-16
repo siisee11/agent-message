@@ -15,6 +15,20 @@ import (
 	"github.com/spf13/cobra"
 )
 
+var agentMessageSkillInstallArgs = []string{
+	"skills",
+	"add",
+	"https://github.com/siisee11/agent-message",
+	"--skill",
+	"agent-message-cli",
+	"-a",
+	"codex",
+	"-a",
+	"claude-code",
+	"-g",
+	"-y",
+}
+
 func newRegisterCommand(rt *Runtime) *cobra.Command {
 	var payload string
 	var payloadFile string
@@ -120,11 +134,21 @@ func runOnboard(rt *Runtime) error {
 		return err
 	}
 
-	return writeTextOrJSON(rt, fmt.Sprintf("onboarded %s", resp.User.AccountID), map[string]any{
+	skillInstall, err := promptAndInstallAgentMessageSkill(rt, reader)
+	if err != nil {
+		return err
+	}
+
+	result := map[string]any{
 		"status": "onboarded",
 		"user":   resp.User,
 		"master": rt.Config.Master,
-	})
+	}
+	if skillInstall != nil {
+		result["skill_install"] = skillInstall
+	}
+
+	return writeTextOrJSON(rt, fmt.Sprintf("onboarded %s", resp.User.AccountID), result)
 }
 
 func newLoginCommand(rt *Runtime) *cobra.Command {
@@ -365,4 +389,79 @@ func promptRequiredInput(reader *bufio.Reader, stdout io.Writer, label string) (
 			return "", fmt.Errorf("%s is required", trimmedLabel)
 		}
 	}
+}
+
+func promptYesNo(reader *bufio.Reader, stdout io.Writer, label string, defaultYes bool) (bool, error) {
+	trimmedLabel := strings.TrimSpace(label)
+	if trimmedLabel == "" {
+		return false, errors.New("prompt label is required")
+	}
+
+	defaultHint := "[y/N]"
+	if defaultYes {
+		defaultHint = "[Y/n]"
+	}
+
+	for {
+		if _, err := fmt.Fprintf(stdout, "%s %s: ", trimmedLabel, defaultHint); err != nil {
+			return false, fmt.Errorf("write %s prompt: %w", trimmedLabel, err)
+		}
+
+		line, err := reader.ReadString('\n')
+		if err != nil && !errors.Is(err, io.EOF) {
+			return false, fmt.Errorf("read %s: %w", trimmedLabel, err)
+		}
+
+		value := strings.ToLower(strings.TrimSpace(line))
+		switch value {
+		case "":
+			if errors.Is(err, io.EOF) {
+				return defaultYes, nil
+			}
+			return defaultYes, nil
+		case "y", "yes":
+			return true, nil
+		case "n", "no":
+			return false, nil
+		}
+
+		if _, writeErr := fmt.Fprintln(stdout, "Please answer y or n."); writeErr != nil {
+			return false, fmt.Errorf("write %s retry prompt: %w", trimmedLabel, writeErr)
+		}
+		if errors.Is(err, io.EOF) {
+			return false, fmt.Errorf("%s requires y or n", trimmedLabel)
+		}
+	}
+}
+
+func promptAndInstallAgentMessageSkill(rt *Runtime, reader *bufio.Reader) (map[string]any, error) {
+	approved, err := promptYesNo(reader, rt.Stdout, "Install the agent-message-cli skill globally for Codex and Claude Code? (recommended)", true)
+	if err != nil {
+		return nil, err
+	}
+
+	result := map[string]any{
+		"prompted": true,
+		"accepted": approved,
+		"command":  append([]string{"npx"}, agentMessageSkillInstallArgs...),
+	}
+	if !approved {
+		return result, nil
+	}
+
+	runner := rt.RunExternal
+	if runner == nil {
+		runner = runExternalCommand
+	}
+	if err := runner(context.Background(), rt.Stdout, rt.Stderr, "npx", agentMessageSkillInstallArgs...); err != nil {
+		result["installed"] = false
+		result["error"] = err.Error()
+		if _, writeErr := fmt.Fprintf(rt.Stderr, "warning: agent-message-cli skill install failed: %v\n", err); writeErr != nil {
+			return result, fmt.Errorf("write skill install warning: %w", writeErr)
+		}
+		return result, nil
+	}
+
+	result["installed"] = true
+	return result, nil
 }

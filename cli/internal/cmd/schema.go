@@ -457,6 +457,7 @@ func schemaRegistry() map[string]commandSchemaDescriptor {
 			OutputFormats: []string{"text", "json"},
 			Notes: []string{
 				"Interactive command that reads account ID and password from stdin prompts.",
+				"After authentication, it offers to globally install the `agent-message-cli` skill for Codex and Claude Code via `npx skills add`.",
 			},
 		},
 		"agent-message register": {

@@ -325,6 +325,14 @@
   background: var(--surface-hover);
 }
 
+:global(:root[data-theme='neo-brutalism']) .header,
+:global(:root[data-theme='neo-brutalism']) .listSection,
+:global(:root[data-theme='neo-brutalism']) .conversationItem,
+:global(:root[data-theme='neo-brutalism']) .conversationMenu,
+:global(:root[data-theme='neo-brutalism']) .emptyState {
+  box-shadow: 6px 6px 0 0 var(--border-strong);
+}
+
 .conversationAvatar {
   margin-top: 0.05rem;
 }

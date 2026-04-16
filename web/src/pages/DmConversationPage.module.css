@@ -78,7 +78,6 @@
 }
 
 .messageActionsTrigger:focus-visible,
-.composerInput:focus-visible,
 .attachButton:focus-visible,
 .submitButton:focus-visible,
 .editingCancelButton:focus-visible,
@@ -541,8 +540,7 @@
 .composerField:focus-within {
   border: var(--field-focus-border);
   border-bottom: var(--field-focus-border-bottom);
-  outline: var(--field-focus-outline);
-  outline-offset: var(--field-focus-outline-offset);
+  outline: none;
 }
 
 .composerInput {

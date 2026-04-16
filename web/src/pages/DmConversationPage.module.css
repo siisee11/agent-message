@@ -36,6 +36,18 @@
   padding-right: 0;
 }
 
+.headerBackButton {
+  width: 2.4rem;
+  height: 2.4rem;
+  flex-shrink: 0;
+  color: var(--text-secondary);
+}
+
+.headerBackButton:hover:not(:disabled) {
+  background: var(--surface-hover);
+  color: var(--text-primary);
+}
+
 .headerAvatar {
   flex-shrink: 0;
   width: 2.4rem;

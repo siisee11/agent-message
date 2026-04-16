@@ -6,7 +6,7 @@ import {
   useQueryClient,
 } from '@tanstack/react-query'
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
-import { useParams } from 'react-router-dom'
+import { useNavigate, useParams } from 'react-router-dom'
 import {
   ApiError,
   type MessageAttachment,
@@ -132,6 +132,20 @@ function SendIcon() {
   )
 }
 
+function BackIcon() {
+  return (
+    <svg aria-hidden="true" fill="none" height="16" viewBox="0 0 24 24" width="16">
+      <path
+        d="M14.5 5.5 8 12l6.5 6.5"
+        stroke="currentColor"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        strokeWidth="2"
+      />
+    </svg>
+  )
+}
+
 function scrollTimelineToBottom(timeline: HTMLDivElement | null): void {
   if (!timeline) {
     return
@@ -182,6 +196,7 @@ export function DmConversationPage() {
     themeColor,
   })
 
+  const navigate = useNavigate()
   const { conversationId } = useParams()
   const { user } = useAuth()
   const queryClient = useQueryClient()
@@ -716,6 +731,14 @@ export function DmConversationPage() {
     [approvalResponseMutation],
   )
 
+  const handleBack = useCallback(() => {
+    if (window.history.length > 1) {
+      navigate(-1)
+      return
+    }
+    navigate('/app')
+  }, [navigate])
+
   if (!conversationId) {
     return (
       <section className={styles.page}>
@@ -769,6 +792,14 @@ export function DmConversationPage() {
       <div className={styles.panel}>
         <header className={styles.header}>
           <div className={styles.headerBar}>
+            <button
+              aria-label="Back to conversations"
+              className={`${styles.iconButton} ${styles.headerBackButton}`}
+              onClick={handleBack}
+              type="button"
+            >
+              <BackIcon />
+            </button>
             <ChatAvatar
               className={styles.headerAvatar}
               size="sm"

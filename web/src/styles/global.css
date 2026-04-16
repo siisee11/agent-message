@@ -671,8 +671,8 @@
   --foreground: #121212;
   --card: #fff7eb;
   --card-foreground: #121212;
-  --primary: #ffd60a;
-  --primary-foreground: #121212;
+  --primary: #121212;
+  --primary-foreground: #fff7eb;
   --secondary: #7bdff2;
   --secondary-foreground: #121212;
   --muted: #fff0cc;

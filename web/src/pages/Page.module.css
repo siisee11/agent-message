@@ -7,6 +7,10 @@
   background: var(--surface-elevated);
 }
 
+:global(:root[data-theme='neo-brutalism']) .card {
+  box-shadow: 6px 6px 0 0 var(--border-strong);
+}
+
 .card h2 {
   margin-top: 0;
   margin-bottom: 0.6rem;

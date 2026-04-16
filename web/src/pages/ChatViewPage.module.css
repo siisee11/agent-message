@@ -13,6 +13,10 @@
   background: var(--surface-elevated);
 }
 
+:global(:root[data-theme='neo-brutalism']) .card {
+  box-shadow: 6px 6px 0 0 var(--border-strong);
+}
+
 .title {
   margin: 0;
   color: var(--text-primary);

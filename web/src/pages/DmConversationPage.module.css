@@ -669,6 +669,16 @@
   background: var(--surface-elevated);
 }
 
+:global(:root[data-theme='neo-brutalism']) .panel,
+:global(:root[data-theme='neo-brutalism']) .header,
+:global(:root[data-theme='neo-brutalism']) .messageBubbleOwnFull,
+:global(:root[data-theme='neo-brutalism']) .messageBubbleAgent,
+:global(:root[data-theme='neo-brutalism']) .composerForm,
+:global(:root[data-theme='neo-brutalism']) .contextMenu,
+:global(:root[data-theme='neo-brutalism']) .card {
+  box-shadow: 6px 6px 0 0 var(--border-strong);
+}
+
 @media (max-width: 480px) {
   .header {
     padding:

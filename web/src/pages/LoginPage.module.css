@@ -114,6 +114,10 @@
   color: var(--text-primary);
 }
 
+:global(:root[data-theme='neo-brutalism']) .wrapper {
+  box-shadow: 6px 6px 0 0 var(--border-strong);
+}
+
 @media (max-height: 640px) {
   .page {
     padding-top: max(0.85rem, calc(env(safe-area-inset-top) + 0.85rem));

@@ -39,3 +39,7 @@
   font-size: 1rem;
   line-height: 1.6;
 }
+
+:global(:root[data-theme='neo-brutalism']) .panel {
+  box-shadow: 6px 6px 0 0 var(--border-strong);
+}

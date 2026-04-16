@@ -43,6 +43,14 @@ export const AVAILABLE_THEMES = [
       dark: '#201d1d',
     },
   },
+  {
+    id: 'neo-brutalism',
+    label: 'Neo-Brutalism',
+    themeColorByMode: {
+      light: '#ffbe0b',
+      dark: '#151515',
+    },
+  },
 ] as const
 
 export type ThemeName = (typeof AVAILABLE_THEMES)[number]['id']
@@ -66,7 +74,13 @@ const THEMES_BY_ID = new Map<ThemeName, ThemeDefinition>(
 function readStoredTheme(): ThemeName | null {
   try {
     const stored = window.localStorage.getItem(THEME_STORAGE_KEY)
-    if (stored === 'default' || stored === 'ibm' || stored === 'ferrari' || stored === 'opencode') {
+    if (
+      stored === 'default' ||
+      stored === 'ibm' ||
+      stored === 'ferrari' ||
+      stored === 'opencode' ||
+      stored === 'neo-brutalism'
+    ) {
       return stored
     }
   } catch {

@@ -664,7 +664,161 @@
   color-scheme: dark;
 }
 
-*,
+:root[data-theme='neo-brutalism'][data-color-mode='light'] {
+  --app-surface-background: #ffbe0b;
+  --theme-color: #ffbe0b;
+  --background: #fff7eb;
+  --foreground: #121212;
+  --card: #fff7eb;
+  --card-foreground: #121212;
+  --primary: #ffd60a;
+  --primary-foreground: #121212;
+  --secondary: #7bdff2;
+  --secondary-foreground: #121212;
+  --muted: #fff0cc;
+  --muted-foreground: #514633;
+  --accent: #ff5d73;
+  --accent-foreground: #121212;
+  --destructive: #ff3b30;
+  --border: #121212;
+  --input: #121212;
+  --ring: #3a86ff;
+  --radius: 1rem;
+  --text-primary: #121212;
+  --text-secondary: rgba(18, 18, 18, 0.78);
+  --text-tertiary: rgba(18, 18, 18, 0.62);
+  --text-quaternary: rgba(18, 18, 18, 0.46);
+  --surface-elevated: #fff7eb;
+  --surface-emphasis: #fff0cc;
+  --surface-hover: #ffe169;
+  --border-strong: #121212;
+  --button-primary-bg: #ffd60a;
+  --button-primary-fg: #121212;
+  --button-primary-border: #121212;
+  --status-badge-radius: 999px;
+  --status-badge-neutral-bg: #fff7eb;
+  --status-badge-neutral-border: #121212;
+  --status-badge-neutral-text: #121212;
+  --status-badge-neutral-dot: #121212;
+  --status-badge-live-bg: #b8f36b;
+  --status-badge-live-border: #121212;
+  --status-badge-live-text: #121212;
+  --status-badge-live-dot: #4c9f38;
+  --status-badge-connecting-bg: #7bdff2;
+  --status-badge-connecting-border: #121212;
+  --status-badge-connecting-text: #121212;
+  --status-badge-connecting-dot: #3a86ff;
+  --status-badge-offline-bg: #fff0cc;
+  --status-badge-offline-border: #121212;
+  --status-badge-offline-text: #514633;
+  --status-badge-offline-dot: #8d7a58;
+  --status-badge-online-bg: #b8f36b;
+  --status-badge-online-border: #121212;
+  --status-badge-online-text: #121212;
+  --status-badge-online-dot: #4c9f38;
+  --status-badge-error-bg: #ff9eb5;
+  --status-badge-error-border: #121212;
+  --status-badge-error-text: #121212;
+  --status-badge-error-dot: #ff3b30;
+  --field-border: 2px solid var(--input);
+  --field-border-bottom: 4px solid var(--input);
+  --field-focus-border: 2px solid var(--border-strong);
+  --field-focus-border-bottom: 4px solid var(--border-strong);
+  --field-focus-outline: 3px solid var(--ring);
+  --field-focus-outline-offset: 2px;
+  --font-display:
+    "IBM Plex Sans",
+    "Helvetica Neue",
+    Arial,
+    "Noto Sans KR",
+    sans-serif;
+  --font-body:
+    "IBM Plex Sans",
+    "Helvetica Neue",
+    Arial,
+    "Noto Sans KR",
+    sans-serif;
+  color-scheme: light;
+}
+
+:root[data-theme='neo-brutalism'][data-color-mode='dark'] {
+  --app-surface-background: #151515;
+  --theme-color: #151515;
+  --background: #151515;
+  --foreground: #fff7eb;
+  --card: #fff4d6;
+  --card-foreground: #121212;
+  --primary: #ffd60a;
+  --primary-foreground: #121212;
+  --secondary: #7bdff2;
+  --secondary-foreground: #121212;
+  --muted: #242424;
+  --muted-foreground: #d2c6b5;
+  --accent: #ff5d73;
+  --accent-foreground: #121212;
+  --destructive: #ff6b6b;
+  --border: #121212;
+  --input: #121212;
+  --ring: #7bdff2;
+  --radius: 1rem;
+  --text-primary: #fff7eb;
+  --text-secondary: rgba(255, 247, 235, 0.8);
+  --text-tertiary: rgba(255, 247, 235, 0.62);
+  --text-quaternary: rgba(255, 247, 235, 0.48);
+  --surface-elevated: #242424;
+  --surface-emphasis: #353535;
+  --surface-hover: #ffd60a;
+  --border-strong: #121212;
+  --button-primary-bg: #ffd60a;
+  --button-primary-fg: #121212;
+  --button-primary-border: #121212;
+  --status-badge-radius: 999px;
+  --status-badge-neutral-bg: #242424;
+  --status-badge-neutral-border: #fff7eb;
+  --status-badge-neutral-text: #fff7eb;
+  --status-badge-neutral-dot: #fff7eb;
+  --status-badge-live-bg: #b8f36b;
+  --status-badge-live-border: #121212;
+  --status-badge-live-text: #121212;
+  --status-badge-live-dot: #4c9f38;
+  --status-badge-connecting-bg: #7bdff2;
+  --status-badge-connecting-border: #121212;
+  --status-badge-connecting-text: #121212;
+  --status-badge-connecting-dot: #3a86ff;
+  --status-badge-offline-bg: #353535;
+  --status-badge-offline-border: #fff7eb;
+  --status-badge-offline-text: #d2c6b5;
+  --status-badge-offline-dot: #b0a493;
+  --status-badge-online-bg: #b8f36b;
+  --status-badge-online-border: #121212;
+  --status-badge-online-text: #121212;
+  --status-badge-online-dot: #4c9f38;
+  --status-badge-error-bg: #ff9eb5;
+  --status-badge-error-border: #121212;
+  --status-badge-error-text: #121212;
+  --status-badge-error-dot: #ff3b30;
+  --field-border: 2px solid #fff7eb;
+  --field-border-bottom: 4px solid #fff7eb;
+  --field-focus-border: 2px solid var(--ring);
+  --field-focus-border-bottom: 4px solid var(--ring);
+  --field-focus-outline: 3px solid var(--accent);
+  --field-focus-outline-offset: 2px;
+  --font-display:
+    "IBM Plex Sans",
+    "Helvetica Neue",
+    Arial,
+    "Noto Sans KR",
+    sans-serif;
+  --font-body:
+    "IBM Plex Sans",
+    "Helvetica Neue",
+    Arial,
+    "Noto Sans KR",
+    sans-serif;
+  color-scheme: dark;
+}
+
+*, 
 *::before,
 *::after {
   box-sizing: border-box;
@@ -719,4 +873,27 @@ a {
 ::selection {
   background: var(--surface-hover);
   color: var(--text-primary);
+}
+
+:root[data-theme='neo-brutalism'] body {
+  background-color: var(--app-surface-background);
+  background-image: radial-gradient(circle at center, rgba(18, 18, 18, 0.38) 1.6px, transparent 1.7px);
+  background-size: 18px 18px;
+}
+
+:root[data-theme='neo-brutalism'] #root {
+  background: transparent;
+}
+
+:root[data-theme='neo-brutalism'] button {
+  box-shadow: 4px 4px 0 0 var(--border-strong);
+}
+
+:root[data-theme='neo-brutalism'] button:hover {
+  transform: translate(-1px, -1px);
+}
+
+:root[data-theme='neo-brutalism'] button:active {
+  transform: translate(2px, 2px);
+  box-shadow: 1px 1px 0 0 var(--border-strong);
 }

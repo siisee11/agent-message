@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { buildSelectedFileKey, extractImageFilesFromClipboardData, mergeSelectedFiles } from './dmComposerFiles'
+import { buildSelectedFileKey, extractImageFilesFromClipboardData, isImageFile, mergeSelectedFiles } from './dmComposerFiles'
 
 function createFile(name: string, size = 100, lastModified = 1): File {
   return new File([new Uint8Array(size)], name, { lastModified, type: 'image/png' })
@@ -18,6 +18,11 @@ function createClipboardItem(file: File): DataTransferItem {
 describe('dm composer file helpers', () => {
   it('builds a stable file key from file metadata', () => {
     expect(buildSelectedFileKey(createFile('diagram.png', 42, 99))).toBe('diagram.png-42-99')
+  })
+
+  it('detects image files for preview rendering', () => {
+    expect(isImageFile(createFile('preview.png'))).toBe(true)
+    expect(isImageFile(new File(['plain'], 'note.txt', { type: 'text/plain' }))).toBe(false)
   })
 
   it('extracts pasted image files from clipboard items', () => {

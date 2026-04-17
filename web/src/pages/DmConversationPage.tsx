@@ -36,7 +36,7 @@ import {
   REALTIME_MESSAGE_WILL_APPEND_EVENT,
   replaceMessageInPages,
 } from '../realtime/state'
-import { buildSelectedFileKey, extractImageFilesFromClipboardData, mergeSelectedFiles } from './dmComposerFiles'
+import { buildSelectedFileKey, extractImageFilesFromClipboardData, isImageFile, mergeSelectedFiles } from './dmComposerFiles'
 import styles from './DmConversationPage.module.css'
 
 const MESSAGE_PAGE_SIZE = 20
@@ -62,6 +62,12 @@ interface ActionMenuState {
   messageId: string
   x: number
   y: number
+}
+
+interface SelectedImagePreview {
+  file: File
+  key: string
+  url: string
 }
 
 interface ReactionGroup {
@@ -220,9 +226,12 @@ export function DmConversationPage() {
   const fileInputRef = useRef<HTMLInputElement | null>(null)
   const actionMenuRef = useRef<HTMLDivElement | null>(null)
   const composerInputRef = useRef<HTMLTextAreaElement | null>(null)
+  const pendingLocalMessageStickRef = useRef<boolean | null>(null)
+  const selectedImagePreviewUrlsRef = useRef<string[]>([])
 
   const [composerText, setComposerText] = useState('')
   const [selectedFiles, setSelectedFiles] = useState<File[]>([])
+  const [selectedImagePreviews, setSelectedImagePreviews] = useState<SelectedImagePreview[]>([])
   const [composerError, setComposerError] = useState<string | null>(null)
   const [editingTarget, setEditingTarget] = useState<EditTarget | null>(null)
   const [actionMenu, setActionMenu] = useState<ActionMenuState | null>(null)
@@ -286,7 +295,53 @@ export function DmConversationPage() {
     return null
   }, [messagesAscending])
 
+  const selectedNonImageFiles = useMemo(() => selectedFiles.filter((file) => !isImageFile(file)), [selectedFiles])
+
   const hasOlderMessages = Boolean(messagePagesQuery.hasNextPage)
+
+  useEffect(() => {
+    setSelectedImagePreviews((current) => {
+      const currentByKey = new Map(current.map((preview) => [preview.key, preview]))
+      const next = selectedFiles.filter(isImageFile).map((file) => {
+        const key = buildSelectedFileKey(file)
+        const existing = currentByKey.get(key)
+        if (existing) {
+          return existing
+        }
+
+        return {
+          file,
+          key,
+          url: URL.createObjectURL(file),
+        }
+      })
+
+      const nextKeys = new Set(next.map((preview) => preview.key))
+      for (const preview of current) {
+        if (!nextKeys.has(preview.key)) {
+          URL.revokeObjectURL(preview.url)
+        }
+      }
+
+      const didChange =
+        current.length !== next.length ||
+        current.some((preview, index) => preview.key !== next[index]?.key || preview.url !== next[index]?.url)
+
+      return didChange ? next : current
+    })
+  }, [selectedFiles])
+
+  useEffect(() => {
+    selectedImagePreviewUrlsRef.current = selectedImagePreviews.map((preview) => preview.url)
+  }, [selectedImagePreviews])
+
+  useEffect(() => {
+    return () => {
+      for (const previewUrl of selectedImagePreviewUrlsRef.current) {
+        URL.revokeObjectURL(previewUrl)
+      }
+    }
+  }, [])
 
   const handleMessageCreated = useCallback(
     async (createdMessage: Message, options?: { resetComposer?: boolean }) => {
@@ -294,7 +349,9 @@ export function DmConversationPage() {
         return
       }
 
-      const shouldStickToBottom = shouldStickToBottomOnMessageAppend(timelineRef.current)
+      const shouldStickToBottom =
+        pendingLocalMessageStickRef.current ?? shouldStickToBottomOnMessageAppend(timelineRef.current)
+      pendingLocalMessageStickRef.current = null
 
       setComposerError(null)
       if (options?.resetComposer ?? false) {
@@ -343,10 +400,14 @@ export function DmConversationPage() {
         content: trimmedContent,
       })
     },
+    onMutate: () => {
+      pendingLocalMessageStickRef.current = shouldStickToBottomOnMessageAppend(timelineRef.current)
+    },
     onSuccess: async (createdMessage) => {
       await handleMessageCreated(createdMessage, { resetComposer: true })
     },
     onError: (error: unknown) => {
+      pendingLocalMessageStickRef.current = null
       setComposerError(resolveErrorMessage(error, 'Failed to send the message.'))
     },
   })
@@ -361,8 +422,14 @@ export function DmConversationPage() {
         content: value.trim(),
       })
     },
+    onMutate: () => {
+      pendingLocalMessageStickRef.current = shouldStickToBottomOnMessageAppend(timelineRef.current)
+    },
     onSuccess: async (createdMessage) => {
       await handleMessageCreated(createdMessage)
+    },
+    onError: () => {
+      pendingLocalMessageStickRef.current = null
     },
   })
 
@@ -1041,9 +1108,36 @@ export function DmConversationPage() {
               </div>
             ) : null}
 
-            {selectedFiles.length > 0 ? (
+            {selectedImagePreviews.length > 0 ? (
+              <div className={styles.attachmentPreviewGrid}>
+                {selectedImagePreviews.map((preview) => (
+                  <div className={styles.attachmentPreviewCard} key={preview.key}>
+                    <div className={styles.attachmentPreviewFrame}>
+                      <img
+                        alt={preview.file.name || 'Selected image preview'}
+                        className={styles.attachmentPreviewImage}
+                        src={preview.url}
+                      />
+                    </div>
+                    <div className={styles.attachmentPreviewMeta}>
+                      <span className={styles.attachmentPreviewName}>{preview.file.name}</span>
+                      <button
+                        className={styles.attachmentPreviewRemove}
+                        disabled={disableComposerActions}
+                        onClick={() => clearSelectedAttachment(preview.key)}
+                        type="button"
+                      >
+                        Remove
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : null}
+
+            {selectedNonImageFiles.length > 0 ? (
               <div className={styles.attachmentChipList}>
-                {selectedFiles.map((selectedFile) => (
+                {selectedNonImageFiles.map((selectedFile) => (
                   <div className={styles.attachmentChip} key={buildSelectedFileKey(selectedFile)}>
                     <span className={styles.attachmentName}>{selectedFile.name}</span>
                     <button

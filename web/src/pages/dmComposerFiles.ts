@@ -2,6 +2,10 @@ export function buildSelectedFileKey(file: File): string {
   return `${file.name}-${file.size}-${file.lastModified}`
 }
 
+export function isImageFile(file: File): boolean {
+  return file.type.startsWith('image/')
+}
+
 export function extractImageFilesFromClipboardData(clipboardData: DataTransfer | null | undefined): File[] {
   if (!clipboardData) {
     return []
@@ -16,7 +20,7 @@ export function extractImageFilesFromClipboardData(clipboardData: DataTransfer |
     return itemFiles
   }
 
-  return Array.from(clipboardData.files ?? []).filter((file) => file.type.startsWith('image/'))
+  return Array.from(clipboardData.files ?? []).filter(isImageFile)
 }
 
 export function mergeSelectedFiles(existing: File[], incoming: File[]): File[] {

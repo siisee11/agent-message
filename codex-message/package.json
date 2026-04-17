@@ -1,6 +1,6 @@
 {
   "name": "codex-message",
-  "version": "0.6.15",
+  "version": "0.6.16",
   "description": "Codex wrapper for agent-message on macOS",
   "type": "module",
   "bin": {

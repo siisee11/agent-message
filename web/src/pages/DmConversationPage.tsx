@@ -159,6 +159,16 @@ function isTimelineNearBottom(timeline: HTMLDivElement, threshold = 48): boolean
   return distanceFromBottom <= threshold
 }
 
+export function shouldStickToBottomOnMessageAppend(
+  timeline: Pick<HTMLDivElement, 'scrollHeight' | 'clientHeight' | 'scrollTop'> | null,
+): boolean {
+  if (!timeline) {
+    return true
+  }
+
+  return isTimelineNearBottom(timeline as HTMLDivElement)
+}
+
 function groupReactionsByEmoji(
   reactions: Reaction[] | undefined,
   currentUserId: string | undefined,
@@ -283,6 +293,8 @@ export function DmConversationPage() {
         return
       }
 
+      const shouldStickToBottom = shouldStickToBottomOnMessageAppend(timelineRef.current)
+
       setComposerError(null)
       if (options?.resetComposer ?? false) {
         setEditingTarget(null)
@@ -304,8 +316,10 @@ export function DmConversationPage() {
       )
       await queryClient.invalidateQueries({ queryKey: ['conversations'] })
 
-      shouldStickToBottomRef.current = true
-      scrollTimelineToBottom(timelineRef.current)
+      shouldStickToBottomRef.current = shouldStickToBottom
+      if (shouldStickToBottom) {
+        scrollTimelineToBottom(timelineRef.current)
+      }
     },
     [conversationId, queryClient, user],
   )
@@ -451,6 +465,11 @@ export function DmConversationPage() {
       shouldStickToBottomRef.current = true
       scrollTimelineToBottom(timeline)
       initialScrollConversationRef.current = conversationId
+      return
+    }
+
+    if (shouldStickToBottomRef.current) {
+      scrollTimelineToBottom(timeline)
     }
   }, [conversationId, messagePagesQuery.isFetchingNextPage, messagesAscending.length])
 

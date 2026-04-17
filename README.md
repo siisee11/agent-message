@@ -170,7 +170,7 @@ go run .
 ### Local production-like stack (Server + PostgreSQL)
 
 ```bash
-docker compose up --build
+make stack-up
 ```
 
 This starts:
@@ -190,6 +190,8 @@ To also remove persisted DB/uploads volumes:
 ```bash
 docker compose down -v
 ```
+
+If Postgres starts with `Database directory appears to contain a database` and the server logs `password authentication failed for user "agent"`, the persisted `postgres_data` volume was initialized with different credentials. Remove the persisted volumes with `docker compose down -v`, then start the stack again.
 
 ## Home Server Container Deploy
 
@@ -214,7 +216,7 @@ Web push keys are optional in `.env.home`.
 2. Start the stack:
 
 ```bash
-docker compose --env-file .env.home -f docker-compose.home.yml up -d --build
+make publish
 ```
 
 3. Check status:
@@ -296,6 +298,12 @@ You can run the same packaging step manually from the repo root:
 
 ```bash
 npm run prepare:npm-bundle
+```
+
+To publish all npm packages from the repo with the local Makefile:
+
+```bash
+make release
 ```
 
 GitHub Actions can publish all three npm packages (`agent-message`, `codex-message`, `claude-message`) from a release tag. The workflow is `.github/workflows/npm-release.yml` and expects a tag in the form `v<semver>` such as `v0.6.13`. On tag push it validates the package versions, builds release tarballs on macOS, creates or updates the GitHub release, and publishes the tarballs to npm. The publish job uses npm trusted publishing with provenance when available, and can also fall back to `NPM_TOKEN` if you set that repository secret.

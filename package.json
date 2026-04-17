@@ -8,6 +8,8 @@
   },
   "files": [
     "README.md",
+    "agent-message-logo.png",
+    "agent-message-logo.svg",
     "npm/bin/agent-message.mjs",
     "npm/runtime"
   ],

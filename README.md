@@ -1,3 +1,7 @@
+<p align="center">
+  <img src="agent-message-logo.svg" alt="Agent Message logo" width="88">
+</p>
+
 # Agent Message
 
 ```bash

@@ -26,27 +26,8 @@
   width: var(--logo-mark-size);
   height: var(--logo-mark-size);
   flex: none;
-}
-
-.markFrame {
-  fill: #1f2228;
-  stroke: rgba(255, 255, 255, 0.16);
-  stroke-width: 1.5;
-  shape-rendering: crispEdges;
-}
-
-.markBubble {
-  fill: none;
-  stroke: #ffffff;
-  stroke-width: 3.5;
-  stroke-linecap: square;
-  stroke-linejoin: miter;
-}
-
-.markBar,
-.markPrompt,
-.markCursor {
-  fill: #ffffff;
+  display: block;
+  object-fit: contain;
 }
 
 .wordmark {

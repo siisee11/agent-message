@@ -10,7 +10,7 @@ export default defineConfig({
       srcDir: 'src',
       filename: 'sw.ts',
       registerType: 'autoUpdate',
-      includeAssets: ['favicon.svg', 'apple-touch-icon.png', 'masked-icon.svg'],
+      includeAssets: ['agent-message-logo.svg', 'favicon.png', 'apple-touch-icon.png'],
       manifest: {
         name: 'Agent Message',
         short_name: 'Agent Message',

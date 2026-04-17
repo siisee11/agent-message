@@ -58,15 +58,16 @@
 }
 
 .logoutButton {
-  width: 44px;
-  height: 44px;
+  width: 2.5rem;
+  min-height: 2.5rem;
   padding: 0;
   border: 1px solid var(--border-strong);
-  background: transparent;
+  background: var(--surface-elevated);
   color: var(--text-primary);
   display: inline-flex;
   align-items: center;
   justify-content: center;
+  flex: none;
   cursor: pointer;
 }
 
@@ -520,8 +521,8 @@
 
   .logoutButton {
     justify-self: end;
-    width: 42px;
-    height: 42px;
+    width: 2.5rem;
+    min-height: 2.5rem;
   }
 
   .notificationRow {

@@ -91,6 +91,48 @@ describe('MessageJsonRender', () => {
     expect(html).toContain('<textarea')
   })
 
+  it('renders paginated ask-question flows when multiple questions are provided', () => {
+    const html = ReactDOMServer.renderToStaticMarkup(
+      <MessageJsonRender
+        spec={{
+          root: 'question-1',
+          elements: {
+            'question-1': {
+              type: 'AskQuestion',
+              props: {
+                backLabel: 'Previous',
+                confirmLabel: 'Submit answers',
+                nextLabel: 'Next',
+                questions: [
+                  {
+                    id: 'environment',
+                    options: [
+                      { label: 'Production', value: 'production' },
+                      { label: 'Staging', value: 'staging' },
+                    ],
+                    question: 'Which environment should I use?',
+                  },
+                  {
+                    freeformPlaceholder: 'Add any extra requirements',
+                    id: 'notes',
+                    question: 'Anything else I should know?',
+                  },
+                ],
+              },
+            },
+          },
+        }}
+      />,
+    )
+
+    expect(html).toContain('Question 1 of 2')
+    expect(html).toContain('Which environment should I use?')
+    expect(html).toContain('Production')
+    expect(html).toContain('Staging')
+    expect(html).toContain('Previous')
+    expect(html).toContain('Next')
+  })
+
   it('renders alerts with title and message', () => {
     const html = ReactDOMServer.renderToStaticMarkup(
       <MessageJsonRender

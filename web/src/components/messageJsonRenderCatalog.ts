@@ -27,6 +27,18 @@ const gitCommitEntrySchema = z.object({
   subject: z.string(),
 })
 
+const askQuestionOptionSchema = z.object({
+  label: z.string(),
+  value: z.string().optional(),
+})
+
+const askQuestionItemSchema = z.object({
+  freeformPlaceholder: z.string().optional(),
+  id: z.string().optional(),
+  options: z.array(askQuestionOptionSchema).optional(),
+  question: z.string(),
+})
+
 export const messageJsonRenderCatalog = defineCatalog(schema, {
   components: {
     ApprovalCard: {
@@ -49,19 +61,15 @@ export const messageJsonRenderCatalog = defineCatalog(schema, {
     },
     Alert: shadcnComponentDefinitions.Alert,
     AskQuestion: {
-      description: 'Question prompt with quick-reply buttons and a freeform text area',
+      description: 'Question prompt that supports either a single reply or a paginated multi-question flow',
       props: z.object({
+        backLabel: z.string().optional(),
         confirmLabel: z.string().optional(),
         freeformPlaceholder: z.string().optional(),
-        options: z
-          .array(
-            z.object({
-              label: z.string(),
-              value: z.string().optional(),
-            }),
-          )
-          .optional(),
-        question: z.string(),
+        nextLabel: z.string().optional(),
+        options: z.array(askQuestionOptionSchema).optional(),
+        question: z.string().optional(),
+        questions: z.array(askQuestionItemSchema).optional(),
       }),
     },
     Avatar: shadcnComponentDefinitions.Avatar,

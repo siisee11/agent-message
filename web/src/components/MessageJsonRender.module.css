@@ -373,6 +373,16 @@
   line-height: 1.4;
 }
 
+.askQuestionProgress {
+  margin: 0;
+  color: var(--text-tertiary);
+  font-size: 0.76rem;
+  line-height: 1.4;
+  font-family: var(--font-display);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
 .askQuestionOptions {
   display: grid;
   gap: 0.55rem;
@@ -408,6 +418,11 @@
   text-align: center;
 }
 
+.askQuestionOptionSelected {
+  background: var(--surface-emphasis);
+  border-color: var(--border-strong);
+}
+
 .askQuestionOption:focus-visible,
 .askQuestionConfirm:focus-visible,
 .askQuestionTextarea:focus-visible {
@@ -425,6 +440,16 @@
 .askQuestionFreeform {
   display: grid;
   gap: 0.48rem;
+}
+
+.askQuestionNav {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 0.55rem;
+}
+
+.askQuestionNavSecondary {
+  text-align: center;
 }
 
 .askQuestionLabel,

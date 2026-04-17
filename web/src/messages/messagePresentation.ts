@@ -132,6 +132,41 @@ function summarizeGitCommitLog(props: Record<string, unknown> | undefined): { pr
   }
 }
 
+function summarizeAskQuestion(props: Record<string, unknown> | undefined): { primary?: string; secondary?: string } {
+  if (!props) {
+    return {}
+  }
+
+  const question = readStringProp(props, 'question')
+  if (question) {
+    return {
+      primary: question,
+      secondary: readStringProp(props, 'freeformPlaceholder') ?? undefined,
+    }
+  }
+
+  if (!Array.isArray(props.questions)) {
+    return {}
+  }
+
+  const normalizedQuestions = props.questions.filter(isObject)
+  let firstQuestion: string | null = null
+  for (const value of normalizedQuestions) {
+    const candidate = readStringProp(value, 'question')
+    if (candidate) {
+      firstQuestion = candidate
+      break
+    }
+  }
+
+  const countLabel =
+    normalizedQuestions.length > 1 ? `${normalizedQuestions.length} questions` : normalizedQuestions.length === 1 ? '1 question' : null
+
+  return {
+    primary: joinCandidateParts([firstQuestion, countLabel], ' - ') ?? undefined,
+  }
+}
+
 function summarizeElement(element: BareUIElement): { primary?: string; secondary?: string; fallback?: string } {
   const props = isObject(element.props) ? element.props : undefined
 
@@ -155,10 +190,7 @@ function summarizeElement(element: BareUIElement): { primary?: string; secondary
         secondary: readStringProp(props, 'badge') ?? undefined,
       }
     case 'AskQuestion':
-      return {
-        primary: readStringProp(props, 'question') ?? undefined,
-        secondary: readStringProp(props, 'freeformPlaceholder') ?? undefined,
-      }
+      return summarizeAskQuestion(props)
     case 'Card':
       return {
         primary:

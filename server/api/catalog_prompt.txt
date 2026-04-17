@@ -50,7 +50,7 @@ AVAILABLE COMPONENTS (20):
 
 - ApprovalCard: { badge?: string, title: string, details?: Array<string>, replyHint?: string, actions?: Array<{ label: string, value: string, variant?: "primary" | "secondary" | "destructive" }> } - Approval request card with quick response buttons
 - Alert: { title: string, message?: string, type?: "info" | "success" | "warning" | "error" } - Alert banner
-- AskQuestion: { confirmLabel?: string, freeformPlaceholder?: string, options?: Array<{ label: string, value?: string }>, question: string } - Question prompt with quick-reply buttons and a freeform text area
+- AskQuestion: { backLabel?: string, confirmLabel?: string, freeformPlaceholder?: string, nextLabel?: string, options?: Array<{ label: string, value?: string }>, question?: string, questions?: Array<{ freeformPlaceholder?: string, id?: string, options?: Array<{ label: string, value?: string }>, question: string }> } - Question prompt that supports either a single reply or a paginated multi-question flow
 - Avatar: { src?: string, name: string, size?: "sm" | "md" | "lg" } - User avatar with fallback initials
 - Badge: { text: string, variant?: "default" | "secondary" | "destructive" | "outline" } - Status badge
 - BarGraph: { currency?: string, data: Array<{ color?: string, label: string, value: number }>, description?: string, format?: "currency" | "number" | "percent", maxValue?: number, title?: string } - Compact bar chart for labeled numeric series

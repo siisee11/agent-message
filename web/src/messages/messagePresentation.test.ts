@@ -177,6 +177,28 @@ describe('message presentation helpers', () => {
     expect(summarizeLastMessagePreview(message)).toBe('Which environment should I use?')
   })
 
+  it('extracts a useful preview from paginated ask-question json render messages', () => {
+    const message = createMessage({
+      kind: 'json_render',
+      json_render_spec: {
+        root: 'question-1',
+        elements: {
+          'question-1': {
+            type: 'AskQuestion',
+            props: {
+              questions: [
+                { question: 'Which environment should I use?' },
+                { question: 'Anything else I should know?' },
+              ],
+            },
+          },
+        },
+      },
+    })
+
+    expect(summarizeLastMessagePreview(message)).toBe('Which environment should I use? - 2 questions')
+  })
+
   it('falls back to placeholder when json render has no extractable text', () => {
     const message = createMessage({
       kind: 'json_render',

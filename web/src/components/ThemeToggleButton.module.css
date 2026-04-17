@@ -113,3 +113,29 @@
   white-space: nowrap;
   border: 0;
 }
+
+:global(:root[data-theme='neumorphism']) .trigger,
+:global(:root[data-theme='neumorphism']) .iconButton,
+:global(:root[data-theme='neumorphism']) .menu,
+:global(:root[data-theme='neumorphism']) .optionActive {
+  border-color: color-mix(in srgb, var(--border) 90%, transparent);
+  border-radius: 1.35rem;
+  box-shadow: var(--theme-shadow-surface);
+}
+
+:global(:root[data-theme='neumorphism']) .menu {
+  background: var(--surface-elevated);
+}
+
+:global(:root[data-theme='neumorphism']) .trigger:hover,
+:global(:root[data-theme='neumorphism']) .iconButton:hover,
+:global(:root[data-theme='neumorphism']) .option:hover {
+  box-shadow: var(--theme-shadow-floating);
+  background: var(--surface-hover);
+}
+
+:global(:root[data-theme='neumorphism']) .trigger:active,
+:global(:root[data-theme='neumorphism']) .iconButton:active,
+:global(:root[data-theme='neumorphism']) .optionActive {
+  box-shadow: var(--theme-shadow-pressed);
+}

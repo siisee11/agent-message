@@ -36,6 +36,7 @@ import {
   REALTIME_MESSAGE_WILL_APPEND_EVENT,
   replaceMessageInPages,
 } from '../realtime/state'
+import { useRealtime } from '../realtime'
 import { buildSelectedFileKey, extractImageFilesFromClipboardData, isImageFile, mergeSelectedFiles } from './dmComposerFiles'
 import styles from './DmConversationPage.module.css'
 
@@ -75,6 +76,21 @@ interface ReactionGroup {
   count: number
   reactedByMe: boolean
 }
+
+type PendingTurnTone = 'working' | 'connecting' | 'offline'
+
+interface PendingTurnStatus {
+  label: string
+  tone: PendingTurnTone
+}
+
+type PendingTurnMessageDetails = {
+  message: Pick<Message, 'id' | 'sender_id' | 'deleted'>
+}
+
+const ASCII_WORKING_FRAMES = ['[=   ]', '[==  ]', '[=== ]', '[ ===]', '[  ==]', '[   =]'] as const
+const ASCII_CONNECTING_FRAMES = ['[.  ]', '[.. ]', '[...]', '[ ..]', '[  .]'] as const
+const ASCII_OFFLINE_FRAME = '[ x ]'
 
 function resolveErrorMessage(error: unknown, fallback: string): string {
   if (error instanceof ApiError) {
@@ -176,6 +192,89 @@ export function shouldStickToBottomOnMessageAppend(
   return isTimelineNearBottom(timeline as HTMLDivElement)
 }
 
+export function resolvePendingTurnMessageId(
+  messages: readonly PendingTurnMessageDetails[],
+  currentUserId: string | undefined,
+): string | null {
+  if (!currentUserId || messages.length === 0) {
+    return null
+  }
+
+  const lastMessage = messages[messages.length - 1]?.message
+  if (!lastMessage || lastMessage.deleted || lastMessage.sender_id !== currentUserId) {
+    return null
+  }
+
+  return lastMessage.id
+}
+
+export function resolvePendingTurnStatus(
+  realtimeStatus: 'idle' | 'connecting' | 'open' | 'closed',
+  watcherOnline: boolean | null,
+): PendingTurnStatus {
+  if (realtimeStatus === 'connecting') {
+    return {
+      label: 'reconnecting to updates',
+      tone: 'connecting',
+    }
+  }
+
+  if (realtimeStatus === 'closed') {
+    return {
+      label: 'updates interrupted',
+      tone: 'offline',
+    }
+  }
+
+  if (watcherOnline === false) {
+    return {
+      label: 'waiting for agent',
+      tone: 'offline',
+    }
+  }
+
+  if (watcherOnline === true) {
+    return {
+      label: 'agent working',
+      tone: 'working',
+    }
+  }
+
+  return {
+    label: 'starting turn',
+    tone: 'connecting',
+  }
+}
+
+function useAsciiStatusFrame(tone: PendingTurnTone): string {
+  const [frameIndex, setFrameIndex] = useState(0)
+
+  useEffect(() => {
+    setFrameIndex(0)
+    if (tone === 'offline') {
+      return
+    }
+
+    const intervalId = window.setInterval(() => {
+      setFrameIndex((current) => current + 1)
+    }, 160)
+
+    return () => {
+      window.clearInterval(intervalId)
+    }
+  }, [tone])
+
+  if (tone === 'working') {
+    return ASCII_WORKING_FRAMES[frameIndex % ASCII_WORKING_FRAMES.length]
+  }
+
+  if (tone === 'connecting') {
+    return ASCII_CONNECTING_FRAMES[frameIndex % ASCII_CONNECTING_FRAMES.length]
+  }
+
+  return ASCII_OFFLINE_FRAME
+}
+
 function groupReactionsByEmoji(
   reactions: Reaction[] | undefined,
   currentUserId: string | undefined,
@@ -216,6 +315,7 @@ export function DmConversationPage() {
   const navigate = useNavigate()
   const { conversationId } = useParams()
   const { user } = useAuth()
+  const realtime = useRealtime()
   const queryClient = useQueryClient()
 
   const timelineRef = useRef<HTMLDivElement | null>(null)
@@ -877,6 +977,9 @@ export function DmConversationPage() {
         ? `@${otherParticipant.username}`
         : 'Conversation'
   const watcherPresence = conversationQuery.data?.watcher_presence
+  const pendingTurnMessageId = resolvePendingTurnMessageId(messagesAscending, user?.id)
+  const pendingTurnStatus = resolvePendingTurnStatus(realtime.status, watcherPresence?.online ?? null)
+  const pendingTurnFrame = useAsciiStatusFrame(pendingTurnStatus.tone)
   const watcherStatusLabel =
     conversationQuery.isError || !watcherPresence
       ? null
@@ -956,11 +1059,18 @@ export function DmConversationPage() {
                     const fileAttachments = attachments.filter((attachment) => attachment.type === 'file')
                     const isOwnMessage = details.message.sender_id === user?.id
                     const isAgentMessage = !isOwnMessage
+                    const showPendingTurnStatus = details.message.id === pendingTurnMessageId
                     const messageSurfaceClassName = isOwnMessage
                       ? styles.messageBubbleOwnFull
                       : styles.messageBubbleAgent
                     const timelineMetaClassName = isOwnMessage ? styles.timelineMetaOwn : styles.timelineMetaAgent
                     const messageTextClassName = isOwnMessage ? styles.messageTextOwn : styles.messageTextAgent
+                    const pendingTurnStatusClassName =
+                      pendingTurnStatus.tone === 'working'
+                        ? styles.pendingTurnStatusWorking
+                        : pendingTurnStatus.tone === 'connecting'
+                          ? styles.pendingTurnStatusConnecting
+                          : styles.pendingTurnStatusOffline
 
                     return (
                       <li
@@ -1079,6 +1189,18 @@ export function DmConversationPage() {
                                   </span>
                                 ))}
                               </div>
+                            </div>
+                          ) : null}
+
+                          {showPendingTurnStatus ? (
+                            <div
+                              aria-live="polite"
+                              className={`${styles.pendingTurnStatus} ${pendingTurnStatusClassName}`}
+                            >
+                              <span aria-hidden="true" className={styles.pendingTurnFrame}>
+                                {pendingTurnFrame}
+                              </span>
+                              <span className={styles.pendingTurnLabel}>{pendingTurnStatus.label}</span>
                             </div>
                           ) : null}
                         </div>

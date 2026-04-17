@@ -11,6 +11,12 @@
   box-shadow: 6px 6px 0 0 var(--border-strong);
 }
 
+:global(:root[data-theme='neumorphism']) .card {
+  border-color: color-mix(in srgb, var(--border) 90%, transparent);
+  border-radius: 1.5rem;
+  box-shadow: var(--theme-shadow-surface);
+}
+
 .card h2 {
   margin-top: 0;
   margin-bottom: 0.6rem;

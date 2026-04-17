@@ -449,6 +449,28 @@
   flex-wrap: wrap;
 }
 
+:global(:root[data-theme='neumorphism']) .navLink,
+:global(:root[data-theme='neumorphism']) .primaryAction,
+:global(:root[data-theme='neumorphism']) .secondaryAction,
+:global(:root[data-theme='neumorphism']) .installCard,
+:global(:root[data-theme='neumorphism']) .visualBackdrop,
+:global(:root[data-theme='neumorphism']) .terminalWindow,
+:global(:root[data-theme='neumorphism']) .statusCard,
+:global(:root[data-theme='neumorphism']) .featureCard,
+:global(:root[data-theme='neumorphism']) .guideCard,
+:global(:root[data-theme='neumorphism']) .ctaPanel {
+  border-color: color-mix(in srgb, var(--border) 90%, transparent);
+  border-radius: 1.6rem;
+  box-shadow: var(--theme-shadow-surface);
+}
+
+:global(:root[data-theme='neumorphism']) .primaryAction:hover,
+:global(:root[data-theme='neumorphism']) .secondaryAction:hover,
+:global(:root[data-theme='neumorphism']) .navLink:hover {
+  box-shadow: var(--theme-shadow-floating);
+  transform: translateY(-1px);
+}
+
 @media (max-width: 1120px) {
   .hero {
     grid-template-columns: 1fr;

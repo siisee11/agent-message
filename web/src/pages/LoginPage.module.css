@@ -118,6 +118,24 @@
   box-shadow: 6px 6px 0 0 var(--border-strong);
 }
 
+:global(:root[data-theme='neumorphism']) .wrapper,
+:global(:root[data-theme='neumorphism']) .input,
+:global(:root[data-theme='neumorphism']) .submit {
+  border-color: color-mix(in srgb, var(--border) 90%, transparent);
+  border-radius: 1.5rem;
+  box-shadow: var(--theme-shadow-surface);
+}
+
+:global(:root[data-theme='neumorphism']) .submit:not(:disabled):hover {
+  box-shadow: var(--theme-shadow-floating);
+  opacity: 1;
+}
+
+:global(:root[data-theme='neumorphism']) .input:focus,
+:global(:root[data-theme='neumorphism']) .submit:active {
+  box-shadow: var(--theme-shadow-pressed);
+}
+
 @media (max-height: 640px) {
   .page {
     padding-top: max(0.85rem, calc(env(safe-area-inset-top) + 0.85rem));

@@ -387,6 +387,42 @@
   gap: 0.4rem;
 }
 
+.pendingTurnStatus {
+  margin-top: 0.9rem;
+  padding-top: 0.72rem;
+  border-top: 1px solid var(--border);
+  display: inline-flex;
+  align-items: center;
+  gap: 0.65rem;
+  color: var(--text-tertiary);
+  font-family: var(--font-mono, 'SFMono-Regular', 'SF Mono', Consolas, 'Liberation Mono', Menlo, monospace);
+  font-size: 0.72rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.pendingTurnStatusWorking {
+  color: var(--status-badge-online-text);
+}
+
+.pendingTurnStatusConnecting {
+  color: var(--status-badge-connecting-text);
+}
+
+.pendingTurnStatusOffline {
+  color: var(--status-badge-offline-text);
+}
+
+.pendingTurnFrame {
+  min-width: 3.7rem;
+  font-variant-numeric: tabular-nums;
+  white-space: pre;
+}
+
+.pendingTurnLabel {
+  white-space: nowrap;
+}
+
 .reactionGroups {
   display: flex;
   align-items: center;
@@ -742,6 +778,42 @@
 :global(:root[data-theme='neo-brutalism']) .contextMenu,
 :global(:root[data-theme='neo-brutalism']) .card {
   box-shadow: 6px 6px 0 0 var(--border-strong);
+}
+
+:global(:root[data-theme='neumorphism']) .panel,
+:global(:root[data-theme='neumorphism']) .header,
+:global(:root[data-theme='neumorphism']) .messageBubbleOwnFull,
+:global(:root[data-theme='neumorphism']) .messageBubbleAgent,
+:global(:root[data-theme='neumorphism']) .composerForm,
+:global(:root[data-theme='neumorphism']) .contextMenu,
+:global(:root[data-theme='neumorphism']) .card,
+:global(:root[data-theme='neumorphism']) .attachmentPreviewCard,
+:global(:root[data-theme='neumorphism']) .attachmentChip,
+:global(:root[data-theme='neumorphism']) .iconButton,
+:global(:root[data-theme='neumorphism']) .submitButton {
+  border-color: color-mix(in srgb, var(--border) 90%, transparent);
+  border-radius: 1.5rem;
+  box-shadow: var(--theme-shadow-surface);
+}
+
+:global(:root[data-theme='neumorphism']) .attachmentPreviewFrame,
+:global(:root[data-theme='neumorphism']) .composerField {
+  border-radius: 1.2rem;
+}
+
+:global(:root[data-theme='neumorphism']) .iconButton:hover:not(:disabled),
+:global(:root[data-theme='neumorphism']) .submitButton:hover:not(:disabled),
+:global(:root[data-theme='neumorphism']) .attachmentRemove:hover:not(:disabled),
+:global(:root[data-theme='neumorphism']) .attachmentPreviewRemove:hover:not(:disabled),
+:global(:root[data-theme='neumorphism']) .contextMenuAction:hover:not(:disabled),
+:global(:root[data-theme='neumorphism']) .unreadBanner:hover {
+  box-shadow: var(--theme-shadow-floating);
+}
+
+:global(:root[data-theme='neumorphism']) .submitButton:active,
+:global(:root[data-theme='neumorphism']) .iconButton:active,
+:global(:root[data-theme='neumorphism']) .contextMenuAction:active {
+  box-shadow: var(--theme-shadow-pressed);
 }
 
 @media (max-width: 480px) {

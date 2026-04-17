@@ -51,6 +51,14 @@ export const AVAILABLE_THEMES = [
       dark: '#151515',
     },
   },
+  {
+    id: 'neumorphism',
+    label: 'Neumorphism',
+    themeColorByMode: {
+      light: '#e3e8f0',
+      dark: '#2b3240',
+    },
+  },
 ] as const
 
 export type ThemeName = (typeof AVAILABLE_THEMES)[number]['id']
@@ -79,7 +87,8 @@ function readStoredTheme(): ThemeName | null {
       stored === 'ibm' ||
       stored === 'ferrari' ||
       stored === 'opencode' ||
-      stored === 'neo-brutalism'
+      stored === 'neo-brutalism' ||
+      stored === 'neumorphism'
     ) {
       return stored
     }

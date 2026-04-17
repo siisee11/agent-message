@@ -38,3 +38,9 @@
 :global(:root[data-theme='neo-brutalism']) .panel {
   box-shadow: 6px 6px 0 0 var(--border-strong);
 }
+
+:global(:root[data-theme='neumorphism']) .panel {
+  border-color: color-mix(in srgb, var(--border) 90%, transparent);
+  border-radius: 1.75rem;
+  box-shadow: var(--theme-shadow-floating);
+}

@@ -57,11 +57,54 @@
   table-layout: fixed;
 }
 
+.tableShell {
+  display: grid;
+  gap: 0.45rem;
+  width: 100%;
+  min-width: 0;
+}
+
+.tableFrame {
+  overflow: hidden;
+  border: 1px solid var(--border);
+  background: var(--surface-elevated);
+}
+
+.root :global([data-slot='table-head']) {
+  height: auto;
+  padding: 0.72rem 0.5rem;
+  vertical-align: middle;
+}
+
 .root :global([data-slot='table'] th),
 .root :global([data-slot='table'] td) {
   min-width: 0;
   white-space: normal;
   vertical-align: top;
+}
+
+.root :global([data-slot='table-header'] [data-slot='table-row']) {
+  border-bottom: 1px solid var(--border);
+}
+
+.root :global([data-slot='table-body'] [data-slot='table-row']) {
+  border-bottom: 1px solid var(--border);
+}
+
+.root :global([data-slot='table-body'] [data-slot='table-row']:last-child) {
+  border-bottom: 0;
+}
+
+.root :global([data-slot='table-cell']) {
+  padding: 0.5rem;
+  vertical-align: middle;
+}
+
+.tableCaption {
+  margin: 0;
+  color: var(--text-tertiary);
+  font-size: 0.78rem;
+  line-height: 1.5;
 }
 
 .root :global([data-slot='card-title']),

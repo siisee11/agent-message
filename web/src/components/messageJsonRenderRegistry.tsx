@@ -6,6 +6,7 @@ import { MessageAskQuestion } from './MessageAskQuestion'
 import { MessageCommitLog } from './MessageCommitLog'
 import { MessageBarGraph, MessageLineGraph } from './MessageGraph'
 import { MessageMarkdown } from './MessageMarkdown'
+import { MessageTable } from './MessageTable'
 import { messageJsonRenderCatalog } from './messageJsonRenderCatalog'
 
 export const { registry: messageJsonRenderRegistry } = defineRegistry(messageJsonRenderCatalog, {
@@ -28,7 +29,7 @@ export const { registry: messageJsonRenderRegistry } = defineRegistry(messageJso
     Skeleton: shadcnComponents.Skeleton,
     Spinner: shadcnComponents.Spinner,
     Stack: shadcnComponents.Stack,
-    Table: shadcnComponents.Table,
+    Table: MessageTable,
     Text: shadcnComponents.Text,
   },
 })

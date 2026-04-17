@@ -150,6 +150,7 @@ describe('MessageJsonRender', () => {
                   ['Alpha', '123'],
                   ['Beta', '456'],
                 ],
+                caption: 'Summary table',
               },
             },
           },
@@ -159,8 +160,12 @@ describe('MessageJsonRender', () => {
 
     expect(html).toContain('data-slot="table-container"')
     expect(html).toContain('data-slot="table"')
+    expect(html).toContain('data-slot="table-caption"')
     expect(html).toContain('>Name</th>')
     expect(html).toContain('>456</td>')
+    expect(html).toContain('Summary table')
+    expect(html).not.toContain('<caption')
+    expect(html.indexOf('data-slot="table-caption"')).toBeGreaterThan(html.indexOf('</table>'))
   })
 
   it('renders custom bar graphs', () => {

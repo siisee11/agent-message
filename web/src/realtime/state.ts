@@ -19,6 +19,44 @@ export function announceRealtimeMessageWillAppend(conversationId: string): void 
   )
 }
 
+export function shouldMarkConversationUnread(
+  message: Message,
+  currentUserId: string | undefined,
+  activeConversationId: string | null,
+): boolean {
+  if (message.sender_id === currentUserId) {
+    return false
+  }
+
+  return message.conversation_id !== activeConversationId
+}
+
+export function addUnreadConversation(
+  unreadConversationIds: ReadonlySet<string>,
+  conversationId: string,
+): Set<string> {
+  if (unreadConversationIds.has(conversationId)) {
+    return new Set(unreadConversationIds)
+  }
+
+  const next = new Set(unreadConversationIds)
+  next.add(conversationId)
+  return next
+}
+
+export function removeUnreadConversation(
+  unreadConversationIds: ReadonlySet<string>,
+  conversationId: string | null,
+): Set<string> {
+  if (!conversationId || !unreadConversationIds.has(conversationId)) {
+    return new Set(unreadConversationIds)
+  }
+
+  const next = new Set(unreadConversationIds)
+  next.delete(conversationId)
+  return next
+}
+
 export function fallbackSender(message: Message): UserProfile {
   return {
     id: message.sender_id,

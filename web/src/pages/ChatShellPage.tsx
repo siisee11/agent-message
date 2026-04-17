@@ -323,6 +323,7 @@ export function ChatShellPage() {
     const isMenuOpen = openConversationMenuId === conversationId
     const isActive = activeConversationId === conversationId
     const isDeletingConversation = deleteConversationMutation.isPending && isMenuOpen
+    const hasUnread = realtime.unreadConversationIds.has(conversationId)
 
     return (
       <div
@@ -337,8 +338,11 @@ export function ChatShellPage() {
           <ChatAvatar className={styles.conversationAvatar} size="md" username={summary.other_user.username} />
           <div className={styles.conversationBody}>
             <div className={styles.conversationMeta}>
-              <span className={styles.conversationName} title={conversationLabel}>
-                {conversationLabel}
+              <span className={styles.conversationNameRow}>
+                <span className={styles.conversationName} title={conversationLabel}>
+                  {conversationLabel}
+                </span>
+                {hasUnread ? <span aria-label="Unread conversation" className={styles.unreadDot} /> : null}
               </span>
               <span className={styles.conversationTime}>{timestamp}</span>
             </div>

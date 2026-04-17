@@ -2,10 +2,13 @@ import type { InfiniteData } from '@tanstack/react-query'
 import { describe, expect, it } from 'vitest'
 import type { MessageDetails, Reaction } from '../api'
 import {
+  addUnreadConversation,
   addReactionToPages,
   announceRealtimeMessageWillAppend,
   REALTIME_MESSAGE_WILL_APPEND_EVENT,
+  removeUnreadConversation,
   removeReactionFromPages,
+  shouldMarkConversationUnread,
 } from './state'
 
 function buildMessageDetails(messageId: string): MessageDetails {
@@ -91,5 +94,26 @@ describe('realtime message append event', () => {
     }
 
     expect(receivedConversationId).toBe('conversation-42')
+  })
+})
+
+describe('realtime unread conversation helpers', () => {
+  it('marks only incoming messages outside the active conversation as unread', () => {
+    const incomingMessage = { ...buildMessageDetails('message-3').message, sender_id: 'user-2' }
+    const ownMessage = { ...incomingMessage, sender_id: 'user-1' }
+
+    expect(shouldMarkConversationUnread(incomingMessage, 'user-1', null)).toBe(true)
+    expect(shouldMarkConversationUnread(incomingMessage, 'user-1', 'conversation-1')).toBe(false)
+    expect(shouldMarkConversationUnread(ownMessage, 'user-1', null)).toBe(false)
+  })
+
+  it('adds and removes unread conversation ids without mutating the original set', () => {
+    const current = new Set<string>(['conversation-1'])
+    const added = addUnreadConversation(current, 'conversation-2')
+    const removed = removeUnreadConversation(added, 'conversation-1')
+
+    expect(Array.from(current)).toEqual(['conversation-1'])
+    expect(Array.from(added)).toEqual(['conversation-1', 'conversation-2'])
+    expect(Array.from(removed)).toEqual(['conversation-2'])
   })
 })

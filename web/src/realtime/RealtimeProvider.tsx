@@ -3,9 +3,12 @@ import {
   createContext,
   useCallback,
   useContext,
+  useEffect,
   useMemo,
   type PropsWithChildren,
+  useState,
 } from 'react'
+import { useLocation } from 'react-router-dom'
 import type {
   ConversationDetails,
   Message,
@@ -17,17 +20,21 @@ import type {
 import { useAuth } from '../auth'
 import { useEventStream, type EventStreamConnectionStatus } from '../hooks'
 import {
+  addUnreadConversation,
   addReactionToPages,
   announceRealtimeMessageWillAppend,
   markMessageDeletedInPages,
   prependMessageToPages,
+  removeUnreadConversation,
   removeReactionFromPages,
   replaceMessageInPages,
   resolveRealtimeSender,
+  shouldMarkConversationUnread,
 } from './state'
 
 interface RealtimeContextValue {
   status: EventStreamConnectionStatus
+  unreadConversationIds: ReadonlySet<string>
 }
 
 const RealtimeContext = createContext<RealtimeContextValue | undefined>(undefined)
@@ -35,6 +42,11 @@ const RealtimeContext = createContext<RealtimeContextValue | undefined>(undefine
 export function RealtimeProvider({ children }: PropsWithChildren) {
   const queryClient = useQueryClient()
   const { isAuthenticated, token, user } = useAuth()
+  const location = useLocation()
+  const [unreadConversationIds, setUnreadConversationIds] = useState<Set<string>>(new Set())
+  const activeConversationId = location.pathname.startsWith('/dm/')
+    ? location.pathname.slice('/dm/'.length)
+    : null
 
   const invalidateConversations = useCallback(() => {
     void queryClient.invalidateQueries({ queryKey: ['conversations'] })
@@ -43,6 +55,9 @@ export function RealtimeProvider({ children }: PropsWithChildren) {
   const handleMessageNew = useCallback(
     (incomingMessage: Message) => {
       announceRealtimeMessageWillAppend(incomingMessage.conversation_id)
+      if (shouldMarkConversationUnread(incomingMessage, user?.id, activeConversationId)) {
+        setUnreadConversationIds((current) => addUnreadConversation(current, incomingMessage.conversation_id))
+      }
       const key = ['messages', incomingMessage.conversation_id] as const
       const existingCache = queryClient.getQueryData<InfiniteData<MessageDetails[]>>(key)
       if (existingCache !== undefined) {
@@ -60,7 +75,7 @@ export function RealtimeProvider({ children }: PropsWithChildren) {
       }
       invalidateConversations()
     },
-    [invalidateConversations, queryClient, user],
+    [activeConversationId, invalidateConversations, queryClient, user],
   )
 
   const handleMessageEdited = useCallback(
@@ -174,6 +189,18 @@ export function RealtimeProvider({ children }: PropsWithChildren) {
     [handlePresenceUpdated],
   )
 
+  useEffect(() => {
+    setUnreadConversationIds((current) => removeUnreadConversation(current, activeConversationId))
+  }, [activeConversationId])
+
+  useEffect(() => {
+    if (isAuthenticated) {
+      return
+    }
+
+    setUnreadConversationIds(new Set())
+  }, [isAuthenticated])
+
   const eventStream = useEventStream({
     token,
     enabled: isAuthenticated,
@@ -188,8 +215,9 @@ export function RealtimeProvider({ children }: PropsWithChildren) {
   const value = useMemo<RealtimeContextValue>(
     () => ({
       status: eventStream.status,
+      unreadConversationIds,
     }),
-    [eventStream.status],
+    [eventStream.status, unreadConversationIds],
   )
 
   return <RealtimeContext.Provider value={value}>{children}</RealtimeContext.Provider>

@@ -426,15 +426,31 @@
   min-width: 0;
 }
 
-.conversationName {
+.conversationNameRow {
   min-width: 0;
   flex: 1;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+}
+
+.conversationName {
+  min-width: 0;
   font-size: 1rem;
   font-weight: 500;
   color: var(--text-secondary);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+.unreadDot {
+  width: 0.55rem;
+  height: 0.55rem;
+  border-radius: 999px;
+  background: #e43f4f;
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--surface-elevated) 86%, transparent);
+  flex: none;
 }
 
 .conversationTime {

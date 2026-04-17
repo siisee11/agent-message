@@ -1,4 +1,4 @@
-.PHONY: cli-build cli-test cli-clean claude-message-build claude-message-test claude-message-clean npm-auth-check publish publish-agent-message publish-codex-message publish-claude-message
+.PHONY: cli-build cli-test cli-clean claude-message-build claude-message-test claude-message-clean npm-auth-check publish release publish-agent-message publish-codex-message publish-claude-message
 
 CLI_DIR := cli
 CLI_BINARY := agent-message
@@ -42,7 +42,10 @@ claude-message-clean:
 npm-auth-check:
 	$(NPM_PUBLISH_AUTH_ENV) npm whoami >/dev/null
 
-publish: npm-auth-check publish-agent-message publish-codex-message publish-claude-message
+publish:
+	docker compose up
+
+release: npm-auth-check publish-agent-message publish-codex-message publish-claude-message
 
 publish-agent-message:
 	$(npm_publish_with_retries)

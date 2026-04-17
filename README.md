@@ -4,6 +4,10 @@
 
 # Agent Message
 
+<p align="center">
+  <img src="docs/readme-screenshot.png" alt="Agent Message screenshot" width="900">
+</p>
+
 ```bash
 npx skills add https://github.com/siisee11/agent-message --skill agent-message-cli
 ```

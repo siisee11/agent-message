@@ -33,6 +33,7 @@ import { useDocumentSurface } from '../hooks'
 import {
   fallbackSender,
   prependMessageToPages,
+  REALTIME_MESSAGE_WILL_APPEND_EVENT,
   replaceMessageInPages,
 } from '../realtime/state'
 import { buildSelectedFileKey, extractImageFilesFromClipboardData, mergeSelectedFiles } from './dmComposerFiles'
@@ -526,6 +527,26 @@ export function DmConversationPage() {
       loadOlderMessages()
     }
   }, [conversationId, loadOlderMessages, messagesAscending.length])
+
+  useEffect(() => {
+    if (!conversationId || typeof window === 'undefined') {
+      return
+    }
+
+    const handleRealtimeMessageWillAppend = (event: Event) => {
+      const customEvent = event as CustomEvent<{ conversationId?: string }>
+      if (customEvent.detail?.conversationId !== conversationId) {
+        return
+      }
+
+      shouldStickToBottomRef.current = shouldStickToBottomOnMessageAppend(timelineRef.current)
+    }
+
+    window.addEventListener(REALTIME_MESSAGE_WILL_APPEND_EVENT, handleRealtimeMessageWillAppend)
+    return () => {
+      window.removeEventListener(REALTIME_MESSAGE_WILL_APPEND_EVENT, handleRealtimeMessageWillAppend)
+    }
+  }, [conversationId])
 
   useEffect(() => {
     const timeline = timelineRef.current

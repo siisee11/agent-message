@@ -1,6 +1,24 @@
 import type { InfiniteData } from '@tanstack/react-query'
 import type { ConversationDetails, Message, MessageDetails, Reaction, UserProfile } from '../api'
 
+export const REALTIME_MESSAGE_WILL_APPEND_EVENT = 'agent-message:message-will-append'
+
+export interface RealtimeMessageWillAppendDetail {
+  conversationId: string
+}
+
+export function announceRealtimeMessageWillAppend(conversationId: string): void {
+  if (typeof window === 'undefined') {
+    return
+  }
+
+  window.dispatchEvent(
+    new CustomEvent<RealtimeMessageWillAppendDetail>(REALTIME_MESSAGE_WILL_APPEND_EVENT, {
+      detail: { conversationId },
+    }),
+  )
+}
+
 export function fallbackSender(message: Message): UserProfile {
   return {
     id: message.sender_id,

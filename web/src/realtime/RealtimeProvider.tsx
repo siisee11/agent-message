@@ -18,6 +18,7 @@ import { useAuth } from '../auth'
 import { useEventStream, type EventStreamConnectionStatus } from '../hooks'
 import {
   addReactionToPages,
+  announceRealtimeMessageWillAppend,
   markMessageDeletedInPages,
   prependMessageToPages,
   removeReactionFromPages,
@@ -41,6 +42,7 @@ export function RealtimeProvider({ children }: PropsWithChildren) {
 
   const handleMessageNew = useCallback(
     (incomingMessage: Message) => {
+      announceRealtimeMessageWillAppend(incomingMessage.conversation_id)
       const key = ['messages', incomingMessage.conversation_id] as const
       const existingCache = queryClient.getQueryData<InfiniteData<MessageDetails[]>>(key)
       if (existingCache !== undefined) {

@@ -1,7 +1,12 @@
 import type { InfiniteData } from '@tanstack/react-query'
 import { describe, expect, it } from 'vitest'
 import type { MessageDetails, Reaction } from '../api'
-import { addReactionToPages, removeReactionFromPages } from './state'
+import {
+  addReactionToPages,
+  announceRealtimeMessageWillAppend,
+  REALTIME_MESSAGE_WILL_APPEND_EVENT,
+  removeReactionFromPages,
+} from './state'
 
 function buildMessageDetails(messageId: string): MessageDetails {
   return {
@@ -60,5 +65,31 @@ describe('realtime reaction page updates', () => {
     })
 
     expect(updated?.pages[0][0].reactions).toEqual([])
+  })
+})
+
+describe('realtime message append event', () => {
+  it('dispatches the active conversation id before appending a realtime message', () => {
+    let receivedConversationId: string | null = null
+    const originalWindow = Reflect.get(globalThis, 'window')
+    const windowStub = new EventTarget()
+    const handleEvent = (event: Event) => {
+      receivedConversationId = (event as CustomEvent<{ conversationId: string }>).detail.conversationId
+    }
+
+    Reflect.set(globalThis, 'window', windowStub)
+    windowStub.addEventListener(REALTIME_MESSAGE_WILL_APPEND_EVENT, handleEvent)
+    try {
+      announceRealtimeMessageWillAppend('conversation-42')
+    } finally {
+      windowStub.removeEventListener(REALTIME_MESSAGE_WILL_APPEND_EVENT, handleEvent)
+      if (originalWindow === undefined) {
+        Reflect.deleteProperty(globalThis, 'window')
+      } else {
+        Reflect.set(globalThis, 'window', originalWindow)
+      }
+    }
+
+    expect(receivedConversationId).toBe('conversation-42')
   })
 })

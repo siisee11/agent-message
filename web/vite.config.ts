@@ -10,7 +10,7 @@ export default defineConfig({
       srcDir: 'src',
       filename: 'sw.ts',
       registerType: 'autoUpdate',
-      includeAssets: ['agent-message-logo.svg', 'favicon.png', 'apple-touch-icon.png'],
+      includeAssets: ['agent-message-logo.svg', 'favicon-0.6.21.png', 'apple-touch-icon-0.6.21.png'],
       manifest: {
         name: 'Agent Message',
         short_name: 'Agent Message',
@@ -23,17 +23,17 @@ export default defineConfig({
         scope: '/',
         icons: [
           {
-            src: '/pwa-192x192.png',
+            src: '/pwa-192x192-0.6.21.png',
             sizes: '192x192',
             type: 'image/png',
           },
           {
-            src: '/pwa-512x512.png',
+            src: '/pwa-512x512-0.6.21.png',
             sizes: '512x512',
             type: 'image/png',
           },
           {
-            src: '/pwa-512x512.png',
+            src: '/pwa-512x512-0.6.21.png',
             sizes: '512x512',
             type: 'image/png',
             purpose: 'maskable',

@@ -46,8 +46,8 @@ async function handlePushEvent(payload: NotificationPayload): Promise<void> {
   await self.registration.showNotification(payload.title ?? 'Agent Message', {
     body: payload.body ?? 'New message',
     tag: payload.tag ?? 'chat',
-    icon: '/pwa-192x192.png',
-    badge: '/pwa-192x192.png',
+    icon: '/pwa-192x192-0.6.21.png',
+    badge: '/pwa-192x192-0.6.21.png',
     data: {
       url: payload.data?.url ?? '/',
       conversationId: payload.data?.conversationId,

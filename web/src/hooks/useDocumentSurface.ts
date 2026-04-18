@@ -17,10 +17,12 @@ export function useDocumentSurface({
     const themeColorMeta = document.querySelector<HTMLMetaElement>('meta[name="theme-color"]')
 
     const previousRootBackground = root.style.getPropertyValue(SURFACE_BACKGROUND_VARIABLE)
+    const previousRootBackgroundColor = root.style.backgroundColor
     const previousBodyBackground = body.style.backgroundColor
     const previousThemeColor = themeColorMeta?.getAttribute('content')
 
     root.style.setProperty(SURFACE_BACKGROUND_VARIABLE, backgroundColor)
+    root.style.backgroundColor = backgroundColor
     body.style.backgroundColor = backgroundColor
     themeColorMeta?.setAttribute('content', themeColor)
 
@@ -31,6 +33,7 @@ export function useDocumentSurface({
         root.style.setProperty(SURFACE_BACKGROUND_VARIABLE, previousRootBackground)
       }
 
+      root.style.backgroundColor = previousRootBackgroundColor
       body.style.backgroundColor = previousBodyBackground
 
       if (!themeColorMeta) {

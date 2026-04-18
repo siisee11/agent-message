@@ -18,6 +18,8 @@
 }
 
 .header {
+  position: relative;
+  z-index: 3;
   display: grid;
   gap: 1rem;
   padding: 1rem;
@@ -244,6 +246,8 @@
 }
 
 .listSection {
+  position: relative;
+  z-index: 1;
   min-height: 0;
   display: grid;
   grid-template-rows: auto minmax(0, 1fr);

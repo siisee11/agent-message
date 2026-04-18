@@ -6,9 +6,10 @@ import {
   useQueryClient,
 } from '@tanstack/react-query'
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
-import { useNavigate, useParams } from 'react-router-dom'
+import { NavLink, useNavigate, useParams } from 'react-router-dom'
 import {
   ApiError,
+  type ConversationSummary,
   type MessageAttachment,
   type ConversationDetails,
   type Message,
@@ -27,6 +28,8 @@ import {
   extractMessageHostname,
   MESSAGE_PREVIEW_DELETED,
   resolveMessageRenderContent,
+  summarizeConversationLabel,
+  summarizeLastMessagePreview,
 } from '../messages/messagePresentation'
 import { useTheme } from '../theme'
 import { useDocumentSurface } from '../hooks'
@@ -43,6 +46,12 @@ import styles from './DmConversationPage.module.css'
 const MESSAGE_PAGE_SIZE = 20
 const TIMELINE_PULL_TRIGGER_PX = 32
 const TIMESTAMP_FORMATTER = new Intl.DateTimeFormat('en-US', {
+  month: 'short',
+  day: 'numeric',
+  hour: '2-digit',
+  minute: '2-digit',
+})
+const CONVERSATION_TIME_FORMATTER = new Intl.DateTimeFormat('en-US', {
   month: 'short',
   day: 'numeric',
   hour: '2-digit',
@@ -124,6 +133,19 @@ function formatMessageTimestamp(message: Message): string {
     return message.created_at
   }
   return TIMESTAMP_FORMATTER.format(new Date(parsed))
+}
+
+function formatConversationTimestamp(lastMessage?: Message): string {
+  if (!lastMessage) {
+    return ''
+  }
+
+  const parsed = Date.parse(lastMessage.created_at)
+  if (Number.isNaN(parsed)) {
+    return ''
+  }
+
+  return CONVERSATION_TIME_FORMATTER.format(new Date(parsed))
 }
 
 function getWatcherPresenceClass(online: boolean): string {
@@ -345,6 +367,11 @@ export function DmConversationPage() {
     enabled: Boolean(conversationId),
   })
 
+  const conversationsQuery = useQuery({
+    queryKey: ['conversations'],
+    queryFn: () => apiClient.listConversations(),
+  })
+
   const messagePagesQuery = useInfiniteQuery({
     queryKey: ['messages', conversationId],
     queryFn: ({ pageParam }) =>
@@ -367,6 +394,7 @@ export function DmConversationPage() {
     const newestFirstMessages = (messagePagesQuery.data?.pages ?? []).flatMap((page) => page)
     return [...newestFirstMessages].reverse()
   }, [messagePagesQuery.data])
+  const conversations = conversationsQuery.data ?? []
 
   const otherParticipant = useMemo(() => {
     if (!conversationQuery.data) {
@@ -997,61 +1025,95 @@ export function DmConversationPage() {
       ? 'unavailable'
       : conversationHostname ?? 'unavailable'
 
+  function renderConversationSidebarItem(summary: ConversationSummary) {
+    const nextConversationId = summary.conversation.id
+    const preview = summarizeLastMessagePreview(summary.last_message)
+    const timestamp = formatConversationTimestamp(summary.last_message)
+    const conversationLabel = summarizeConversationLabel(summary)
+    const isActiveConversation = nextConversationId === conversationId
+    const hasUnread = realtime.unreadConversationIds.has(nextConversationId)
+
+    return (
+      <NavLink
+        className={`${styles.desktopConversationItem}${isActiveConversation ? ` ${styles.desktopConversationItemActive}` : ''}`}
+        key={nextConversationId}
+        to={`/dm/${nextConversationId}`}
+      >
+        <ChatAvatar className={styles.desktopConversationAvatar} size="md" username={summary.other_user.username} />
+        <div className={styles.desktopConversationBody}>
+          <div className={styles.desktopConversationMeta}>
+            <span className={styles.desktopConversationNameRow}>
+              <span className={styles.desktopConversationName} title={conversationLabel}>
+                {conversationLabel}
+              </span>
+              {hasUnread ? <span aria-label="Unread conversation" className={styles.desktopUnreadDot} /> : null}
+            </span>
+            {timestamp ? <span className={styles.desktopConversationTime}>{timestamp}</span> : null}
+          </div>
+          <p className={styles.desktopConversationPreview} title={preview}>
+            {preview}
+          </p>
+        </div>
+      </NavLink>
+    )
+  }
+
   return (
     <section className={styles.page}>
-      <div className={styles.panel}>
-        <header className={styles.header}>
-          <div className={styles.headerBar}>
-            <button
-              aria-label="Back to conversations"
-              className={`${styles.iconButton} ${styles.headerBackButton}`}
-              onClick={handleBack}
-              type="button"
-            >
-              <BackIcon />
-            </button>
-            <ChatAvatar
-              className={styles.headerAvatar}
-              size="sm"
-              username={otherParticipant?.username ?? 'conversation'}
-            />
-            <div className={styles.headerCopy}>
-              <div className={styles.headerTitleRow}>
-                <h2 className={styles.title}>{headerTitle}</h2>
-                {watcherStatusLabel ? (
-                  <span className={getWatcherPresenceClass(Boolean(watcherPresence?.online))}>
-                    {watcherStatusLabel}
-                  </span>
-                ) : null}
-              </div>
-              <div
-                className={styles.sessionMetaBar}
-                title={`cwd: ${headerCwdValue} | hostname: ${headerHostnameValue}`}
+      <div className={styles.desktopLayout}>
+        <div className={styles.panel}>
+          <header className={styles.header}>
+            <div className={styles.headerBar}>
+              <button
+                aria-label="Back to conversations"
+                className={`${styles.iconButton} ${styles.headerBackButton}`}
+                onClick={handleBack}
+                type="button"
               >
-                <span className={styles.sessionMetaLabel}>{`cwd: ${headerCwdValue}`}</span>
-                <span aria-hidden="true" className={styles.sessionMetaDivider}>
-                  /
-                </span>
-                <span className={styles.sessionMetaLabel}>{`hostname: ${headerHostnameValue}`}</span>
+                <BackIcon />
+              </button>
+              <ChatAvatar
+                className={styles.headerAvatar}
+                size="sm"
+                username={otherParticipant?.username ?? 'conversation'}
+              />
+              <div className={styles.headerCopy}>
+                <div className={styles.headerTitleRow}>
+                  <h2 className={styles.title}>{headerTitle}</h2>
+                  {watcherStatusLabel ? (
+                    <span className={getWatcherPresenceClass(Boolean(watcherPresence?.online))}>
+                      {watcherStatusLabel}
+                    </span>
+                  ) : null}
+                </div>
+                <div
+                  className={styles.sessionMetaBar}
+                  title={`cwd: ${headerCwdValue} | hostname: ${headerHostnameValue}`}
+                >
+                  <span className={styles.sessionMetaLabel}>{`cwd: ${headerCwdValue}`}</span>
+                  <span aria-hidden="true" className={styles.sessionMetaDivider}>
+                    /
+                  </span>
+                  <span className={styles.sessionMetaLabel}>{`hostname: ${headerHostnameValue}`}</span>
+                </div>
               </div>
             </div>
-          </div>
-        </header>
+          </header>
 
-        <section className={styles.timelineSection}>
-          <div className={styles.timelineViewport} ref={timelineRef}>
-            <div className={styles.timelineContent} ref={timelineContentRef}>
-              {messagePagesQuery.isFetchingNextPage ? (
-                <p className={styles.timelinePullStatus}>Loading older messages...</p>
-              ) : null}
-              {timelineError ? <p className={styles.error}>{timelineError}</p> : null}
-              {messagePagesQuery.isLoading ? <p className={styles.muted}>Loading messages...</p> : null}
-              {messagePagesQuery.isSuccess && messagesAscending.length === 0 ? (
-                <p className={styles.muted}>No messages yet in this conversation.</p>
-              ) : null}
-              {messagesAscending.length > 0 ? (
-                <ol className={styles.timelineList}>
-                  {messagesAscending.map((details: MessageDetails) => {
+          <section className={styles.timelineSection}>
+            <div className={styles.timelineViewport} ref={timelineRef}>
+              <div className={styles.timelineContent} ref={timelineContentRef}>
+                {messagePagesQuery.isFetchingNextPage ? (
+                  <p className={styles.timelinePullStatus}>Loading older messages...</p>
+                ) : null}
+                {timelineError ? <p className={styles.error}>{timelineError}</p> : null}
+                {messagePagesQuery.isLoading ? <p className={styles.muted}>Loading messages...</p> : null}
+                {messagePagesQuery.isSuccess && messagesAscending.length === 0 ? (
+                  <p className={styles.muted}>No messages yet in this conversation.</p>
+                ) : null}
+                {messagesAscending.length > 0 ? (
+                  <ol className={styles.timelineList}>
+                    {messagesAscending.map((details: MessageDetails) => {
                     const renderContent = resolveMessageRenderContent(details.message)
                     const reactionGroups = groupReactionsByEmoji(details.reactions, user?.id)
                     const attachments = details.message.attachments ?? []
@@ -1206,144 +1268,169 @@ export function DmConversationPage() {
                         </div>
                       </li>
                     )
-                  })}
-                </ol>
-              ) : null}
-            </div>
-          </div>
-
-          <form
-            className={`${styles.composerForm}${isComposerFocused ? ` ${styles.composerFormKeyboardOpen}` : ''}`}
-            onSubmit={handleComposerSubmit}
-          >
-            {unreadCount > 0 ? (
-              <button className={styles.unreadBanner} onClick={handleScrollToBottom} type="button">
-                {unreadCount === 1 ? '1 unread message' : `${unreadCount} unread messages`}
-              </button>
-            ) : null}
-            {editingTarget ? (
-              <div className={styles.editingBanner}>
-                <span>Editing message</span>
-                <button className={styles.editingCancelButton} onClick={cancelEdit} type="button">
-                  Cancel
-                </button>
+                    })}
+                  </ol>
+                ) : null}
               </div>
-            ) : null}
+            </div>
 
-            {selectedImagePreviews.length > 0 ? (
-              <div className={styles.attachmentPreviewGrid}>
-                {selectedImagePreviews.map((preview) => (
-                  <div className={styles.attachmentPreviewCard} key={preview.key}>
-                    <div className={styles.attachmentPreviewFrame}>
-                      <img
-                        alt={preview.file.name || 'Selected image preview'}
-                        className={styles.attachmentPreviewImage}
-                        src={preview.url}
-                      />
+            <form
+              className={`${styles.composerForm}${isComposerFocused ? ` ${styles.composerFormKeyboardOpen}` : ''}`}
+              onSubmit={handleComposerSubmit}
+            >
+              {unreadCount > 0 ? (
+                <button className={styles.unreadBanner} onClick={handleScrollToBottom} type="button">
+                  {unreadCount === 1 ? '1 unread message' : `${unreadCount} unread messages`}
+                </button>
+              ) : null}
+              {editingTarget ? (
+                <div className={styles.editingBanner}>
+                  <span>Editing message</span>
+                  <button className={styles.editingCancelButton} onClick={cancelEdit} type="button">
+                    Cancel
+                  </button>
+                </div>
+              ) : null}
+
+              {selectedImagePreviews.length > 0 ? (
+                <div className={styles.attachmentPreviewGrid}>
+                  {selectedImagePreviews.map((preview) => (
+                    <div className={styles.attachmentPreviewCard} key={preview.key}>
+                      <div className={styles.attachmentPreviewFrame}>
+                        <img
+                          alt={preview.file.name || 'Selected image preview'}
+                          className={styles.attachmentPreviewImage}
+                          src={preview.url}
+                        />
+                      </div>
+                      <div className={styles.attachmentPreviewMeta}>
+                        <span className={styles.attachmentPreviewName}>{preview.file.name}</span>
+                        <button
+                          className={styles.attachmentPreviewRemove}
+                          disabled={disableComposerActions}
+                          onClick={() => clearSelectedAttachment(preview.key)}
+                          type="button"
+                        >
+                          Remove
+                        </button>
+                      </div>
                     </div>
-                    <div className={styles.attachmentPreviewMeta}>
-                      <span className={styles.attachmentPreviewName}>{preview.file.name}</span>
+                  ))}
+                </div>
+              ) : null}
+
+              {selectedNonImageFiles.length > 0 ? (
+                <div className={styles.attachmentChipList}>
+                  {selectedNonImageFiles.map((selectedFile) => (
+                    <div className={styles.attachmentChip} key={buildSelectedFileKey(selectedFile)}>
+                      <span className={styles.attachmentName}>{selectedFile.name}</span>
                       <button
-                        className={styles.attachmentPreviewRemove}
+                        className={styles.attachmentRemove}
                         disabled={disableComposerActions}
-                        onClick={() => clearSelectedAttachment(preview.key)}
+                        onClick={() => clearSelectedAttachment(buildSelectedFileKey(selectedFile))}
                         type="button"
                       >
                         Remove
                       </button>
                     </div>
-                  </div>
-                ))}
-              </div>
-            ) : null}
+                  ))}
+                </div>
+              ) : null}
 
-            {selectedNonImageFiles.length > 0 ? (
-              <div className={styles.attachmentChipList}>
-                {selectedNonImageFiles.map((selectedFile) => (
-                  <div className={styles.attachmentChip} key={buildSelectedFileKey(selectedFile)}>
-                    <span className={styles.attachmentName}>{selectedFile.name}</span>
-                    <button
-                      className={styles.attachmentRemove}
-                      disabled={disableComposerActions}
-                      onClick={() => clearSelectedAttachment(buildSelectedFileKey(selectedFile))}
-                      type="button"
-                    >
-                      Remove
-                    </button>
-                  </div>
-                ))}
-              </div>
-            ) : null}
-
-            <div className={styles.composerDock}>
-              <input
-                className={styles.attachInput}
-                disabled={disableComposerActions || Boolean(editingTarget)}
-                onChange={handleSelectAttachment}
-                ref={fileInputRef}
-                type="file"
-                multiple
-              />
-
-              <button
-                aria-label="Attach file"
-                className={`${styles.iconButton} ${styles.attachButton}${
-                  editingTarget ? ` ${styles.attachButtonDisabled}` : ''
-                }`}
-                disabled={disableComposerActions || Boolean(editingTarget)}
-                onClick={handleOpenFilePicker}
-                title={editingTarget ? 'Attachments are unavailable while editing.' : 'Attach file'}
-                type="button"
-              >
-                <PlusIcon />
-              </button>
-
-              <div className={styles.composerField} onPointerDown={handleComposerFieldPointerDown}>
-                <textarea
-                  className={styles.composerInput}
-                  disabled={disableComposerActions}
-                  onChange={handleComposerChange}
-                  onBlur={() => setIsComposerFocused(false)}
-                  onFocus={() => setIsComposerFocused(true)}
-                  onKeyDown={handleComposerKeyDown}
-                  onPaste={handleComposerPaste}
-                  placeholder={editingTarget ? 'Edit message...' : 'Message'}
-                  ref={composerInputRef}
-                  rows={1}
-                  value={composerText}
+              <div className={styles.composerDock}>
+                <input
+                  className={styles.attachInput}
+                  disabled={disableComposerActions || Boolean(editingTarget)}
+                  onChange={handleSelectAttachment}
+                  ref={fileInputRef}
+                  type="file"
+                  multiple
                 />
+
+                <button
+                  aria-label="Attach file"
+                  className={`${styles.iconButton} ${styles.attachButton}${
+                    editingTarget ? ` ${styles.attachButtonDisabled}` : ''
+                  }`}
+                  disabled={disableComposerActions || Boolean(editingTarget)}
+                  onClick={handleOpenFilePicker}
+                  title={editingTarget ? 'Attachments are unavailable while editing.' : 'Attach file'}
+                  type="button"
+                >
+                  <PlusIcon />
+                </button>
+
+                <div className={styles.composerField} onPointerDown={handleComposerFieldPointerDown}>
+                  <textarea
+                    className={styles.composerInput}
+                    disabled={disableComposerActions}
+                    onChange={handleComposerChange}
+                    onBlur={() => setIsComposerFocused(false)}
+                    onFocus={() => setIsComposerFocused(true)}
+                    onKeyDown={handleComposerKeyDown}
+                    onPaste={handleComposerPaste}
+                    placeholder={editingTarget ? 'Edit message...' : 'Message'}
+                    ref={composerInputRef}
+                    rows={1}
+                    value={composerText}
+                  />
+                </div>
+
+                <button
+                  aria-label={
+                    editMessageMutation.isPending
+                      ? 'Saving message'
+                      : sendMessageMutation.isPending
+                        ? 'Sending message'
+                        : editingTarget
+                          ? 'Save edit'
+                          : 'Send message'
+                  }
+                  className={styles.submitButton}
+                  disabled={disableComposerActions || !hasComposerContent}
+                  title={
+                    editingTarget
+                      ? editMessageMutation.isPending
+                        ? 'Saving...'
+                        : 'Save edit'
+                      : sendMessageMutation.isPending
+                        ? 'Sending...'
+                        : 'Send message'
+                  }
+                  type="submit"
+                >
+                  <SendIcon />
+                </button>
               </div>
 
-              <button
-                aria-label={
-                  editMessageMutation.isPending
-                    ? 'Saving message'
-                    : sendMessageMutation.isPending
-                      ? 'Sending message'
-                      : editingTarget
-                        ? 'Save edit'
-                        : 'Send message'
-                }
-                className={styles.submitButton}
-                disabled={disableComposerActions || !hasComposerContent}
-                title={
-                  editingTarget
-                    ? editMessageMutation.isPending
-                      ? 'Saving...'
-                      : 'Save edit'
-                    : sendMessageMutation.isPending
-                      ? 'Sending...'
-                      : 'Send message'
-                }
-                type="submit"
-              >
-                <SendIcon />
-              </button>
-            </div>
+              {composerError ? <p className={styles.error}>{composerError}</p> : null}
+            </form>
+          </section>
+        </div>
 
-            {composerError ? <p className={styles.error}>{composerError}</p> : null}
-          </form>
-        </section>
+        <aside className={styles.desktopSidebar}>
+          <div className={styles.desktopSidebarInner}>
+            <div className={styles.desktopSidebarHeading}>
+              <h3 className={styles.desktopSidebarTitle}>Conversations</h3>
+              <p className={styles.desktopSidebarCopy}>
+                {conversations.length > 0
+                  ? `${conversations.length} conversation${conversations.length === 1 ? '' : 's'}`
+                  : 'No open conversations yet.'}
+              </p>
+            </div>
+            {conversationsQuery.isLoading ? <p className={styles.desktopSidebarStatus}>Loading conversations...</p> : null}
+            {conversationsQuery.isError ? (
+              <p className={styles.desktopSidebarStatus}>
+                {resolveErrorMessage(conversationsQuery.error, 'Failed to load conversations.')}
+              </p>
+            ) : null}
+            {conversationsQuery.isSuccess && conversations.length > 0 ? (
+              <nav aria-label="Conversation list" className={styles.desktopConversationList}>
+                {conversations.map(renderConversationSidebarItem)}
+              </nav>
+            ) : null}
+          </div>
+        </aside>
       </div>
 
       {actionMenu && actionMenuMessage ? (

@@ -10,12 +10,153 @@
   overscroll-behavior: none;
 }
 
+.desktopLayout {
+  height: 100%;
+  min-height: 0;
+}
+
 .panel {
   height: 100%;
   min-height: 0;
   display: grid;
   grid-template-rows: auto minmax(0, 1fr);
   overflow: hidden;
+}
+
+.desktopSidebar {
+  display: none;
+}
+
+.desktopSidebarInner {
+  height: 100%;
+  min-height: 0;
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr);
+  gap: 1rem;
+  padding: 1rem;
+  border: 1px solid var(--border);
+  background: var(--surface-elevated);
+  overflow: hidden;
+}
+
+.desktopSidebarHeading {
+  display: grid;
+  gap: 0.35rem;
+}
+
+.desktopSidebarTitle {
+  margin: 0;
+  color: var(--text-primary);
+  font-family: var(--font-display);
+  font-size: 0.875rem;
+  font-weight: 400;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+
+.desktopSidebarCopy,
+.desktopSidebarStatus {
+  margin: 0;
+  color: var(--text-secondary);
+  font-size: 0.95rem;
+  line-height: 1.5;
+}
+
+.desktopConversationList {
+  min-height: 0;
+  display: grid;
+  align-content: start;
+  grid-auto-rows: max-content;
+  gap: 0.75rem;
+  overflow: auto;
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
+}
+
+.desktopConversationItem {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: start;
+  gap: 0.85rem;
+  padding: 1rem;
+  border: 1px solid var(--border);
+  background: var(--surface-elevated);
+  color: inherit;
+  text-decoration: none;
+}
+
+.desktopConversationItem:hover {
+  border-color: var(--border-strong);
+  background: var(--surface-hover);
+}
+
+.desktopConversationItemActive {
+  border-color: var(--border-strong);
+  background: var(--surface-hover);
+}
+
+.desktopConversationAvatar {
+  margin-top: 0.05rem;
+}
+
+.desktopConversationBody {
+  min-width: 0;
+  display: grid;
+  gap: 0.6rem;
+}
+
+.desktopConversationMeta {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.75rem;
+  min-width: 0;
+}
+
+.desktopConversationNameRow {
+  min-width: 0;
+  flex: 1;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+}
+
+.desktopConversationName {
+  min-width: 0;
+  font-size: 1rem;
+  font-weight: 500;
+  color: var(--text-secondary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.desktopUnreadDot {
+  width: 0.55rem;
+  height: 0.55rem;
+  border-radius: 999px;
+  background: #e43f4f;
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--surface-elevated) 86%, transparent);
+  flex: none;
+}
+
+.desktopConversationTime {
+  flex: none;
+  color: var(--text-tertiary);
+  font-family: var(--font-display);
+  font-size: 0.75rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.desktopConversationPreview {
+  margin: 0;
+  color: var(--text-secondary);
+  font-size: 0.95rem;
+  line-height: 1.5;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .header {
@@ -937,6 +1078,56 @@
   box-shadow: var(--glass-shadow-pressed);
 }
 
+:global(:root[data-theme='neo-brutalism']) .desktopSidebarInner,
+:global(:root[data-theme='neo-brutalism']) .desktopConversationItem {
+  box-shadow: 6px 6px 0 0 var(--border-strong);
+}
+
+:global(:root[data-theme='neumorphism']) .desktopSidebarInner,
+:global(:root[data-theme='neumorphism']) .desktopConversationItem {
+  border-color: color-mix(in srgb, var(--border) 90%, transparent);
+  border-radius: 1.5rem;
+  box-shadow: var(--theme-shadow-surface);
+}
+
+:global(:root[data-theme='neumorphism']) .desktopConversationList {
+  padding: 0.35rem 0.4rem 0.85rem;
+}
+
+:global(:root[data-theme='neumorphism']) .desktopConversationItem:hover,
+:global(:root[data-theme='neumorphism']) .desktopConversationItemActive {
+  box-shadow: var(--theme-shadow-floating);
+}
+
+:global(:root[data-theme='liquid-glass']) .desktopSidebarInner {
+  border-color: var(--glass-stroke);
+  border-radius: 1.9rem;
+  background: var(--glass-surface-thick);
+  backdrop-filter: var(--glass-backdrop-filter-strong);
+  -webkit-backdrop-filter: var(--glass-backdrop-filter-strong);
+  box-shadow: var(--glass-shadow-floating);
+}
+
+:global(:root[data-theme='liquid-glass']) .desktopConversationItem {
+  border-color: var(--glass-stroke);
+  border-radius: 1.5rem;
+  background: var(--glass-surface-regular);
+  backdrop-filter: var(--glass-backdrop-filter);
+  -webkit-backdrop-filter: var(--glass-backdrop-filter);
+  box-shadow: var(--glass-shadow-soft);
+}
+
+:global(:root[data-theme='liquid-glass']) .desktopSidebarTitle {
+  letter-spacing: 0.01em;
+  text-transform: none;
+}
+
+:global(:root[data-theme='liquid-glass']) .desktopConversationItem:hover,
+:global(:root[data-theme='liquid-glass']) .desktopConversationItemActive {
+  background: var(--glass-surface-thick);
+  box-shadow: var(--glass-shadow-floating);
+}
+
 @media (max-width: 480px) {
   .header {
     padding:
@@ -975,5 +1166,31 @@
 
   .composerForm {
     padding: 1rem 1.5rem max(1rem, calc(env(safe-area-inset-bottom) + 0.5rem));
+  }
+}
+
+@media (min-width: 1200px) {
+  .page {
+    padding: 1rem;
+  }
+
+  .desktopLayout {
+    width: min(100%, 88rem);
+    margin: 0 auto;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 23rem;
+    gap: 1rem;
+  }
+
+  .panel {
+    min-width: 0;
+    max-width: none;
+    margin: 0;
+    min-height: calc(100vh - 2rem);
+  }
+
+  .desktopSidebar {
+    display: block;
+    min-height: 0;
   }
 }

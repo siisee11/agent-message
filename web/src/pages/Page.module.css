@@ -20,9 +20,9 @@
 :global(:root[data-theme='liquid-glass']) .card {
   border-color: var(--glass-stroke);
   border-radius: 1.8rem;
-  background: var(--glass-surface-thick);
-  backdrop-filter: var(--glass-backdrop-filter-strong);
-  -webkit-backdrop-filter: var(--glass-backdrop-filter-strong);
+  background: var(--glass-surface-regular);
+  backdrop-filter: var(--glass-backdrop-filter);
+  -webkit-backdrop-filter: var(--glass-backdrop-filter);
   box-shadow: var(--glass-shadow-floating);
 }
 

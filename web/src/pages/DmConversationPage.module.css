@@ -989,9 +989,9 @@
 :global(:root[data-theme='liquid-glass']) .card {
   border-color: var(--glass-stroke);
   border-radius: 1.9rem;
-  background: var(--glass-surface-thick);
-  backdrop-filter: var(--glass-backdrop-filter-strong);
-  -webkit-backdrop-filter: var(--glass-backdrop-filter-strong);
+  background: var(--glass-surface-regular);
+  backdrop-filter: var(--glass-backdrop-filter);
+  -webkit-backdrop-filter: var(--glass-backdrop-filter);
   box-shadow: var(--glass-shadow-floating);
 }
 
@@ -1002,7 +1002,7 @@
 :global(:root[data-theme='liquid-glass']) .iconButton {
   border-color: var(--glass-stroke);
   border-radius: 1.5rem;
-  background: var(--glass-surface-regular);
+  background: var(--glass-surface-thin);
   backdrop-filter: var(--glass-backdrop-filter);
   -webkit-backdrop-filter: var(--glass-backdrop-filter);
   box-shadow: var(--glass-shadow-soft);
@@ -1012,10 +1012,10 @@
   background:
     linear-gradient(
       180deg,
-      color-mix(in srgb, var(--primary) 10%, rgba(255, 255, 255, 0.18)),
-      rgba(255, 255, 255, 0.02)
+      color-mix(in srgb, var(--primary) 7%, rgba(255, 255, 255, 0.12)),
+      rgba(255, 255, 255, 0.01)
     ),
-    var(--glass-surface-regular);
+    var(--glass-surface-thin);
 }
 
 :global(:root[data-theme='liquid-glass']) .timelineContent {
@@ -1034,15 +1034,17 @@
 :global(:root[data-theme='liquid-glass']) .composerField {
   border-color: var(--glass-stroke);
   border-radius: 1.2rem;
-  background: var(--glass-surface-regular);
+  background: var(--glass-surface-thin);
   backdrop-filter: var(--glass-backdrop-filter);
   -webkit-backdrop-filter: var(--glass-backdrop-filter);
   box-shadow: var(--glass-shadow-soft);
 }
 
 :global(:root[data-theme='liquid-glass']) .composerField:focus-within {
-  background: var(--glass-surface-thick);
-  box-shadow: var(--glass-shadow-pressed);
+  background: var(--glass-surface-regular);
+  box-shadow:
+    var(--glass-shadow-soft),
+    0 0 0 2px color-mix(in srgb, var(--primary) 20%, transparent);
 }
 
 :global(:root[data-theme='liquid-glass']) .composerInput,
@@ -1063,7 +1065,7 @@
 :global(:root[data-theme='liquid-glass']) .attachmentPreviewRemove:hover:not(:disabled),
 :global(:root[data-theme='liquid-glass']) .contextMenuAction:hover:not(:disabled),
 :global(:root[data-theme='liquid-glass']) .unreadBanner:hover {
-  background: var(--glass-surface-thick);
+  background: var(--glass-surface-regular);
   box-shadow: var(--glass-shadow-floating);
 }
 
@@ -1102,16 +1104,16 @@
 :global(:root[data-theme='liquid-glass']) .desktopSidebarInner {
   border-color: var(--glass-stroke);
   border-radius: 1.9rem;
-  background: var(--glass-surface-thick);
-  backdrop-filter: var(--glass-backdrop-filter-strong);
-  -webkit-backdrop-filter: var(--glass-backdrop-filter-strong);
+  background: var(--glass-surface-regular);
+  backdrop-filter: var(--glass-backdrop-filter);
+  -webkit-backdrop-filter: var(--glass-backdrop-filter);
   box-shadow: var(--glass-shadow-floating);
 }
 
 :global(:root[data-theme='liquid-glass']) .desktopConversationItem {
   border-color: var(--glass-stroke);
   border-radius: 1.5rem;
-  background: var(--glass-surface-regular);
+  background: var(--glass-surface-thin);
   backdrop-filter: var(--glass-backdrop-filter);
   -webkit-backdrop-filter: var(--glass-backdrop-filter);
   box-shadow: var(--glass-shadow-soft);
@@ -1124,7 +1126,7 @@
 
 :global(:root[data-theme='liquid-glass']) .desktopConversationItem:hover,
 :global(:root[data-theme='liquid-glass']) .desktopConversationItemActive {
-  background: var(--glass-surface-thick);
+  background: var(--glass-surface-regular);
   box-shadow: var(--glass-shadow-floating);
 }
 

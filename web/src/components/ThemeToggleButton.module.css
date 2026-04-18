@@ -154,19 +154,19 @@
 :global(:root[data-theme='liquid-glass']) .trigger,
 :global(:root[data-theme='liquid-glass']) .iconButton,
 :global(:root[data-theme='liquid-glass']) .optionActive {
-  background: var(--glass-surface-regular);
+  background: var(--glass-surface-thin);
 }
 
 :global(:root[data-theme='liquid-glass']) .menu {
-  background: var(--glass-surface-thick);
-  backdrop-filter: var(--glass-backdrop-filter-strong);
-  -webkit-backdrop-filter: var(--glass-backdrop-filter-strong);
+  background: var(--glass-surface-regular);
+  backdrop-filter: var(--glass-backdrop-filter);
+  -webkit-backdrop-filter: var(--glass-backdrop-filter);
 }
 
 :global(:root[data-theme='liquid-glass']) .trigger:hover,
 :global(:root[data-theme='liquid-glass']) .iconButton:hover,
 :global(:root[data-theme='liquid-glass']) .option:hover {
-  background: var(--glass-surface-thick);
+  background: var(--glass-surface-regular);
   box-shadow: var(--glass-shadow-floating);
 }
 

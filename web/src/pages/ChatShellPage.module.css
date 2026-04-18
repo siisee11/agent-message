@@ -368,9 +368,9 @@
 :global(:root[data-theme='liquid-glass']) .conversationMenu {
   border-color: var(--glass-stroke);
   border-radius: 1.9rem;
-  background: var(--glass-surface-thick);
-  backdrop-filter: var(--glass-backdrop-filter-strong);
-  -webkit-backdrop-filter: var(--glass-backdrop-filter-strong);
+  background: var(--glass-surface-regular);
+  backdrop-filter: var(--glass-backdrop-filter);
+  -webkit-backdrop-filter: var(--glass-backdrop-filter);
   box-shadow: var(--glass-shadow-floating);
 }
 
@@ -380,7 +380,7 @@
 :global(:root[data-theme='liquid-glass']) .pushSwitch {
   border-color: var(--glass-stroke);
   border-radius: 1.5rem;
-  background: var(--glass-surface-regular);
+  background: var(--glass-surface-thin);
   backdrop-filter: var(--glass-backdrop-filter);
   -webkit-backdrop-filter: var(--glass-backdrop-filter);
   box-shadow: var(--glass-shadow-soft);
@@ -398,7 +398,7 @@
 :global(:root[data-theme='liquid-glass']) .conversationMenuTrigger:hover:not(:disabled),
 :global(:root[data-theme='liquid-glass']) .conversationMenuItem:hover:not(:disabled),
 :global(:root[data-theme='liquid-glass']) .profileButton:hover {
-  background: var(--glass-surface-thick);
+  background: var(--glass-surface-regular);
   box-shadow: var(--glass-shadow-floating);
 }
 

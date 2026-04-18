@@ -18,6 +18,7 @@ import type {
   StartConversationRequest,
   ToggleReactionRequest,
   ToggleReactionResult,
+  UpdatePasswordRequest,
   UploadResponse,
   UserProfile,
 } from './types'
@@ -171,6 +172,15 @@ export class ApiClient {
     return this.requestJSON<UserProfile>({
       method: 'GET',
       path: '/api/users/me',
+    })
+  }
+
+  async updatePassword(input: UpdatePasswordRequest): Promise<void> {
+    await this.requestVoid({
+      method: 'PATCH',
+      path: '/api/users/me/password',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(input),
     })
   }
 

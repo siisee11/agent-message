@@ -3,6 +3,7 @@ import { ChatShellPage } from './pages/ChatShellPage'
 import { DmConversationPage } from './pages/DmConversationPage'
 import { LoginPage } from './pages/LoginPage'
 import { NotFoundPage } from './pages/NotFoundPage'
+import { ProfilePage } from './pages/ProfilePage'
 import { SessionGatePage } from './pages/SessionGatePage'
 import { RealtimeProvider } from './realtime'
 import { ProtectedRoute } from './routes'
@@ -10,7 +11,10 @@ import styles from './App.module.css'
 
 export function App() {
   const location = useLocation()
-  const isFixedShellRoute = location.pathname.startsWith('/app') || location.pathname.startsWith('/dm/')
+  const isFixedShellRoute =
+    location.pathname.startsWith('/app') ||
+    location.pathname.startsWith('/dm/') ||
+    location.pathname.startsWith('/profile')
 
   return (
     <div className={`${styles.app} ${isFixedShellRoute ? styles.appShell : styles.appDocument}`}>
@@ -21,6 +25,7 @@ export function App() {
           <Route element={<ProtectedRoute />}>
             <Route element={<ChatShellPage />} path="/app" />
             <Route element={<DmConversationPage />} path="/dm/:conversationId" />
+            <Route element={<ProfilePage />} path="/profile" />
           </Route>
           <Route element={<NotFoundPage />} path="*" />
         </Routes>

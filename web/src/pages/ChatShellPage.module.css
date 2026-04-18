@@ -57,7 +57,7 @@
   align-items: center;
 }
 
-.logoutButton {
+.profileButton {
   width: 2.5rem;
   min-height: 2.5rem;
   padding: 0;
@@ -69,18 +69,14 @@
   justify-content: center;
   flex: none;
   cursor: pointer;
+  text-decoration: none;
 }
 
-.logoutButton:hover:not(:disabled) {
+.profileButton:hover {
   background: var(--surface-emphasis);
 }
 
-.logoutButton:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
-}
-
-.logoutIcon {
+.profileIcon {
   width: 1.15rem;
   height: 1.15rem;
   flex: none;
@@ -211,7 +207,7 @@
 }
 
 .pushSwitch:focus-visible,
-.logoutButton:focus-visible,
+.profileButton:focus-visible,
 .conversationLink:focus-visible,
 .conversationMenuTrigger:focus-visible,
 .conversationMenuItem:focus-visible {
@@ -337,7 +333,7 @@
 :global(:root[data-theme='neumorphism']) .conversationMenu,
 :global(:root[data-theme='neumorphism']) .emptyState,
 :global(:root[data-theme='neumorphism']) .conversationMenuTrigger,
-:global(:root[data-theme='neumorphism']) .logoutButton,
+:global(:root[data-theme='neumorphism']) .profileButton,
 :global(:root[data-theme='neumorphism']) .pushSwitch {
   border-color: color-mix(in srgb, var(--border) 90%, transparent);
   border-radius: 1.5rem;
@@ -348,13 +344,13 @@
 :global(:root[data-theme='neumorphism']) .conversationItemActive,
 :global(:root[data-theme='neumorphism']) .conversationMenuTrigger:hover:not(:disabled),
 :global(:root[data-theme='neumorphism']) .conversationMenuItem:hover:not(:disabled),
-:global(:root[data-theme='neumorphism']) .logoutButton:hover:not(:disabled) {
+:global(:root[data-theme='neumorphism']) .profileButton:hover {
   box-shadow: var(--theme-shadow-floating);
 }
 
 :global(:root[data-theme='neumorphism']) .pushSwitchEnabled,
 :global(:root[data-theme='neumorphism']) .conversationMenuTrigger:active,
-:global(:root[data-theme='neumorphism']) .logoutButton:active {
+:global(:root[data-theme='neumorphism']) .profileButton:active {
   box-shadow: var(--theme-shadow-pressed);
 }
 
@@ -562,7 +558,7 @@
     display: none;
   }
 
-  .logoutButton {
+  .profileButton {
     justify-self: end;
     width: 2.5rem;
     min-height: 2.5rem;

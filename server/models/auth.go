@@ -72,6 +72,18 @@ func (r UpdateUsernameRequest) Validate() error {
 	return ValidateUsername(trimmed)
 }
 
+type UpdatePasswordRequest struct {
+	CurrentPassword string `json:"current_password"`
+	NewPassword     string `json:"new_password"`
+}
+
+func (r UpdatePasswordRequest) Validate() error {
+	if err := validatePassword(r.CurrentPassword); err != nil {
+		return err
+	}
+	return validatePassword(r.NewPassword)
+}
+
 // AuthResponse is returned by successful register/login endpoints.
 type AuthResponse struct {
 	Token string      `json:"token"`

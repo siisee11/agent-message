@@ -60,6 +60,7 @@ func NewRouter(deps Dependencies) http.Handler {
 
 	mux.Handle("/api/users", authRequired(http.HandlerFunc(usersHandler.handleUsers)))
 	mux.Handle("/api/users/me", authRequired(http.HandlerFunc(usersHandler.handleMe)))
+	mux.Handle("/api/users/me/password", authRequired(http.HandlerFunc(usersHandler.handlePassword)))
 	mux.Handle("/api/push/config", authRequired(http.HandlerFunc(pushHandler.handleConfig)))
 	mux.Handle("/api/push/subscriptions", authRequired(http.HandlerFunc(pushHandler.handleSubscriptions)))
 	mux.Handle("/api/watchers/heartbeat", authRequired(http.HandlerFunc(watcherPresenceHandler.handleHeartbeat)))

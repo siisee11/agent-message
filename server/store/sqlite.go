@@ -119,6 +119,26 @@ func (s *SQLiteStore) UpdateUsername(ctx context.Context, params models.UpdateUs
 	return s.GetUserByID(ctx, params.UserID)
 }
 
+func (s *SQLiteStore) UpdatePasswordHash(ctx context.Context, params models.UpdatePasswordHashParams) (models.User, error) {
+	const query = `
+		UPDATE users
+		SET password_hash = ?
+		WHERE id = ?
+	`
+	res, err := s.db.ExecContext(ctx, query, params.PasswordHash, params.UserID)
+	if err != nil {
+		return models.User{}, fmt.Errorf("update password hash: %w", err)
+	}
+	rowsAffected, err := res.RowsAffected()
+	if err != nil {
+		return models.User{}, fmt.Errorf("update password hash rows affected: %w", err)
+	}
+	if rowsAffected == 0 {
+		return models.User{}, ErrNotFound
+	}
+	return s.GetUserByID(ctx, params.UserID)
+}
+
 func (s *SQLiteStore) CreateSession(ctx context.Context, params models.CreateSessionParams) (models.Session, error) {
 	const query = `
 		INSERT INTO sessions (token, user_id, created_at, expires_at)

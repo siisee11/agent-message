@@ -59,18 +59,18 @@ function getRealtimeStatusBadgeClass(status: ReturnType<typeof useRealtime>['sta
   return styles.statusBadgeOffline
 }
 
-function LogoutIcon() {
+function ProfileIcon() {
   return (
-    <svg aria-hidden="true" className={styles.logoutIcon} viewBox="0 0 24 24">
+    <svg aria-hidden="true" className={styles.profileIcon} viewBox="0 0 24 24">
       <path
-        d="M14 4h-4.75A2.25 2.25 0 0 0 7 6.25v11.5A2.25 2.25 0 0 0 9.25 20H14"
+        d="M12 12a4 4 0 1 0 0-8 4 4 0 0 0 0 8Z"
         fill="none"
         stroke="currentColor"
         strokeLinecap="round"
         strokeWidth="1.8"
       />
       <path
-        d="M10.5 12h9M16.5 8.5 20 12l-3.5 3.5"
+        d="M4.5 20a7.5 7.5 0 0 1 15 0"
         fill="none"
         stroke="currentColor"
         strokeLinecap="round"
@@ -101,7 +101,7 @@ export function ChatShellPage() {
 
   const location = useLocation()
   const navigate = useNavigate()
-  const { user, logout } = useAuth()
+  const { user } = useAuth()
   const realtime = useRealtime()
   const queryClient = useQueryClient()
 
@@ -126,16 +126,6 @@ export function ChatShellPage() {
   const activeConversationId = location.pathname.startsWith('/dm/')
     ? location.pathname.slice('/dm/'.length)
     : null
-
-  const logoutMutation = useMutation({
-    mutationFn: () => logout(),
-    onSuccess: () => {
-      navigate('/login', { replace: true })
-    },
-    onError: (error: unknown) => {
-      setPageError(resolveErrorMessage(error, 'Failed to sign out.'))
-    },
-  })
 
   const pushMutation = useMutation({
     mutationFn: async () => {
@@ -404,17 +394,15 @@ export function ChatShellPage() {
             </div>
             <div className={styles.headerActions}>
               <ThemeToggleButton />
-              <button
-                aria-label={logoutMutation.isPending ? 'Signing out' : 'Logout'}
-                className={styles.logoutButton}
-                disabled={logoutMutation.isPending}
-                onClick={() => logoutMutation.mutate()}
-                title={logoutMutation.isPending ? 'Signing out...' : 'Logout'}
-                type="button"
+              <NavLink
+                aria-label="Profile"
+                className={styles.profileButton}
+                title="Profile"
+                to="/profile"
               >
-                <LogoutIcon />
-                <span className={styles.srOnly}>{logoutMutation.isPending ? 'Signing out...' : 'Logout'}</span>
-              </button>
+                <ProfileIcon />
+                <span className={styles.srOnly}>Profile</span>
+              </NavLink>
             </div>
           </div>
           <div className={styles.headerMeta}>

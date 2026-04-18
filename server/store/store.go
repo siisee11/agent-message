@@ -20,6 +20,7 @@ type Store interface {
 	GetUserByUsername(ctx context.Context, username string) (models.User, error)
 	GetUserByID(ctx context.Context, userID string) (models.User, error)
 	UpdateUsername(ctx context.Context, params models.UpdateUsernameParams) (models.User, error)
+	UpdatePasswordHash(ctx context.Context, params models.UpdatePasswordHashParams) (models.User, error)
 	CreateSession(ctx context.Context, params models.CreateSessionParams) (models.Session, error)
 	GetSessionByToken(ctx context.Context, token string) (models.Session, error)
 	DeleteSessionByToken(ctx context.Context, token string) error

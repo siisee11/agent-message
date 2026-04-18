@@ -105,3 +105,46 @@ func TestAuthResponseValidate(t *testing.T) {
 		t.Fatalf("expected no error, got %v", err)
 	}
 }
+
+func TestUpdatePasswordRequestValidate(t *testing.T) {
+	tests := []struct {
+		name    string
+		req     UpdatePasswordRequest
+		wantErr bool
+	}{
+		{
+			name: "valid",
+			req: UpdatePasswordRequest{
+				CurrentPassword: "secret123",
+				NewPassword:     "newsecret123",
+			},
+		},
+		{
+			name: "missing current password",
+			req: UpdatePasswordRequest{
+				NewPassword: "newsecret123",
+			},
+			wantErr: true,
+		},
+		{
+			name: "new password too short",
+			req: UpdatePasswordRequest{
+				CurrentPassword: "secret123",
+				NewPassword:     "123",
+			},
+			wantErr: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			err := tt.req.Validate()
+			if tt.wantErr && err == nil {
+				t.Fatalf("expected validation error")
+			}
+			if !tt.wantErr && err != nil {
+				t.Fatalf("expected no validation error, got %v", err)
+			}
+		})
+	}
+}

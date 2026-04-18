@@ -141,6 +141,91 @@ func TestAuthRegisterDuplicateUsername(t *testing.T) {
 	}
 }
 
+func TestAuthChangePasswordFlow(t *testing.T) {
+	ctx := context.Background()
+	router, sqliteStore := newTestRouter(t)
+
+	registerReq := httptest.NewRequest(http.MethodPost, "/api/auth/register", bytes.NewBufferString(`{"username":"alice","password":"secret123"}`))
+	registerReq.Header.Set("Content-Type", "application/json")
+	registerResp := httptest.NewRecorder()
+	router.ServeHTTP(registerResp, registerReq)
+	if registerResp.Code != http.StatusCreated {
+		t.Fatalf("expected register status %d, got %d body=%s", http.StatusCreated, registerResp.Code, registerResp.Body.String())
+	}
+
+	var registerResult models.AuthResponse
+	if err := json.NewDecoder(registerResp.Body).Decode(&registerResult); err != nil {
+		t.Fatalf("decode register response: %v", err)
+	}
+
+	changeReq := httptest.NewRequest(
+		http.MethodPatch,
+		"/api/users/me/password",
+		bytes.NewBufferString(`{"current_password":"secret123","new_password":"newsecret123"}`),
+	)
+	changeReq.Header.Set("Authorization", "Bearer "+registerResult.Token)
+	changeReq.Header.Set("Content-Type", "application/json")
+	changeResp := httptest.NewRecorder()
+	router.ServeHTTP(changeResp, changeReq)
+	if changeResp.Code != http.StatusNoContent {
+		t.Fatalf("expected change password status %d, got %d body=%s", http.StatusNoContent, changeResp.Code, changeResp.Body.String())
+	}
+
+	storedUser, err := sqliteStore.GetUserByUsername(ctx, "alice")
+	if err != nil {
+		t.Fatalf("GetUserByUsername() error = %v", err)
+	}
+	if err := bcrypt.CompareHashAndPassword([]byte(storedUser.PasswordHash), []byte("newsecret123")); err != nil {
+		t.Fatalf("expected updated hash to match new password: %v", err)
+	}
+
+	oldLoginReq := httptest.NewRequest(http.MethodPost, "/api/auth/login", bytes.NewBufferString(`{"username":"alice","password":"secret123"}`))
+	oldLoginReq.Header.Set("Content-Type", "application/json")
+	oldLoginResp := httptest.NewRecorder()
+	router.ServeHTTP(oldLoginResp, oldLoginReq)
+	if oldLoginResp.Code != http.StatusUnauthorized {
+		t.Fatalf("expected old password login status %d, got %d", http.StatusUnauthorized, oldLoginResp.Code)
+	}
+
+	newLoginReq := httptest.NewRequest(http.MethodPost, "/api/auth/login", bytes.NewBufferString(`{"username":"alice","password":"newsecret123"}`))
+	newLoginReq.Header.Set("Content-Type", "application/json")
+	newLoginResp := httptest.NewRecorder()
+	router.ServeHTTP(newLoginResp, newLoginReq)
+	if newLoginResp.Code != http.StatusOK {
+		t.Fatalf("expected new password login status %d, got %d body=%s", http.StatusOK, newLoginResp.Code, newLoginResp.Body.String())
+	}
+}
+
+func TestAuthChangePasswordRejectsWrongCurrentPassword(t *testing.T) {
+	router, _ := newTestRouter(t)
+
+	registerReq := httptest.NewRequest(http.MethodPost, "/api/auth/register", bytes.NewBufferString(`{"username":"alice","password":"secret123"}`))
+	registerReq.Header.Set("Content-Type", "application/json")
+	registerResp := httptest.NewRecorder()
+	router.ServeHTTP(registerResp, registerReq)
+	if registerResp.Code != http.StatusCreated {
+		t.Fatalf("expected register status %d, got %d body=%s", http.StatusCreated, registerResp.Code, registerResp.Body.String())
+	}
+
+	var registerResult models.AuthResponse
+	if err := json.NewDecoder(registerResp.Body).Decode(&registerResult); err != nil {
+		t.Fatalf("decode register response: %v", err)
+	}
+
+	changeReq := httptest.NewRequest(
+		http.MethodPatch,
+		"/api/users/me/password",
+		bytes.NewBufferString(`{"current_password":"wrongpass","new_password":"newsecret123"}`),
+	)
+	changeReq.Header.Set("Authorization", "Bearer "+registerResult.Token)
+	changeReq.Header.Set("Content-Type", "application/json")
+	changeResp := httptest.NewRecorder()
+	router.ServeHTTP(changeResp, changeReq)
+	if changeResp.Code != http.StatusUnauthorized {
+		t.Fatalf("expected wrong current password status %d, got %d body=%s", http.StatusUnauthorized, changeResp.Code, changeResp.Body.String())
+	}
+}
+
 func TestAuthRegisterValidation(t *testing.T) {
 	router, _ := newTestRouter(t)
 

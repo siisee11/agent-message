@@ -32,6 +32,11 @@ export interface LoginRequest {
   password: string
 }
 
+export interface UpdatePasswordRequest {
+  current_password: string
+  new_password: string
+}
+
 export interface Conversation {
   id: string
   participant_a: string

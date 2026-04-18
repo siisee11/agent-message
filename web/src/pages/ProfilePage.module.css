@@ -1,0 +1,254 @@
+.page {
+  min-height: 100%;
+  overflow: auto;
+  padding:
+    max(1rem, calc(env(safe-area-inset-top) + 1rem))
+    1rem
+    max(1rem, calc(env(safe-area-inset-bottom) + 1rem));
+  background: var(--app-surface-background);
+}
+
+.shell {
+  width: min(100%, 760px);
+  margin: 0 auto;
+  display: grid;
+  gap: 1rem;
+}
+
+.header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+
+.backButton,
+.primaryButton,
+.logoutButton {
+  min-height: 2.75rem;
+  border: 1px solid var(--border-strong);
+  background: var(--surface-elevated);
+  color: var(--text-primary);
+  font-family: var(--font-display);
+  font-size: 0.8rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.backButton {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.7rem 0.9rem;
+  cursor: pointer;
+}
+
+.hero,
+.card {
+  padding: 1.25rem;
+  border: 1px solid var(--border);
+  background: var(--surface-elevated);
+}
+
+.hero {
+  display: grid;
+  gap: 0.45rem;
+}
+
+.eyebrow {
+  margin: 0;
+  color: var(--text-tertiary);
+  font-family: var(--font-display);
+  font-size: 0.74rem;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+}
+
+.title {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: clamp(2.2rem, 8vw, 4.2rem);
+  font-weight: 300;
+  line-height: 0.95;
+  letter-spacing: -0.05em;
+  text-transform: uppercase;
+}
+
+.subtitle,
+.sectionCopy,
+.label,
+.infoLabel {
+  color: var(--text-secondary);
+}
+
+.subtitle,
+.sectionCopy {
+  margin: 0;
+  line-height: 1.5;
+}
+
+.sectionHeader {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.75rem;
+  margin-bottom: 1rem;
+}
+
+.sectionTitle {
+  margin: 0 0 0.3rem;
+  font-family: var(--font-display);
+  font-size: 0.9rem;
+  font-weight: 400;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+
+.infoGrid,
+.form {
+  display: grid;
+  gap: 0.85rem;
+}
+
+.infoGrid {
+  grid-template-columns: repeat(auto-fit, minmax(12rem, 1fr));
+}
+
+.infoItem {
+  display: grid;
+  gap: 0.35rem;
+}
+
+.infoLabel {
+  margin: 0;
+  font-size: 0.8rem;
+}
+
+.infoValue {
+  margin: 0;
+  color: var(--text-primary);
+  font-size: 0.98rem;
+  line-height: 1.5;
+}
+
+.infoCode {
+  font-family: var(--font-mono, 'SFMono-Regular', 'SF Mono', Consolas, 'Liberation Mono', Menlo, monospace);
+}
+
+.field {
+  display: grid;
+  gap: 0.42rem;
+}
+
+.label {
+  font-size: 0.84rem;
+}
+
+.input {
+  border: var(--field-border);
+  border-bottom: var(--field-border-bottom);
+  padding: 0.8rem 0.85rem;
+  background: var(--surface-elevated);
+  color: var(--text-primary);
+  font-size: 0.96rem;
+}
+
+.input:focus {
+  outline: var(--field-focus-outline);
+  outline-offset: var(--field-focus-outline-offset);
+  border: var(--field-focus-border);
+  border-bottom: var(--field-focus-border-bottom);
+}
+
+.primaryButton,
+.logoutButton {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.55rem;
+  padding: 0.78rem 1rem;
+  cursor: pointer;
+}
+
+.primaryButton {
+  background: var(--button-primary-bg);
+  border-color: var(--button-primary-border);
+  color: var(--button-primary-fg);
+}
+
+.logoutButton {
+  background: var(--status-badge-error-bg);
+  color: var(--status-badge-error-text);
+}
+
+.backButton:hover:not(:disabled),
+.primaryButton:hover:not(:disabled),
+.logoutButton:hover:not(:disabled) {
+  background: var(--surface-emphasis);
+}
+
+.primaryButton:hover:not(:disabled) {
+  opacity: 0.94;
+}
+
+.primaryButton:disabled,
+.logoutButton:disabled,
+.backButton:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.error,
+.success {
+  margin: 0;
+  padding: 0 0.25rem;
+  color: var(--text-primary);
+}
+
+.backButton:focus-visible,
+.primaryButton:focus-visible,
+.logoutButton:focus-visible,
+.input:focus-visible {
+  outline: 2px solid var(--ring);
+  outline-offset: 2px;
+}
+
+:global(:root[data-theme='neo-brutalism']) .hero,
+:global(:root[data-theme='neo-brutalism']) .card {
+  box-shadow: 6px 6px 0 0 var(--border-strong);
+}
+
+:global(:root[data-theme='neumorphism']) .hero,
+:global(:root[data-theme='neumorphism']) .card,
+:global(:root[data-theme='neumorphism']) .backButton,
+:global(:root[data-theme='neumorphism']) .primaryButton,
+:global(:root[data-theme='neumorphism']) .logoutButton,
+:global(:root[data-theme='neumorphism']) .input {
+  border-color: color-mix(in srgb, var(--border) 90%, transparent);
+  border-radius: 1.5rem;
+  box-shadow: var(--theme-shadow-surface);
+}
+
+:global(:root[data-theme='neumorphism']) .backButton:hover:not(:disabled),
+:global(:root[data-theme='neumorphism']) .primaryButton:hover:not(:disabled),
+:global(:root[data-theme='neumorphism']) .logoutButton:hover:not(:disabled) {
+  box-shadow: var(--theme-shadow-floating);
+}
+
+:global(:root[data-theme='neumorphism']) .primaryButton:active,
+:global(:root[data-theme='neumorphism']) .logoutButton:active,
+:global(:root[data-theme='neumorphism']) .backButton:active,
+:global(:root[data-theme='neumorphism']) .input:focus {
+  box-shadow: var(--theme-shadow-pressed);
+}
+
+@media (max-width: 640px) {
+  .page {
+    padding-inline: 0.75rem;
+  }
+
+  .hero,
+  .card {
+    padding: 1rem;
+  }
+}

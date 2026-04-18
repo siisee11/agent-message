@@ -20,6 +20,12 @@ type UpdateUsernameParams struct {
 	UpdatedAt time.Time
 }
 
+type UpdatePasswordHashParams struct {
+	UserID       string
+	PasswordHash string
+	UpdatedAt    time.Time
+}
+
 // CreateSessionParams is a persistence boundary shape for inserting sessions.
 type CreateSessionParams struct {
 	Token     string

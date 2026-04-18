@@ -12,9 +12,7 @@ import styles from './App.module.css'
 export function App() {
   const location = useLocation()
   const isFixedShellRoute =
-    location.pathname.startsWith('/app') ||
-    location.pathname.startsWith('/dm/') ||
-    location.pathname.startsWith('/profile')
+    location.pathname.startsWith('/app') || location.pathname.startsWith('/dm/')
 
   return (
     <div className={`${styles.app} ${isFixedShellRoute ? styles.appShell : styles.appDocument}`}>

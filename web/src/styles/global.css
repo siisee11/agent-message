@@ -994,6 +994,208 @@
   color-scheme: dark;
 }
 
+:root[data-theme='liquid-glass'][data-color-mode='light'] {
+  --app-surface-background: #eef3f9;
+  --theme-color: #eef3f9;
+  --background: #f3f6fb;
+  --foreground: #0f1728;
+  --card: rgba(255, 255, 255, 0.42);
+  --card-foreground: #0f1728;
+  --primary: #007aff;
+  --primary-foreground: #ffffff;
+  --secondary: rgba(255, 255, 255, 0.5);
+  --secondary-foreground: #142033;
+  --muted: rgba(255, 255, 255, 0.32);
+  --muted-foreground: rgba(15, 23, 40, 0.68);
+  --accent: rgba(0, 122, 255, 0.14);
+  --accent-foreground: #007aff;
+  --destructive: #ff3b30;
+  --border: rgba(255, 255, 255, 0.6);
+  --input: rgba(255, 255, 255, 0.64);
+  --ring: rgba(0, 122, 255, 0.34);
+  --radius: 1.5rem;
+  --text-primary: #0f1728;
+  --text-secondary: rgba(15, 23, 40, 0.74);
+  --text-tertiary: rgba(15, 23, 40, 0.54);
+  --text-quaternary: rgba(15, 23, 40, 0.34);
+  --surface-elevated: rgba(255, 255, 255, 0.44);
+  --surface-emphasis: rgba(255, 255, 255, 0.58);
+  --surface-hover: rgba(255, 255, 255, 0.72);
+  --border-strong: rgba(120, 140, 168, 0.2);
+  --button-primary-bg: rgba(0, 122, 255, 0.9);
+  --button-primary-fg: #ffffff;
+  --button-primary-border: rgba(255, 255, 255, 0.34);
+  --status-badge-radius: 999px;
+  --status-badge-neutral-bg: rgba(255, 255, 255, 0.46);
+  --status-badge-neutral-border: rgba(255, 255, 255, 0.62);
+  --status-badge-neutral-text: var(--text-primary);
+  --status-badge-neutral-dot: rgba(15, 23, 40, 0.5);
+  --status-badge-live-bg: rgba(255, 255, 255, 0.52);
+  --status-badge-live-border: rgba(255, 255, 255, 0.68);
+  --status-badge-live-text: #0d6a53;
+  --status-badge-live-dot: #34c759;
+  --status-badge-connecting-bg: rgba(255, 255, 255, 0.56);
+  --status-badge-connecting-border: rgba(255, 255, 255, 0.72);
+  --status-badge-connecting-text: #0f5bbf;
+  --status-badge-connecting-dot: #007aff;
+  --status-badge-offline-bg: rgba(255, 255, 255, 0.42);
+  --status-badge-offline-border: rgba(255, 255, 255, 0.56);
+  --status-badge-offline-text: var(--text-secondary);
+  --status-badge-offline-dot: rgba(15, 23, 40, 0.38);
+  --status-badge-online-bg: rgba(255, 255, 255, 0.56);
+  --status-badge-online-border: rgba(255, 255, 255, 0.72);
+  --status-badge-online-text: #0d6a53;
+  --status-badge-online-dot: #34c759;
+  --status-badge-error-bg: rgba(255, 255, 255, 0.52);
+  --status-badge-error-border: rgba(255, 255, 255, 0.68);
+  --status-badge-error-text: #b42318;
+  --status-badge-error-dot: #ff3b30;
+  --field-border: 1px solid rgba(255, 255, 255, 0.66);
+  --field-border-bottom: 1px solid rgba(255, 255, 255, 0.66);
+  --field-focus-border: 1px solid rgba(255, 255, 255, 0.84);
+  --field-focus-border-bottom: 1px solid rgba(255, 255, 255, 0.84);
+  --field-focus-outline: 2px solid var(--ring);
+  --field-focus-outline-offset: 2px;
+  --glass-surface-thin:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.42), rgba(255, 255, 255, 0.2));
+  --glass-surface-regular:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.56), rgba(255, 255, 255, 0.28));
+  --glass-surface-thick:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.74), rgba(255, 255, 255, 0.42));
+  --glass-stroke: rgba(255, 255, 255, 0.66);
+  --glass-shadow-soft:
+    0 12px 32px rgba(136, 154, 182, 0.16),
+    inset 0 1px 0 rgba(255, 255, 255, 0.5);
+  --glass-shadow-floating:
+    0 18px 44px rgba(136, 154, 182, 0.22),
+    inset 0 1px 0 rgba(255, 255, 255, 0.62);
+  --glass-shadow-pressed:
+    0 10px 24px rgba(136, 154, 182, 0.14),
+    inset 0 1px 0 rgba(255, 255, 255, 0.42),
+    inset 0 -1px 0 rgba(255, 255, 255, 0.16);
+  --glass-backdrop-filter: blur(24px) saturate(180%);
+  --glass-backdrop-filter-strong: blur(32px) saturate(190%);
+  --font-display:
+    -apple-system,
+    BlinkMacSystemFont,
+    "SF Pro Display",
+    "SF Pro Text",
+    "Segoe UI",
+    "Noto Sans KR",
+    system-ui,
+    sans-serif;
+  --font-body:
+    -apple-system,
+    BlinkMacSystemFont,
+    "SF Pro Text",
+    "Segoe UI",
+    "Noto Sans KR",
+    system-ui,
+    sans-serif;
+  color-scheme: light;
+}
+
+:root[data-theme='liquid-glass'][data-color-mode='dark'] {
+  --app-surface-background: #0d1420;
+  --theme-color: #0d1420;
+  --background: #101827;
+  --foreground: #f5f8ff;
+  --card: rgba(19, 29, 44, 0.62);
+  --card-foreground: #f5f8ff;
+  --primary: #0a84ff;
+  --primary-foreground: #ffffff;
+  --secondary: rgba(23, 34, 51, 0.62);
+  --secondary-foreground: #e8eefb;
+  --muted: rgba(23, 34, 51, 0.52);
+  --muted-foreground: rgba(232, 238, 251, 0.74);
+  --accent: rgba(10, 132, 255, 0.16);
+  --accent-foreground: #7cc0ff;
+  --destructive: #ff6b6b;
+  --border: rgba(255, 255, 255, 0.12);
+  --input: rgba(255, 255, 255, 0.12);
+  --ring: rgba(10, 132, 255, 0.42);
+  --radius: 1.5rem;
+  --text-primary: #f5f8ff;
+  --text-secondary: rgba(245, 248, 255, 0.8);
+  --text-tertiary: rgba(245, 248, 255, 0.58);
+  --text-quaternary: rgba(245, 248, 255, 0.36);
+  --surface-elevated: rgba(22, 31, 46, 0.56);
+  --surface-emphasis: rgba(27, 40, 61, 0.68);
+  --surface-hover: rgba(33, 47, 71, 0.82);
+  --border-strong: rgba(190, 208, 232, 0.16);
+  --button-primary-bg: rgba(10, 132, 255, 0.86);
+  --button-primary-fg: #ffffff;
+  --button-primary-border: rgba(255, 255, 255, 0.12);
+  --status-badge-radius: 999px;
+  --status-badge-neutral-bg: rgba(23, 34, 51, 0.64);
+  --status-badge-neutral-border: rgba(255, 255, 255, 0.14);
+  --status-badge-neutral-text: var(--text-primary);
+  --status-badge-neutral-dot: rgba(245, 248, 255, 0.56);
+  --status-badge-live-bg: rgba(23, 41, 40, 0.68);
+  --status-badge-live-border: rgba(124, 255, 214, 0.16);
+  --status-badge-live-text: #c9ffef;
+  --status-badge-live-dot: #30d158;
+  --status-badge-connecting-bg: rgba(22, 43, 68, 0.72);
+  --status-badge-connecting-border: rgba(124, 192, 255, 0.18);
+  --status-badge-connecting-text: #d8eaff;
+  --status-badge-connecting-dot: #0a84ff;
+  --status-badge-offline-bg: rgba(23, 34, 51, 0.58);
+  --status-badge-offline-border: rgba(255, 255, 255, 0.12);
+  --status-badge-offline-text: var(--text-secondary);
+  --status-badge-offline-dot: rgba(245, 248, 255, 0.36);
+  --status-badge-online-bg: rgba(22, 43, 41, 0.72);
+  --status-badge-online-border: rgba(124, 255, 214, 0.16);
+  --status-badge-online-text: #d3fff1;
+  --status-badge-online-dot: #30d158;
+  --status-badge-error-bg: rgba(62, 29, 35, 0.72);
+  --status-badge-error-border: rgba(255, 107, 107, 0.16);
+  --status-badge-error-text: #ffdfe0;
+  --status-badge-error-dot: #ff6b6b;
+  --field-border: 1px solid rgba(255, 255, 255, 0.14);
+  --field-border-bottom: 1px solid rgba(255, 255, 255, 0.14);
+  --field-focus-border: 1px solid rgba(255, 255, 255, 0.22);
+  --field-focus-border-bottom: 1px solid rgba(255, 255, 255, 0.22);
+  --field-focus-outline: 2px solid var(--ring);
+  --field-focus-outline-offset: 2px;
+  --glass-surface-thin:
+    linear-gradient(180deg, rgba(28, 39, 58, 0.58), rgba(16, 24, 39, 0.44));
+  --glass-surface-regular:
+    linear-gradient(180deg, rgba(31, 44, 66, 0.72), rgba(17, 27, 43, 0.56));
+  --glass-surface-thick:
+    linear-gradient(180deg, rgba(34, 49, 74, 0.82), rgba(18, 28, 44, 0.68));
+  --glass-stroke: rgba(255, 255, 255, 0.16);
+  --glass-shadow-soft:
+    0 14px 32px rgba(0, 8, 20, 0.38),
+    inset 0 1px 0 rgba(255, 255, 255, 0.08);
+  --glass-shadow-floating:
+    0 20px 48px rgba(0, 8, 20, 0.46),
+    inset 0 1px 0 rgba(255, 255, 255, 0.12);
+  --glass-shadow-pressed:
+    0 10px 24px rgba(0, 8, 20, 0.34),
+    inset 0 1px 0 rgba(255, 255, 255, 0.08),
+    inset 0 -1px 0 rgba(0, 0, 0, 0.18);
+  --glass-backdrop-filter: blur(22px) saturate(170%);
+  --glass-backdrop-filter-strong: blur(30px) saturate(180%);
+  --font-display:
+    -apple-system,
+    BlinkMacSystemFont,
+    "SF Pro Display",
+    "SF Pro Text",
+    "Segoe UI",
+    "Noto Sans KR",
+    system-ui,
+    sans-serif;
+  --font-body:
+    -apple-system,
+    BlinkMacSystemFont,
+    "SF Pro Text",
+    "Segoe UI",
+    "Noto Sans KR",
+    system-ui,
+    sans-serif;
+  color-scheme: dark;
+}
+
 *, 
 *::before,
 *::after {
@@ -1127,4 +1329,49 @@ a {
 :root[data-theme='neumorphism'] textarea:focus,
 :root[data-theme='neumorphism'] select:focus {
   box-shadow: var(--theme-shadow-pressed);
+}
+
+:root[data-theme='liquid-glass'] body {
+  background:
+    radial-gradient(circle at top, rgba(255, 255, 255, 0.34), transparent 30%),
+    radial-gradient(circle at 82% 18%, rgba(90, 200, 250, 0.18), transparent 28%),
+    radial-gradient(circle at 18% 22%, rgba(0, 122, 255, 0.16), transparent 26%),
+    linear-gradient(180deg, color-mix(in srgb, var(--background) 94%, white 6%), var(--app-surface-background));
+}
+
+:root[data-theme='liquid-glass'] #root {
+  background: transparent;
+}
+
+:root[data-theme='liquid-glass'] button {
+  border-radius: 999px;
+}
+
+:root[data-theme='liquid-glass'] button:active {
+  transform: scale(0.985);
+}
+
+:root[data-theme='liquid-glass'] input,
+:root[data-theme='liquid-glass'] textarea,
+:root[data-theme='liquid-glass'] select,
+:root[data-theme='liquid-glass'] .approvalCard,
+:root[data-theme='liquid-glass'] [data-slot='card'],
+:root[data-theme='liquid-glass'] [data-slot='table-container'] {
+  border-color: var(--glass-stroke);
+  background: var(--glass-surface-regular);
+  backdrop-filter: var(--glass-backdrop-filter);
+  -webkit-backdrop-filter: var(--glass-backdrop-filter);
+  box-shadow: var(--glass-shadow-soft);
+}
+
+:root[data-theme='liquid-glass'] [data-slot='card'],
+:root[data-theme='liquid-glass'] [data-slot='table-container'] {
+  border-radius: 1.5rem;
+}
+
+:root[data-theme='liquid-glass'] input:focus,
+:root[data-theme='liquid-glass'] textarea:focus,
+:root[data-theme='liquid-glass'] select:focus {
+  background: var(--glass-surface-thick);
+  box-shadow: var(--glass-shadow-pressed);
 }

@@ -23,6 +23,15 @@
   box-shadow: var(--theme-shadow-surface);
 }
 
+:global(:root[data-theme='liquid-glass']) .card {
+  border-color: var(--glass-stroke);
+  border-radius: 1.8rem;
+  background: var(--glass-surface-thick);
+  backdrop-filter: var(--glass-backdrop-filter-strong);
+  -webkit-backdrop-filter: var(--glass-backdrop-filter-strong);
+  box-shadow: var(--glass-shadow-floating);
+}
+
 .title {
   margin: 0;
   color: var(--text-primary);

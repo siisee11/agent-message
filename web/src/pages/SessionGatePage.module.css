@@ -44,3 +44,12 @@
   border-radius: 1.75rem;
   box-shadow: var(--theme-shadow-floating);
 }
+
+:global(:root[data-theme='liquid-glass']) .panel {
+  border-color: var(--glass-stroke);
+  border-radius: 1.9rem;
+  background: var(--glass-surface-thick);
+  backdrop-filter: var(--glass-backdrop-filter-strong);
+  -webkit-backdrop-filter: var(--glass-backdrop-filter-strong);
+  box-shadow: var(--glass-shadow-floating);
+}

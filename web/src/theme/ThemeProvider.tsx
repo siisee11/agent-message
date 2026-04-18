@@ -59,6 +59,14 @@ export const AVAILABLE_THEMES = [
       dark: '#2b3240',
     },
   },
+  {
+    id: 'liquid-glass',
+    label: 'Liquid Glass',
+    themeColorByMode: {
+      light: '#eef3f9',
+      dark: '#0d1420',
+    },
+  },
 ] as const
 
 export type ThemeName = (typeof AVAILABLE_THEMES)[number]['id']
@@ -88,7 +96,8 @@ function readStoredTheme(): ThemeName | null {
       stored === 'ferrari' ||
       stored === 'opencode' ||
       stored === 'neo-brutalism' ||
-      stored === 'neumorphism'
+      stored === 'neumorphism' ||
+      stored === 'liquid-glass'
     ) {
       return stored
     }

@@ -139,3 +139,39 @@
 :global(:root[data-theme='neumorphism']) .optionActive {
   box-shadow: var(--theme-shadow-pressed);
 }
+
+:global(:root[data-theme='liquid-glass']) .trigger,
+:global(:root[data-theme='liquid-glass']) .iconButton,
+:global(:root[data-theme='liquid-glass']) .menu,
+:global(:root[data-theme='liquid-glass']) .optionActive {
+  border-color: var(--glass-stroke);
+  border-radius: 1.35rem;
+  backdrop-filter: var(--glass-backdrop-filter);
+  -webkit-backdrop-filter: var(--glass-backdrop-filter);
+  box-shadow: var(--glass-shadow-soft);
+}
+
+:global(:root[data-theme='liquid-glass']) .trigger,
+:global(:root[data-theme='liquid-glass']) .iconButton,
+:global(:root[data-theme='liquid-glass']) .optionActive {
+  background: var(--glass-surface-regular);
+}
+
+:global(:root[data-theme='liquid-glass']) .menu {
+  background: var(--glass-surface-thick);
+  backdrop-filter: var(--glass-backdrop-filter-strong);
+  -webkit-backdrop-filter: var(--glass-backdrop-filter-strong);
+}
+
+:global(:root[data-theme='liquid-glass']) .trigger:hover,
+:global(:root[data-theme='liquid-glass']) .iconButton:hover,
+:global(:root[data-theme='liquid-glass']) .option:hover {
+  background: var(--glass-surface-thick);
+  box-shadow: var(--glass-shadow-floating);
+}
+
+:global(:root[data-theme='liquid-glass']) .trigger:active,
+:global(:root[data-theme='liquid-glass']) .iconButton:active,
+:global(:root[data-theme='liquid-glass']) .optionActive {
+  box-shadow: var(--glass-shadow-pressed);
+}

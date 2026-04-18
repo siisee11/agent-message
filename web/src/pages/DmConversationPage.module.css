@@ -796,9 +796,31 @@
   box-shadow: var(--theme-shadow-surface);
 }
 
+:global(:root[data-theme='neumorphism']) .timelineContent {
+  padding: 0.75rem 0.75rem 1.25rem;
+}
+
+:global(:root[data-theme='neumorphism']) .timelineList {
+  gap: 0.75rem;
+}
+
+:global(:root[data-theme='neumorphism']) .messageBubble {
+  border-top: 0;
+}
+
 :global(:root[data-theme='neumorphism']) .attachmentPreviewFrame,
 :global(:root[data-theme='neumorphism']) .composerField {
   border-radius: 1.2rem;
+  box-shadow: var(--theme-shadow-surface);
+}
+
+:global(:root[data-theme='neumorphism']) .composerField:focus-within {
+  box-shadow: var(--theme-shadow-pressed);
+}
+
+:global(:root[data-theme='neumorphism']) .composerInput,
+:global(:root[data-theme='neumorphism']) .composerInput:focus {
+  box-shadow: none;
 }
 
 :global(:root[data-theme='neumorphism']) .iconButton:hover:not(:disabled),

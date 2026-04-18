@@ -340,6 +340,10 @@
   box-shadow: var(--theme-shadow-surface);
 }
 
+:global(:root[data-theme='neumorphism']) .conversationList {
+  padding: 0.35rem 0.4rem 0.85rem;
+}
+
 :global(:root[data-theme='neumorphism']) .conversationItem:hover,
 :global(:root[data-theme='neumorphism']) .conversationItemActive,
 :global(:root[data-theme='neumorphism']) .conversationMenuTrigger:hover:not(:disabled),

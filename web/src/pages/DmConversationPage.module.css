@@ -543,7 +543,7 @@
 }
 
 .pendingTurnStatusWorking {
-  color: var(--status-badge-online-text);
+  color: var(--text-primary);
 }
 
 .pendingTurnStatusConnecting {

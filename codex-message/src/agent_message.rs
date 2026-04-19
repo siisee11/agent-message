@@ -195,17 +195,6 @@ impl AgentMessageClient {
         Ok(())
     }
 
-    pub(crate) async fn unreact_to_message(&self, message: &Message, emoji: &str) -> Result<()> {
-        let output = self
-            .run(&["unreact", &message.id, emoji])
-            .await
-            .context("run `agent-message unreact`")?;
-        if !output.contains(&message.id) {
-            bail!("unexpected unreact output: {output}");
-        }
-        Ok(())
-    }
-
     async fn run(&self, args: &[&str]) -> Result<String> {
         let mut command = self.build_command();
         command

@@ -32,7 +32,6 @@ Operational requirements from the codex-message wrapper:
 "#
     )
 }
-const READ_REACTION_EMOJI: &str = "👀";
 const COMPLETE_REACTION_EMOJI: &str = "✅";
 const WATCH_RETRY_DELAYS_SECS: [u64; 3] = [1, 2, 5];
 
@@ -289,19 +288,6 @@ impl Runtime {
                     format!("Text: {}", request_preview(&message.text)),
                 ],
             );
-            if let Err(error) = self
-                .agent_client
-                .react_to_message(&message, READ_REACTION_EMOJI)
-                .await
-            {
-                self.logger.warning(
-                    "Failed to add read reaction",
-                    [
-                        format!("Message: {}", message.id),
-                        format!("Error: {error}"),
-                    ],
-                );
-            }
             return Ok(message);
         }
     }
@@ -449,19 +435,6 @@ impl Runtime {
     }
 
     async fn mark_message_complete(&self, message: &Message) {
-        if let Err(error) = self
-            .agent_client
-            .unreact_to_message(message, READ_REACTION_EMOJI)
-            .await
-        {
-            self.logger.warning(
-                "Failed to remove read reaction",
-                [
-                    format!("Message: {}", message.id),
-                    format!("Error: {error}"),
-                ],
-            );
-        }
         if let Err(error) = self
             .agent_client
             .react_to_message(message, COMPLETE_REACTION_EMOJI)

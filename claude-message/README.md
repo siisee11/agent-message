@@ -19,13 +19,12 @@ Behavior:
 1. Starts a fresh `agent-{chatId}` account with a generated password.
 2. Sends the `--to` user a startup message with the generated credentials.
 3. Reuses the Claude `session_id` for the DM session and resumes later turns.
-4. Watches `agent-message` DMs for plain-text requests, adds a `👀` reaction to
-   each accepted inbound DM, and passes the request to Claude with explicit
+4. Watches `agent-message` DMs for plain-text requests and passes the request
+   to Claude with explicit
    instructions to send the final user-facing result directly with
    `agent-message send --from agent-{chatId}`.
 5. If Claude fails, the wrapper sends a failure `json_render` notice itself.
-6. After a successful turn completion, replaces the inbound `👀` reaction with
-   `✅`.
+6. After a successful turn completion, adds a `✅` reaction.
 
 `claude-message` now follows the same delivery model as `codex-message` for
 successful turns: the agent is expected to send the final result itself. The

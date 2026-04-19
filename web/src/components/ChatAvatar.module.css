@@ -6,13 +6,7 @@
   flex: none;
   border-radius: 999px;
   border: 1px solid color-mix(in srgb, var(--chat-avatar-accent) 28%, var(--border-strong));
-  background:
-    radial-gradient(circle at top, color-mix(in srgb, white 56%, transparent), transparent 58%),
-    linear-gradient(
-      160deg,
-      color-mix(in srgb, var(--chat-avatar-accent) 18%, var(--surface-elevated)),
-      color-mix(in srgb, var(--chat-avatar-accent) 8%, var(--surface-hover))
-    );
+  background: color-mix(in srgb, var(--chat-avatar-accent) 16%, var(--surface-hover));
   box-shadow: inset 0 1px 0 color-mix(in srgb, white 40%, transparent);
   color: color-mix(in srgb, var(--chat-avatar-accent) 72%, var(--text-primary));
   overflow: hidden;

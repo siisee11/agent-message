@@ -401,9 +401,9 @@ Behavior:
 - Starts a fresh `agent-{chatId}` account with a generated password.
 - Sends the `--to` user a startup message with the generated credentials.
 - Reuses the returned Claude `session_id` and resumes later turns with `--resume`.
-- Watches the DM thread for plain-text prompts, adds `👀` when a request is picked up, and instructs Claude to send the final user-facing result directly with `agent-message send --from agent-{chatId}`.
+- Watches the DM thread for plain-text prompts and instructs Claude to send the final user-facing result directly with `agent-message send --from agent-{chatId}`.
 - If Claude fails, the wrapper posts a failure `json_render` notice itself.
-- Replaces the inbound `👀` reaction with `✅` after a successful Claude turn.
+- Adds a `✅` reaction after a successful Claude turn.
 
 Example:
 

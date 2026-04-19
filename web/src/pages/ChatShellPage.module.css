@@ -478,6 +478,13 @@
   color: var(--status-badge-error-text);
 }
 
+.conversationMenuItemDanger:hover:not(:disabled),
+.conversationMenuItemDanger:focus-visible,
+.conversationMenuItemDanger:active {
+  background: color-mix(in srgb, var(--status-badge-error-bg) 88%, var(--surface-emphasis));
+  color: var(--status-badge-error-text);
+}
+
 .conversationBody {
   min-width: 0;
   display: grid;

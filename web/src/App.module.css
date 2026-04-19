@@ -11,6 +11,8 @@
 }
 
 .appDocument {
-  min-height: 100%;
-  overflow: visible;
+  min-height: 100vh;
+  min-height: 100dvh;
+  overflow-x: hidden;
+  overflow-y: auto;
 }

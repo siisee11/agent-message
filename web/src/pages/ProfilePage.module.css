@@ -1,6 +1,9 @@
 .page {
-  min-height: 100%;
-  overflow: auto;
+  min-height: 100vh;
+  min-height: 100dvh;
+  overflow-x: hidden;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
   padding:
     max(1rem, calc(env(safe-area-inset-top) + 1rem))
     1rem

@@ -61,6 +61,8 @@ Background run:
 
 - `claude-message --bg ...` detaches the wrapper and prints the PID, log path, and metadata path.
 - Logs and metadata are written under `~/.agent-message/wrappers/claude-message/`.
+- `claude-message list` shows running background sessions. Use `claude-message list --all` to include stale metadata.
+- `claude-message kill <session-id|pid|all>` stops one session or every running background session.
 
 Notes:
 

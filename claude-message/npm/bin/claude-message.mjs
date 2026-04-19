@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 
 import { spawn, spawnSync } from 'node:child_process'
-import { accessSync, closeSync, constants, existsSync, mkdirSync, openSync, readFileSync, writeFileSync } from 'node:fs'
+import { accessSync, closeSync, constants, existsSync, mkdirSync, openSync, readFileSync, readdirSync, rmSync, writeFileSync } from 'node:fs'
 import { delimiter, dirname, join, resolve } from 'node:path'
 import { homedir } from 'node:os'
 import process from 'node:process'
@@ -27,6 +27,16 @@ if (process.argv[2] === upgradeCommand) {
 
 if (process.argv[2] === '--version') {
   printVersion(packageJsonPath)
+}
+
+if (process.argv[2] === 'list' || process.argv[2] === 'ls') {
+  listBackgroundSessions('claude-message', process.argv.slice(3))
+  process.exit(0)
+}
+
+if (process.argv[2] === 'kill' || process.argv[2] === 'stop') {
+  const exitCode = await killBackgroundSessions('claude-message', process.argv.slice(3))
+  process.exit(exitCode)
 }
 
 if (process.argv.includes('--bg')) {
@@ -283,6 +293,10 @@ function printBackgroundHelp(appName) {
   console.log(`  ${appName} --bg --to alice --model sonnet --cwd /path/to/worktree`)
   console.log('')
   console.log('All flags except `--bg` are forwarded to the wrapper binary.')
+  console.log('')
+  console.log('Session commands:')
+  console.log(`  ${appName} list [--all] [--json]`)
+  console.log(`  ${appName} kill <session-id|pid|all>`)
 }
 
 function runInBackground({ appName, binaryPath, forwardedArgs, argv0 }) {
@@ -340,6 +354,240 @@ function runInBackground({ appName, binaryPath, forwardedArgs, argv0 }) {
     closeSync(stdoutFd)
     closeSync(stderrFd)
   }
+}
+
+function listBackgroundSessions(appName, args) {
+  if (args.includes('--help') || args.includes('-h')) {
+    printListUsage(appName)
+    return
+  }
+
+  const includeAll = args.includes('--all') || args.includes('-a')
+  const asJson = args.includes('--json')
+  const sessions = readBackgroundSessions(appName)
+  const visibleSessions = includeAll ? sessions : sessions.filter((session) => session.alive)
+
+  if (asJson) {
+    console.log(JSON.stringify(visibleSessions, null, 2))
+    return
+  }
+
+  if (visibleSessions.length === 0) {
+    const staleCount = sessions.filter((session) => !session.alive).length
+    console.log(`No running ${appName} background sessions.`)
+    if (!includeAll && staleCount > 0) {
+      console.log(`Use \`${appName} list --all\` to show ${staleCount} stale session metadata file(s).`)
+    }
+    return
+  }
+
+  printSessionTable(visibleSessions)
+}
+
+async function killBackgroundSessions(appName, args) {
+  if (args.includes('--help') || args.includes('-h')) {
+    printKillUsage(appName)
+    return 0
+  }
+
+  const targets = args.filter((arg) => !arg.startsWith('-'))
+  const killAll = args.includes('--all') || args.includes('-a') || targets.includes('all')
+  if (!killAll && targets.length === 0) {
+    printKillUsage(appName)
+    return 1
+  }
+
+  const sessions = readBackgroundSessions(appName)
+  const matches = killAll
+    ? sessions.filter((session) => session.alive)
+    : uniqueSessions(
+        targets.flatMap((target) =>
+          sessions.filter((session) => sessionMatchesTarget(session, target)),
+        ),
+      )
+
+  if (matches.length === 0) {
+    console.error(killAll ? `No running ${appName} background sessions.` : 'No matching session found.')
+    return killAll ? 0 : 1
+  }
+
+  let exitCode = 0
+  for (const session of matches) {
+    if (!session.alive) {
+      rmSync(session.metadataFile, { force: true })
+      console.log(`Removed stale ${appName} session ${session.sessionId} (pid ${session.pid}).`)
+      continue
+    }
+
+    const killed = await terminateProcessTree(session.pid)
+    if (killed) {
+      rmSync(session.metadataFile, { force: true })
+      console.log(`Killed ${appName} session ${session.sessionId} (pid ${session.pid}).`)
+    } else {
+      console.error(`Failed to kill ${appName} session ${session.sessionId} (pid ${session.pid}).`)
+      exitCode = 1
+    }
+  }
+
+  return exitCode
+}
+
+function printListUsage(appName) {
+  console.log(`Usage: ${appName} list [--all] [--json]`)
+  console.log('')
+  console.log('Lists running background sessions created with --bg.')
+}
+
+function printKillUsage(appName) {
+  console.log(`Usage: ${appName} kill <session-id|pid|all>`)
+  console.log('')
+  console.log('Examples:')
+  console.log(`  ${appName} kill 12345`)
+  console.log(`  ${appName} kill 2026-04-19T10-30-00-000Z-12345`)
+  console.log(`  ${appName} kill all`)
+}
+
+function readBackgroundSessions(appName) {
+  const dir = join(homedir(), '.agent-message', 'wrappers', appName)
+  if (!existsSync(dir)) {
+    return []
+  }
+
+  return readdirSync(dir)
+    .filter((name) => name.endsWith('.json'))
+    .flatMap((name) => {
+      const metadataFile = join(dir, name)
+      try {
+        const metadata = JSON.parse(readFileSync(metadataFile, 'utf8'))
+        const pid = Number(metadata.pid)
+        if (!Number.isInteger(pid) || pid <= 0) {
+          return []
+        }
+        return [
+          {
+            sessionId: name.slice(0, -'.json'.length),
+            appName: metadata.appName ?? appName,
+            pid,
+            cwd: metadata.cwd ?? '',
+            command: metadata.command ?? '',
+            args: Array.isArray(metadata.args) ? metadata.args : [],
+            logFile: metadata.logFile ?? '',
+            startedAt: metadata.startedAt ?? '',
+            metadataFile,
+            alive: isPidAlive(pid),
+          },
+        ]
+      } catch {
+        return []
+      }
+    })
+    .sort((left, right) => String(left.startedAt).localeCompare(String(right.startedAt)))
+}
+
+function printSessionTable(sessions) {
+  const rows = [
+    ['SESSION', 'PID', 'STATUS', 'STARTED', 'CWD', 'LOG'],
+    ...sessions.map((session) => [
+      session.sessionId,
+      String(session.pid),
+      session.alive ? 'running' : 'stale',
+      session.startedAt || '-',
+      session.cwd || '-',
+      session.logFile || '-',
+    ]),
+  ]
+  const widths = rows[0].map((_, columnIndex) =>
+    Math.max(...rows.map((row) => row[columnIndex].length)),
+  )
+  for (const row of rows) {
+    console.log(row.map((cell, index) => cell.padEnd(widths[index])).join('  ').trimEnd())
+  }
+}
+
+function uniqueSessions(sessions) {
+  const seen = new Set()
+  return sessions.filter((session) => {
+    if (seen.has(session.metadataFile)) {
+      return false
+    }
+    seen.add(session.metadataFile)
+    return true
+  })
+}
+
+function sessionMatchesTarget(session, target) {
+  const normalized = String(target).trim()
+  return (
+    normalized.length > 0 &&
+    (String(session.pid) === normalized ||
+      session.sessionId === normalized ||
+      session.sessionId.startsWith(normalized))
+  )
+}
+
+function isPidAlive(pid) {
+  try {
+    process.kill(pid, 0)
+  } catch (error) {
+    return error?.code === 'EPERM'
+  }
+  return !isZombiePid(pid)
+}
+
+function isZombiePid(pid) {
+  if (process.platform === 'win32') {
+    return false
+  }
+  const result = spawnSync('ps', ['-o', 'stat=', '-p', String(pid)], {
+    encoding: 'utf8',
+    stdio: ['ignore', 'pipe', 'ignore'],
+  })
+  const state = result.stdout.trim()
+  return state.startsWith('Z')
+}
+
+async function terminateProcessTree(pid) {
+  if (!isPidAlive(pid)) {
+    return true
+  }
+
+  sendSignal(pid, 'SIGTERM')
+  if (await waitForProcessExit(pid, 3000)) {
+    return true
+  }
+
+  sendSignal(pid, 'SIGKILL')
+  return waitForProcessExit(pid, 3000)
+}
+
+function sendSignal(pid, signal) {
+  if (process.platform !== 'win32') {
+    try {
+      process.kill(-pid, signal)
+      return
+    } catch {}
+  }
+
+  try {
+    process.kill(pid, signal)
+  } catch {}
+}
+
+async function waitForProcessExit(pid, timeoutMs) {
+  const startedAt = Date.now()
+  while (Date.now() - startedAt < timeoutMs) {
+    if (!isPidAlive(pid)) {
+      return true
+    }
+    await sleep(100)
+  }
+  return !isPidAlive(pid)
+}
+
+function sleep(ms) {
+  return new Promise((resolvePromise) => {
+    setTimeout(resolvePromise, ms)
+  })
 }
 
 const binaryPath = resolveBinaryPath()

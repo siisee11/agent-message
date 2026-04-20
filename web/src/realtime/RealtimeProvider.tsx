@@ -52,6 +52,34 @@ export function RealtimeProvider({ children }: PropsWithChildren) {
     void queryClient.invalidateQueries({ queryKey: ['conversations'] })
   }, [queryClient])
 
+  const invalidateConversationMessages = useCallback(
+    (conversationId: string | null) => {
+      if (!conversationId) {
+        return
+      }
+
+      void queryClient.invalidateQueries({ queryKey: ['messages', conversationId] })
+    },
+    [queryClient],
+  )
+
+  const invalidateConversationDetails = useCallback(
+    (conversationId: string | null) => {
+      if (!conversationId) {
+        return
+      }
+
+      void queryClient.invalidateQueries({ queryKey: ['conversation', conversationId] })
+    },
+    [queryClient],
+  )
+
+  const refreshActiveConversation = useCallback(() => {
+    invalidateConversations()
+    invalidateConversationDetails(activeConversationId)
+    invalidateConversationMessages(activeConversationId)
+  }, [activeConversationId, invalidateConversationDetails, invalidateConversationMessages, invalidateConversations])
+
   const handleMessageNew = useCallback(
     (incomingMessage: Message) => {
       announceRealtimeMessageWillAppend(incomingMessage.conversation_id)
@@ -72,10 +100,12 @@ export function RealtimeProvider({ children }: PropsWithChildren) {
             reactions: [],
           }),
         )
+      } else {
+        invalidateConversationMessages(incomingMessage.conversation_id)
       }
       invalidateConversations()
     },
-    [activeConversationId, invalidateConversations, queryClient, user],
+    [activeConversationId, invalidateConversationMessages, invalidateConversations, queryClient, user],
   )
 
   const handleMessageEdited = useCallback(
@@ -204,6 +234,7 @@ export function RealtimeProvider({ children }: PropsWithChildren) {
   const eventStream = useEventStream({
     token,
     enabled: isAuthenticated,
+    onOpen: refreshActiveConversation,
     onMessageNew: handleMessageNewEvent,
     onMessageEdited: handleMessageEditedEvent,
     onMessageDeleted: handleMessageDeletedEvent,

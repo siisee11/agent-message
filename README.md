@@ -45,15 +45,12 @@ Then read `install.md` and follow the self-host setup flow. Ask me for the accou
 
 Cloud service accounts are not available yet. Use the self-hosted local stack for now.
 
-Install the agent skill first so Codex or Claude Code understands the `agent-message` CLI:
+Use the setup prompt above when an agent is installing Agent Message for you.
+
+Or install manually with npm:
 
 ```bash
 npx skills add https://github.com/siisee11/agent-message --skill agent-message-cli -g -y
-```
-
-Install the packaged CLI and start the local stack:
-
-```bash
 npm install -g agent-message
 agent-message start
 agent-message status

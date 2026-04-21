@@ -18,34 +18,6 @@ const FEATURE_ITEMS = [
   },
 ]
 
-const GUIDE_ITEMS = [
-  {
-    title: 'Setup prompt',
-    description: 'Paste the prompt into Codex or Claude Code and let the agent run setup.',
-    command: 'Set up https://github.com/siisee11/agent-message for me.',
-  },
-  {
-    title: 'Or npm install',
-    description: 'Run the manual path when you want to install it yourself.',
-    command: 'npx skills add https://github.com/siisee11/agent-message --skill agent-message-cli -g -y\nnpm install -g agent-message',
-  },
-  {
-    title: 'Start local stack',
-    description: 'Start API and web locally.',
-    command: 'agent-message start',
-  },
-  {
-    title: 'Create account',
-    description: 'Ask for account-id. Use 0000 temporarily.',
-    command: 'agent-message register <account-id> 0000',
-  },
-  {
-    title: 'Set master',
-    description: 'Set the default report recipient.',
-    command: 'agent-message config set master jay',
-  },
-]
-
 const WRAPPER_ITEMS = [
   {
     title: 'codex-message',
@@ -143,7 +115,7 @@ export function LandingPage() {
             </a>
           </div>
 
-          <div className={styles.installCard}>
+          <div className={styles.installCard} id="setup">
             <span className={styles.installLabel}>Setup Prompt</span>
             <code className={styles.installCommand}>Set up https://github.com/siisee11/agent-message for me.</code>
           </div>
@@ -232,26 +204,6 @@ export function LandingPage() {
 
         <div className={styles.guideGrid}>
           {WRAPPER_ITEMS.map((item) => (
-            <article className={styles.guideCard} key={item.title}>
-              <p className={styles.guideTitle}>{item.title}</p>
-              <p className={styles.guideDescription}>{item.description}</p>
-              <code className={styles.guideCommand}>{item.command}</code>
-            </article>
-          ))}
-        </div>
-      </section>
-
-      <section className={styles.workflowSection} id="setup">
-        <div className={styles.workflowIntro}>
-          <p className={styles.sectionEyebrow}>Workflow</p>
-          <h2 className={styles.sectionTitle}>Prompt first. Manual install after.</h2>
-          <p className={styles.workflowCopy}>
-            Prefer the setup prompt. Use npm directly only when you want to run setup yourself.
-          </p>
-        </div>
-
-        <div className={styles.guideGrid}>
-          {GUIDE_ITEMS.map((item) => (
             <article className={styles.guideCard} key={item.title}>
               <p className={styles.guideTitle}>{item.title}</p>
               <p className={styles.guideDescription}>{item.description}</p>

@@ -32,7 +32,6 @@ Operational requirements from the codex-message wrapper:
 "#
     )
 }
-const COMPLETE_REACTION_EMOJI: &str = "✅";
 const WATCH_RETRY_DELAYS_SECS: [u64; 3] = [1, 2, 5];
 
 fn resolve_hostname() -> String {
@@ -229,9 +228,6 @@ impl Runtime {
                                 .await;
                             } else {
                                 self.logger.success("Turn finished", lines);
-                            }
-                            if should_mark_message_complete(&outcome) {
-                                self.mark_message_complete(&message).await;
                             }
                         }
                         Err(error) => {
@@ -432,22 +428,6 @@ impl Runtime {
             status: turn_status,
             error_text: turn_error,
         })
-    }
-
-    async fn mark_message_complete(&self, message: &Message) {
-        if let Err(error) = self
-            .agent_client
-            .react_to_message(message, COMPLETE_REACTION_EMOJI)
-            .await
-        {
-            self.logger.warning(
-                "Failed to add complete reaction",
-                [
-                    format!("Message: {}", message.id),
-                    format!("Error: {error}"),
-                ],
-            );
-        }
     }
 
     async fn handle_server_request(
@@ -786,10 +766,6 @@ struct TurnOutcome {
     turn_id: String,
     status: String,
     error_text: Option<String>,
-}
-
-fn should_mark_message_complete(outcome: &TurnOutcome) -> bool {
-    outcome.status.eq_ignore_ascii_case("completed") && outcome.error_text.is_none()
 }
 
 fn request_preview(text: &str) -> String {
@@ -1238,25 +1214,6 @@ mod tests {
         );
         assert!(text.contains("CWD: /tmp/demo"));
         assert!(text.contains("Hostname: demo-host"));
-    }
-
-    #[test]
-    fn marks_message_complete_only_for_successful_completed_turns() {
-        assert!(should_mark_message_complete(&TurnOutcome {
-            turn_id: "turn-1".to_string(),
-            status: "completed".to_string(),
-            error_text: None,
-        }));
-        assert!(!should_mark_message_complete(&TurnOutcome {
-            turn_id: "turn-2".to_string(),
-            status: "failed".to_string(),
-            error_text: Some("boom".to_string()),
-        }));
-        assert!(!should_mark_message_complete(&TurnOutcome {
-            turn_id: "turn-3".to_string(),
-            status: "completed".to_string(),
-            error_text: Some("boom".to_string()),
-        }));
     }
 
     #[test]

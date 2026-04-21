@@ -155,17 +155,6 @@ impl AgentMessageClient {
         })
     }
 
-    pub(crate) async fn react_to_message(&self, message: &Message, emoji: &str) -> Result<()> {
-        let output = self
-            .run(&["react", &message.id, emoji])
-            .await
-            .context("run `agent-message react`")?;
-        if !output.contains(&message.id) {
-            bail!("unexpected react output: {output}");
-        }
-        Ok(())
-    }
-
     async fn run(&self, args: &[&str]) -> Result<String> {
         let mut command = Command::new(&self.binary);
         if let Some(profile) = &self.from_profile {

@@ -10,7 +10,6 @@ use crate::json_render_validation::{ValidationIssue, validate_json_render_spec};
 use crate::log_ui::LogUi;
 use crate::render::{invalid_json_render_spec, response_spec};
 
-const COMPLETE_REACTION_EMOJI: &str = "✅";
 const WATCH_RETRY_DELAYS_SECS: [u64; 3] = [1, 2, 5];
 
 fn request_suffix(to_username: &str, from_username: &str) -> String {
@@ -216,9 +215,6 @@ impl Runtime {
                             } else {
                                 self.logger.warning("Turn finished", lines);
                             }
-                            if outcome.success {
-                                self.mark_message_complete(&message).await;
-                            }
                         }
                         Err(error) => {
                             self.logger.error(
@@ -343,22 +339,6 @@ impl Runtime {
             session_id: response.session_id.clone(),
             status: response.subtype.clone(),
         })
-    }
-
-    async fn mark_message_complete(&self, message: &Message) {
-        if let Err(error) = self
-            .agent_client
-            .react_to_message(message, COMPLETE_REACTION_EMOJI)
-            .await
-        {
-            self.logger.warning(
-                "Failed to add complete reaction",
-                [
-                    format!("Message: {}", message.id),
-                    format!("Error: {error}"),
-                ],
-            );
-        }
     }
 
     async fn handle_invalid_json_render_message(&self, message: &Message) -> Result<bool> {

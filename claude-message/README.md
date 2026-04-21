@@ -24,7 +24,7 @@ Behavior:
    instructions to send the final user-facing result directly with
    `agent-message send --from agent-{chatId}`.
 5. If Claude fails, the wrapper sends a failure `json_render` notice itself.
-6. After a successful turn completion, adds a `✅` reaction.
+6. After a successful turn completion, the agent's direct reply is left as the completion signal.
 
 `claude-message` now follows the same delivery model as `codex-message` for
 successful turns: the agent is expected to send the final result itself. The

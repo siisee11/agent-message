@@ -25,7 +25,7 @@ Behavior:
 4. Polls `agent-message read <user>` for new plain-text requests and relays them into `turn/start`.
 5. For approval and input requests, sends readable `json_render` prompts back to that user and waits for a text reply.
 6. Tells Codex to send the final user-facing result itself by invoking `agent-message send --from agent-{chatId}` directly, typically as `json_render`.
-7. After a successful turn completion, adds a `✅` reaction.
+7. After a successful turn completion, the agent's direct reply is left as the completion signal.
 
 If `--to` is omitted, `codex-message` uses the current `agent-message` `master` value.
 

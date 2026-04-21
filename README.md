@@ -403,7 +403,7 @@ Behavior:
 - Reuses the returned Claude `session_id` and resumes later turns with `--resume`.
 - Watches the DM thread for plain-text prompts and instructs Claude to send the final user-facing result directly with `agent-message send --from agent-{chatId}`.
 - If Claude fails, the wrapper posts a failure `json_render` notice itself.
-- Adds a `✅` reaction after a successful Claude turn.
+- Leaves the agent's direct reply as the completion signal after a successful Claude turn.
 
 Example:
 

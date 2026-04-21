@@ -1,44 +1,42 @@
 import { Link } from 'react-router-dom'
 import { useAuth } from '../auth'
-import { BrandLogo } from '../components/BrandLogo'
 import { useDocumentSurface } from '../hooks'
-import { useTheme } from '../theme'
 import styles from './LandingPage.module.css'
 
 const FEATURE_ITEMS = [
   {
-    title: 'Self-host first',
-    description: 'Run the local API and web app with one command.',
+    title: 'Local first',
+    description: 'Run the API and web app on your machine.',
   },
   {
     title: 'Agent-ready',
-    description: 'Send updates, approvals, and json_render cards from scripts or wrappers.',
+    description: 'Send updates, approvals, and rendered payloads.',
   },
   {
     title: 'Cloud coming soon',
-    description: 'Hosted accounts are not open yet. Use self-host for now.',
+    description: 'Hosted accounts are not open yet.',
   },
 ]
 
 const GUIDE_ITEMS = [
   {
     title: 'Install skill',
-    description: 'Teach the agent the CLI flow first.',
+    description: 'Load the CLI workflow into the agent.',
     command: 'npx skills add https://github.com/siisee11/agent-message --skill agent-message-cli -g -y',
   },
   {
     title: 'Start local stack',
-    description: 'Launch the local API and web app.',
+    description: 'Start API and web locally.',
     command: 'agent-message start',
   },
   {
     title: 'Create account',
-    description: 'Ask for account-id, then use temporary password 0000.',
+    description: 'Ask for account-id. Use 0000 temporarily.',
     command: 'agent-message register <account-id> 0000',
   },
   {
     title: 'Set master',
-    description: 'Pick the default recipient for agent reports.',
+    description: 'Set the default report recipient.',
     command: 'agent-message config set master jay',
   },
 ]
@@ -67,7 +65,7 @@ function TerminalWindow() {
           <span className={styles.terminalPrompt}>&gt;</span>
           <code className={styles.terminalCommand}>agent-message config set master jay</code>
         </div>
-        <p className={styles.terminalMuted}>self-hosted messages, approvals, and status in one place</p>
+        <p className={styles.terminalMuted}>local messages, approvals, and status</p>
       </div>
     </div>
   )
@@ -75,11 +73,10 @@ function TerminalWindow() {
 
 export function LandingPage() {
   const { isAuthenticated, status } = useAuth()
-  const { themeColor } = useTheme()
 
   useDocumentSurface({
-    backgroundColor: 'var(--app-surface-background)',
-    themeColor,
+    backgroundColor: '#1f2228',
+    themeColor: '#1f2228',
   })
 
   const primaryHref = isAuthenticated ? '/app' : '#setup'
@@ -93,7 +90,8 @@ export function LandingPage() {
 
       <header className={styles.nav}>
         <Link className={styles.brand} to="/">
-          <BrandLogo size="sm" />
+          <img aria-hidden="true" alt="" className={styles.brandMark} src="/agent-message-logo.svg" />
+          <span className={styles.brandText}>Agent Message</span>
         </Link>
 
         <div className={styles.navActions}>
@@ -105,11 +103,11 @@ export function LandingPage() {
 
       <section className={styles.hero}>
         <div className={styles.heroCopy}>
-          <p className={styles.eyebrow}>Self-hosted agent messaging</p>
-          <h1 className={styles.title}>Run agent threads locally.</h1>
+          <p className={styles.eyebrow}>Agent messaging</p>
+          <h1 className={styles.title}>The messenger agents use.</h1>
           <p className={styles.description}>
-            Start the web app and API with one command. Send progress updates, approvals, and structured
-            JSON renders from the CLI, wrappers, or the browser.
+            Local-first direct messages for agents and humans. Send progress, approvals, and rendered
+            reports from the CLI, wrappers, or browser.
           </p>
 
           <div className={styles.actionRow}>
@@ -133,7 +131,7 @@ export function LandingPage() {
           </div>
 
           <p className={styles.installHint}>
-            Cloud service is coming soon. Self-host today with `agent-message start`.
+            Cloud service is coming soon. Self-host with `agent-message start`.
           </p>
         </div>
 
@@ -144,19 +142,19 @@ export function LandingPage() {
             <div className={styles.visualCaption}>
               <p className={styles.visualCaptionLabel}>Example Outputs</p>
               <p className={styles.visualCaptionBody}>
-                Message patterns rendered directly from CLI sends.
+                Rendered directly from CLI sends.
               </p>
             </div>
             <div className={styles.statusPanel}>
               <div className={styles.statusCard}>
                 <p className={styles.statusLabel}>JSON Render</p>
                 <p className={styles.statusTitle}>Readable agent reports</p>
-                <p className={styles.statusBody}>Send cards, badges, and progress blocks from the CLI.</p>
+                <p className={styles.statusBody}>Cards, badges, and progress blocks.</p>
               </div>
               <div className={styles.statusCard}>
                 <p className={styles.statusLabel}>Watch Presence</p>
                 <p className={styles.statusTitle}>Know who is live</p>
-                <p className={styles.statusBody}>Follow work with realtime status and DM context.</p>
+                <p className={styles.statusBody}>Realtime status inside each DM.</p>
               </div>
             </div>
           </div>
@@ -166,7 +164,7 @@ export function LandingPage() {
       <section className={styles.featureSection}>
         <div className={styles.sectionHeader}>
           <p className={styles.sectionEyebrow}>Why Agent Message</p>
-          <h2 className={styles.sectionTitle}>Self-hosted messaging for agents and people.</h2>
+          <h2 className={styles.sectionTitle}>Messaging for agents and people.</h2>
         </div>
         <div className={styles.featureGrid}>
           {FEATURE_ITEMS.map((item) => (
@@ -181,9 +179,9 @@ export function LandingPage() {
       <section className={styles.workflowSection} id="setup">
         <div className={styles.workflowIntro}>
           <p className={styles.sectionEyebrow}>Workflow</p>
-          <h2 className={styles.sectionTitle}>Install the skill, then start local.</h2>
+          <h2 className={styles.sectionTitle}>Skill first. Local after.</h2>
           <p className={styles.workflowCopy}>
-            Use the skill, local stack, account setup, and master setting before wrappers send reports.
+            Install the skill, start the stack, create an account, and set master.
           </p>
         </div>
 
@@ -202,7 +200,7 @@ export function LandingPage() {
         <div className={styles.ctaPanel}>
           <div>
             <p className={styles.sectionEyebrow}>Start Now</p>
-            <h2 className={styles.sectionTitle}>Start local and send the first update.</h2>
+            <h2 className={styles.sectionTitle}>Start local. Send status.</h2>
           </div>
           <div className={styles.ctaActions}>
             {primaryHref.startsWith('#') ? (

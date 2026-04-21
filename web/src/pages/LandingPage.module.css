@@ -1,41 +1,30 @@
 .page {
+  --landing-background: #1f2228;
+  --landing-foreground: #ffffff;
+  --landing-text-secondary: rgba(255, 255, 255, 0.7);
+  --landing-text-tertiary: rgba(255, 255, 255, 0.5);
+  --landing-text-quaternary: rgba(255, 255, 255, 0.3);
+  --landing-border: rgba(255, 255, 255, 0.1);
+  --landing-border-strong: rgba(255, 255, 255, 0.2);
+  --landing-surface: rgba(255, 255, 255, 0.03);
+  --landing-surface-hover: rgba(255, 255, 255, 0.08);
+
   position: relative;
   min-height: 100vh;
   min-height: 100dvh;
-  overflow-x: clip;
+  overflow-x: hidden;
   padding:
-    max(1rem, calc(env(safe-area-inset-top) + 1rem))
-    clamp(1rem, 3vw, 2.5rem)
-    max(2rem, calc(env(safe-area-inset-bottom) + 2rem));
-  background:
-    radial-gradient(circle at top, color-mix(in srgb, var(--background) 72%, #6ca5ff 28%), transparent 36%),
-    radial-gradient(circle at 85% 24%, color-mix(in srgb, var(--background) 78%, #82d8c8 22%), transparent 28%),
-    linear-gradient(180deg, color-mix(in srgb, var(--background) 92%, var(--foreground) 8%), var(--background));
+    max(24px, calc(env(safe-area-inset-top) + 24px))
+    clamp(24px, 4vw, 48px)
+    max(48px, calc(env(safe-area-inset-bottom) + 48px));
+  background: var(--landing-background);
+  color: var(--landing-foreground);
 }
 
 .aurora,
-.gridGlow {
-  position: absolute;
-  inset: 0;
-  pointer-events: none;
-}
-
-.aurora {
-  opacity: 0.7;
-  background:
-    radial-gradient(circle at 18% 18%, color-mix(in srgb, var(--foreground) 8%, transparent), transparent 24%),
-    radial-gradient(circle at 78% 14%, color-mix(in srgb, #6ca5ff 18%, transparent), transparent 28%),
-    radial-gradient(circle at 70% 74%, color-mix(in srgb, #82d8c8 16%, transparent), transparent 26%);
-  filter: blur(28px);
-}
-
-.gridGlow {
-  background-image:
-    linear-gradient(color-mix(in srgb, var(--border) 65%, transparent) 1px, transparent 1px),
-    linear-gradient(90deg, color-mix(in srgb, var(--border) 65%, transparent) 1px, transparent 1px);
-  background-size: 42px 42px;
-  mask-image: linear-gradient(180deg, rgba(0, 0, 0, 0.5), transparent 82%);
-  opacity: 0.25;
+.gridGlow,
+.visualHalo {
+  display: none;
 }
 
 .nav,
@@ -45,7 +34,7 @@
 .ctaSection {
   position: relative;
   z-index: 1;
-  width: min(100%, 1240px);
+  width: min(100%, 1200px);
   margin: 0 auto;
 }
 
@@ -53,97 +42,128 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 1rem;
-  margin-bottom: clamp(2.5rem, 8vw, 5rem);
+  gap: 24px;
+  margin-bottom: clamp(48px, 8vw, 96px);
 }
 
 .brand {
   display: inline-flex;
   align-items: center;
-  color: var(--text-primary);
+  gap: 12px;
+  color: var(--landing-foreground);
   text-decoration: none;
+}
+
+.brandMark {
+  width: 40px;
+  height: 40px;
+  display: block;
+  object-fit: contain;
+}
+
+.brandText {
+  color: var(--landing-foreground);
+  font-family: var(--font-display);
+  font-size: 14px;
+  letter-spacing: 1.4px;
+  line-height: 1;
+  text-transform: uppercase;
+  white-space: nowrap;
 }
 
 .navActions {
   display: flex;
   align-items: center;
   justify-content: flex-end;
-  gap: 0.75rem;
+  gap: 24px;
   flex-wrap: wrap;
 }
 
 .navLink,
 .primaryAction,
 .secondaryAction {
-  min-height: 2.9rem;
-  padding: 0.8rem 1.05rem;
+  min-height: 44px;
+  padding: 12px 24px;
   border: 1px solid transparent;
-  color: var(--text-primary);
+  border-radius: 0;
+  color: var(--landing-foreground);
   text-decoration: none;
   display: inline-flex;
   align-items: center;
   justify-content: center;
   font-family: var(--font-display);
-  font-size: 0.78rem;
-  letter-spacing: 0.1em;
+  font-size: 14px;
+  font-weight: 400;
+  line-height: 1.43;
+  letter-spacing: 1.4px;
   text-transform: uppercase;
   transition:
-    transform 140ms ease,
+    color 140ms ease,
     background-color 140ms ease,
     border-color 140ms ease;
 }
 
 .navLink,
 .secondaryAction {
-  border-color: var(--border);
-  background: color-mix(in srgb, var(--surface-elevated) 88%, transparent);
+  border-color: var(--landing-border-strong);
+  background: transparent;
 }
 
 .primaryAction {
-  background: var(--button-primary-bg);
-  color: var(--button-primary-fg);
+  border-color: var(--landing-foreground);
+  background: var(--landing-foreground);
+  color: var(--landing-background);
 }
 
 .navLink:hover,
-.primaryAction:hover,
 .secondaryAction:hover {
-  transform: translateY(-1px);
+  color: var(--landing-text-tertiary);
+  background: var(--landing-surface);
+}
+
+.primaryAction:hover {
+  background: rgba(255, 255, 255, 0.9);
+  border-color: rgba(255, 255, 255, 0.9);
 }
 
 .hero {
+  min-height: calc(100dvh - 160px);
   display: grid;
-  grid-template-columns: minmax(0, 1.05fr) minmax(0, 0.95fr);
-  gap: clamp(1.5rem, 4vw, 3rem);
-  align-items: start;
-  margin-bottom: clamp(4rem, 10vw, 7rem);
+  grid-template-columns: minmax(0, 1fr);
+  align-content: center;
+  gap: 48px;
+  margin-bottom: clamp(72px, 12vw, 128px);
 }
 
 .heroCopy {
   display: grid;
   grid-template-columns: minmax(0, 1fr);
-  gap: 1.3rem;
+  gap: 24px;
   min-width: 0;
 }
 
 .eyebrow,
 .sectionEyebrow {
   margin: 0;
-  color: var(--text-secondary);
-  font-family: var(--font-display);
-  font-size: 0.78rem;
-  letter-spacing: 0.14em;
-  text-transform: uppercase;
+  color: var(--landing-text-tertiary);
+  font-family: var(--font-body);
+  font-size: 14px;
+  font-weight: 400;
+  line-height: 1.5;
+  letter-spacing: 0;
+  text-transform: none;
 }
 
 .title {
   margin: 0;
-  max-width: 8ch;
+  max-width: 9ch;
+  color: var(--landing-foreground);
   font-family: var(--font-display);
-  font-size: clamp(3.5rem, 9vw, 6.75rem);
+  font-size: clamp(64px, 15vw, 180px);
   font-weight: 300;
   line-height: 0.92;
-  letter-spacing: -0.06em;
-  text-transform: uppercase;
+  letter-spacing: 0;
+  text-transform: none;
   text-wrap: balance;
 }
 
@@ -152,41 +172,51 @@
 .featureDescription,
 .guideDescription,
 .statusBody,
-.installHint {
+.installHint,
+.visualCaptionBody {
   margin: 0;
-  color: var(--text-secondary);
-  line-height: 1.6;
+  color: var(--landing-text-secondary);
+  font-family: var(--font-body);
+  font-size: 16px;
+  line-height: 1.5;
 }
 
 .description {
-  max-width: 40rem;
-  font-size: clamp(1rem, 2vw, 1.16rem);
+  max-width: 600px;
 }
 
 .actionRow {
   display: flex;
   align-items: center;
-  gap: 0.85rem;
+  gap: 8px;
   flex-wrap: wrap;
 }
 
 .installCard {
-  width: 100%;
-  max-width: 36rem;
+  width: min(100%, 600px);
   min-width: 0;
-  padding: 1rem 1.15rem;
-  border: 1px solid color-mix(in srgb, var(--border-strong) 80%, transparent);
-  background: color-mix(in srgb, var(--surface-elevated) 92%, transparent);
+  padding: 24px;
+  border: 1px solid var(--landing-border);
+  border-radius: 0;
+  background: var(--landing-surface);
   display: grid;
-  gap: 0.55rem;
+  gap: 8px;
+}
+
+.installCard:hover,
+.terminalWindow:hover,
+.statusCard:hover,
+.featureCard:hover,
+.guideCard:hover,
+.ctaPanel:hover {
+  border-color: var(--landing-border-strong);
 }
 
 .installLabel {
-  color: var(--text-tertiary);
-  font-family: var(--font-display);
-  font-size: 0.72rem;
-  letter-spacing: 0.12em;
-  text-transform: uppercase;
+  color: var(--landing-text-tertiary);
+  font-family: var(--font-body);
+  font-size: 12px;
+  line-height: 1.5;
 }
 
 .installCommand,
@@ -197,7 +227,9 @@
 }
 
 .installCommand {
-  font-size: clamp(0.95rem, 2vw, 1.15rem);
+  color: var(--landing-foreground);
+  font-size: 16px;
+  line-height: 1.5;
   word-break: break-word;
 }
 
@@ -209,82 +241,62 @@
 .visualBackdrop {
   position: relative;
   display: grid;
-  grid-template-columns: minmax(0, 1fr);
-  align-items: start;
-  gap: clamp(1rem, 2vw, 1.35rem);
-  min-height: 38rem;
+  grid-template-columns: minmax(0, 1fr) minmax(280px, 420px);
+  align-items: stretch;
+  gap: 24px;
   min-width: 0;
-  padding: clamp(1rem, 2vw, 1.6rem);
-  border: 1px solid color-mix(in srgb, var(--border-strong) 80%, transparent);
-  background:
-    linear-gradient(180deg, color-mix(in srgb, var(--surface-elevated) 92%, transparent), color-mix(in srgb, var(--background) 88%, var(--foreground) 12%)),
-    radial-gradient(circle at top, color-mix(in srgb, #6ca5ff 18%, transparent), transparent 40%);
-  overflow: hidden;
-}
-
-.visualHalo {
-  position: absolute;
-  inset: auto -12% -16% auto;
-  width: 26rem;
-  aspect-ratio: 1;
-  border-radius: 999px;
-  background: radial-gradient(circle, color-mix(in srgb, #82d8c8 22%, transparent), transparent 70%);
-  filter: blur(18px);
 }
 
 .terminalWindow {
   position: relative;
   width: 100%;
-  max-width: 32rem;
   min-width: 0;
-  border: 1px solid color-mix(in srgb, var(--border-strong) 82%, transparent);
-  background: color-mix(in srgb, var(--background) 94%, black 6%);
-  box-shadow: 0 24px 80px color-mix(in srgb, var(--foreground) 10%, transparent);
+  border: 1px solid var(--landing-border);
+  border-radius: 0;
+  background: var(--landing-surface);
   justify-self: start;
   z-index: 1;
 }
 
 .visualCaption {
   display: grid;
-  gap: 0.35rem;
-  max-width: 30rem;
+  gap: 8px;
+  align-content: start;
+  padding: 24px;
+  border: 1px solid var(--landing-border);
+  background: transparent;
 }
 
 .visualCaptionLabel {
   margin: 0;
-  color: var(--text-primary);
+  color: var(--landing-foreground);
   font-family: var(--font-display);
-  font-size: 0.76rem;
-  letter-spacing: 0.12em;
-  text-transform: uppercase;
-}
-
-.visualCaptionBody {
-  margin: 0;
-  color: var(--text-secondary);
-  font-size: 0.95rem;
+  font-size: 12px;
+  letter-spacing: 1px;
   line-height: 1.5;
+  text-transform: uppercase;
 }
 
 .windowChrome {
   display: flex;
   align-items: center;
-  gap: 0.45rem;
-  padding: 0.75rem 0.9rem;
-  border-bottom: 1px solid var(--border);
+  gap: 8px;
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--landing-border);
 }
 
 .windowDot {
-  width: 0.68rem;
-  height: 0.68rem;
-  border-radius: 999px;
-  background: color-mix(in srgb, var(--text-tertiary) 80%, transparent);
+  width: 8px;
+  height: 8px;
+  border: 1px solid var(--landing-border-strong);
+  border-radius: 0;
+  background: transparent;
 }
 
 .terminalBody {
-  padding: 1rem;
+  padding: 24px;
   display: grid;
-  gap: 0.85rem;
+  gap: 8px;
 }
 
 .terminalPath,
@@ -295,108 +307,112 @@
 
 .terminalPath,
 .terminalMuted {
-  color: var(--text-tertiary);
-  font-size: 0.85rem;
+  color: var(--landing-text-tertiary);
+  font-size: 14px;
+  line-height: 1.5;
 }
 
 .terminalPromptRow {
   display: grid;
   grid-template-columns: auto minmax(0, 1fr);
-  gap: 0.75rem;
+  gap: 8px;
   align-items: start;
 }
 
 .terminalPrompt {
-  color: color-mix(in srgb, #82d8c8 72%, var(--text-primary) 28%);
+  color: var(--landing-text-tertiary);
   font-family: var(--font-display);
 }
 
 .terminalCommand {
-  font-size: 0.95rem;
+  color: var(--landing-foreground);
+  font-size: 14px;
+  line-height: 1.5;
   white-space: pre-wrap;
   word-break: break-word;
 }
 
 .terminalOutput {
-  color: color-mix(in srgb, #82d8c8 64%, var(--text-primary) 36%);
-  font-size: 0.92rem;
+  color: var(--landing-text-secondary);
+  font-size: 14px;
+  line-height: 1.5;
 }
 
 .statusPanel {
   position: relative;
   width: 100%;
-  max-width: 32rem;
   min-width: 0;
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 0.85rem;
-  justify-self: start;
-  align-self: stretch;
+  gap: 24px;
   z-index: 1;
+  grid-column: 1 / -1;
 }
 
 .statusCard,
 .featureCard,
 .guideCard,
 .ctaPanel {
-  border: 1px solid var(--border);
-  background: color-mix(in srgb, var(--surface-elevated) 92%, transparent);
-  backdrop-filter: blur(12px);
+  border: 1px solid var(--landing-border);
+  border-radius: 0;
+  background: var(--landing-surface);
 }
 
 .statusCard {
-  padding: 1rem;
+  padding: 24px;
   display: grid;
-  gap: 0.45rem;
+  gap: 8px;
 }
 
 .statusLabel,
 .featureTitle,
 .guideTitle {
   margin: 0;
+  color: var(--landing-foreground);
   font-family: var(--font-display);
-  letter-spacing: 0.06em;
+  font-size: 12px;
+  letter-spacing: 1px;
+  line-height: 1.5;
   text-transform: uppercase;
-}
-
-.statusLabel {
-  color: var(--text-tertiary);
-  font-size: 0.74rem;
 }
 
 .statusTitle {
   margin: 0;
-  font-size: 1rem;
-  line-height: 1.3;
+  color: var(--landing-foreground);
+  font-family: var(--font-body);
+  font-size: 22px;
+  font-weight: 400;
+  line-height: 1.2;
 }
 
 .sectionHeader,
 .workflowIntro {
-  max-width: 52rem;
-  margin-bottom: 1.5rem;
+  max-width: 760px;
+  margin-bottom: 48px;
   display: grid;
-  gap: 0.7rem;
+  gap: 8px;
 }
 
 .sectionTitle {
   margin: 0;
-  font-family: var(--font-display);
-  font-size: clamp(2rem, 4vw, 3.6rem);
+  color: var(--landing-foreground);
+  font-family: var(--font-body);
+  font-size: clamp(30px, 4vw, 48px);
   font-weight: 400;
-  line-height: 0.96;
-  letter-spacing: -0.04em;
-  text-transform: uppercase;
+  line-height: 1.2;
+  letter-spacing: 0;
+  text-transform: none;
 }
 
 .featureSection,
 .workflowSection {
-  margin-bottom: clamp(3rem, 8vw, 5rem);
+  margin-bottom: clamp(72px, 10vw, 112px);
 }
 
 .featureGrid,
 .guideGrid {
   display: grid;
-  gap: 1rem;
+  gap: 24px;
 }
 
 .featureGrid {
@@ -405,16 +421,11 @@
 
 .featureCard,
 .guideCard {
-  padding: 1.25rem;
-  min-height: 12rem;
+  padding: 24px;
+  min-height: 160px;
   display: grid;
   align-content: start;
-  gap: 0.9rem;
-}
-
-.featureTitle,
-.guideTitle {
-  font-size: 0.92rem;
+  gap: 8px;
 }
 
 .guideGrid {
@@ -422,116 +433,38 @@
 }
 
 .guideCommand {
-  padding: 0.8rem 0.9rem;
-  border: 1px solid color-mix(in srgb, var(--border-strong) 85%, transparent);
-  background: color-mix(in srgb, var(--background) 90%, transparent);
-  font-size: 0.82rem;
-  line-height: 1.45;
+  padding: 12px;
+  border: 1px solid var(--landing-border-strong);
+  border-radius: 0;
+  background: transparent;
+  color: var(--landing-foreground);
+  font-size: 12px;
+  line-height: 1.5;
   word-break: break-word;
 }
 
 .ctaSection {
-  padding-bottom: 1rem;
+  padding-bottom: 24px;
 }
 
 .ctaPanel {
-  padding: clamp(1.25rem, 3vw, 1.8rem);
+  padding: 48px;
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 1rem;
+  gap: 24px;
 }
 
 .ctaActions {
   display: flex;
   align-items: center;
-  gap: 0.75rem;
+  gap: 8px;
   flex-wrap: wrap;
 }
 
-:global(:root[data-theme='neumorphism']) .navLink,
-:global(:root[data-theme='neumorphism']) .primaryAction,
-:global(:root[data-theme='neumorphism']) .secondaryAction,
-:global(:root[data-theme='neumorphism']) .installCard,
-:global(:root[data-theme='neumorphism']) .visualBackdrop,
-:global(:root[data-theme='neumorphism']) .terminalWindow,
-:global(:root[data-theme='neumorphism']) .statusCard,
-:global(:root[data-theme='neumorphism']) .featureCard,
-:global(:root[data-theme='neumorphism']) .guideCard,
-:global(:root[data-theme='neumorphism']) .ctaPanel {
-  border-color: color-mix(in srgb, var(--border) 90%, transparent);
-  border-radius: 1.6rem;
-  box-shadow: var(--theme-shadow-surface);
-}
-
-:global(:root[data-theme='neumorphism']) .primaryAction:hover,
-:global(:root[data-theme='neumorphism']) .secondaryAction:hover,
-:global(:root[data-theme='neumorphism']) .navLink:hover {
-  box-shadow: var(--theme-shadow-floating);
-  transform: translateY(-1px);
-}
-
-:global(:root[data-theme='liquid-glass']) .page {
-  background:
-    radial-gradient(circle at top, rgba(255, 255, 255, 0.3), transparent 28%),
-    radial-gradient(circle at 82% 18%, rgba(90, 200, 250, 0.14), transparent 26%),
-    radial-gradient(circle at 18% 20%, rgba(0, 122, 255, 0.12), transparent 22%),
-    linear-gradient(180deg, color-mix(in srgb, var(--background) 95%, white 5%), var(--app-surface-background));
-}
-
-:global(:root[data-theme='liquid-glass']) .title {
-  max-width: 10ch;
-  font-weight: 650;
-  letter-spacing: -0.07em;
-  text-transform: none;
-}
-
-:global(:root[data-theme='liquid-glass']) .navLink,
-:global(:root[data-theme='liquid-glass']) .secondaryAction,
-:global(:root[data-theme='liquid-glass']) .installCard,
-:global(:root[data-theme='liquid-glass']) .visualBackdrop,
-:global(:root[data-theme='liquid-glass']) .terminalWindow,
-:global(:root[data-theme='liquid-glass']) .statusCard,
-:global(:root[data-theme='liquid-glass']) .featureCard,
-:global(:root[data-theme='liquid-glass']) .guideCard,
-:global(:root[data-theme='liquid-glass']) .ctaPanel {
-  border-color: var(--glass-stroke);
-  border-radius: 1.8rem;
-  background: var(--glass-surface-regular);
-  backdrop-filter: var(--glass-backdrop-filter);
-  -webkit-backdrop-filter: var(--glass-backdrop-filter);
-  box-shadow: var(--glass-shadow-soft);
-}
-
-:global(:root[data-theme='liquid-glass']) .visualBackdrop,
-:global(:root[data-theme='liquid-glass']) .ctaPanel {
-  background: var(--glass-surface-thick);
-  backdrop-filter: var(--glass-backdrop-filter-strong);
-  -webkit-backdrop-filter: var(--glass-backdrop-filter-strong);
-}
-
-:global(:root[data-theme='liquid-glass']) .primaryAction {
-  border-color: rgba(255, 255, 255, 0.14);
-  border-radius: 999px;
-  background: var(--button-primary-bg);
-  box-shadow: 0 18px 36px color-mix(in srgb, var(--primary) 22%, transparent);
-}
-
-:global(:root[data-theme='liquid-glass']) .primaryAction:hover,
-:global(:root[data-theme='liquid-glass']) .secondaryAction:hover,
-:global(:root[data-theme='liquid-glass']) .navLink:hover {
-  background: var(--glass-surface-thick);
-  box-shadow: var(--glass-shadow-floating);
-  transform: translateY(-1px);
-}
-
 @media (max-width: 1120px) {
-  .hero {
-    grid-template-columns: 1fr;
-  }
-
   .visualBackdrop {
-    min-height: 30rem;
+    grid-template-columns: 1fr;
   }
 
   .featureGrid {
@@ -545,34 +478,47 @@
 
 @media (max-width: 760px) {
   .page {
-    padding-inline: 0.85rem;
+    padding:
+      max(24px, calc(env(safe-area-inset-top) + 24px))
+      24px
+      max(48px, calc(env(safe-area-inset-bottom) + 48px));
   }
 
   .nav {
     align-items: flex-start;
     flex-direction: column;
+    margin-bottom: 48px;
+  }
+
+  .hero {
+    min-height: auto;
+    gap: 48px;
+    margin-bottom: 72px;
   }
 
   .title {
     max-width: none;
-    font-size: clamp(2.8rem, 17vw, 4.6rem);
-    line-height: 0.96;
+    font-size: clamp(48px, 17vw, 72px);
+    line-height: 0.95;
   }
 
-  .visualBackdrop {
-    min-height: auto;
-    display: grid;
-    gap: 1rem;
+  .primaryAction,
+  .secondaryAction,
+  .navLink {
+    width: 100%;
+  }
+
+  .actionRow,
+  .ctaActions {
+    width: 100%;
   }
 
   .visualCaption {
-    max-width: none;
+    padding: 24px;
   }
 
   .statusPanel {
     grid-template-columns: 1fr;
-    width: 100%;
-    max-width: none;
   }
 
   .featureGrid,
@@ -583,5 +529,6 @@
   .ctaPanel {
     align-items: flex-start;
     flex-direction: column;
+    padding: 24px;
   }
 }

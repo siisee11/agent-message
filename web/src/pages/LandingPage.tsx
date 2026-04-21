@@ -20,9 +20,14 @@ const FEATURE_ITEMS = [
 
 const GUIDE_ITEMS = [
   {
-    title: 'Install skill',
-    description: 'Load the CLI workflow into the agent.',
-    command: 'npx skills add https://github.com/siisee11/agent-message --skill agent-message-cli -g -y',
+    title: 'Setup prompt',
+    description: 'Paste the prompt into Codex or Claude Code and let the agent run setup.',
+    command: 'Set up https://github.com/siisee11/agent-message for me.',
+  },
+  {
+    title: 'Or npm install',
+    description: 'Run the manual path when you want to install it yourself.',
+    command: 'npx skills add https://github.com/siisee11/agent-message --skill agent-message-cli -g -y\nnpm install -g agent-message',
   },
   {
     title: 'Start local stack',
@@ -38,6 +43,19 @@ const GUIDE_ITEMS = [
     title: 'Set master',
     description: 'Set the default report recipient.',
     command: 'agent-message config set master jay',
+  },
+]
+
+const WRAPPER_ITEMS = [
+  {
+    title: 'codex-message',
+    description: 'Run a Codex app-server session over the same Agent Message DM thread.',
+    command: 'codex-message --model gpt-5.4 --cwd /path/to/worktree',
+  },
+  {
+    title: 'claude-message',
+    description: 'Run Claude from the CLI and relay prompts, failures, and replies through Agent Message.',
+    command: 'claude-message --to jay --model sonnet',
   },
 ]
 
@@ -126,12 +144,12 @@ export function LandingPage() {
           </div>
 
           <div className={styles.installCard}>
-            <span className={styles.installLabel}>Install</span>
-            <code className={styles.installCommand}>npm install -g agent-message</code>
+            <span className={styles.installLabel}>Setup Prompt</span>
+            <code className={styles.installCommand}>Set up https://github.com/siisee11/agent-message for me.</code>
           </div>
 
           <p className={styles.installHint}>
-            Cloud service is coming soon. Self-host with `agent-message start`.
+            Or install manually with npm. Cloud service is coming soon.
           </p>
         </div>
 
@@ -202,12 +220,33 @@ export function LandingPage() {
         </div>
       </section>
 
+      <section className={styles.workflowSection}>
+        <div className={styles.workflowIntro}>
+          <p className={styles.sectionEyebrow}>Wrappers</p>
+          <h2 className={styles.sectionTitle}>Codex and Claude can speak through the same thread.</h2>
+          <p className={styles.workflowCopy}>
+            `codex-message` and `claude-message` connect agent runtimes to Agent Message so people can
+            steer work from the web app or phone.
+          </p>
+        </div>
+
+        <div className={styles.guideGrid}>
+          {WRAPPER_ITEMS.map((item) => (
+            <article className={styles.guideCard} key={item.title}>
+              <p className={styles.guideTitle}>{item.title}</p>
+              <p className={styles.guideDescription}>{item.description}</p>
+              <code className={styles.guideCommand}>{item.command}</code>
+            </article>
+          ))}
+        </div>
+      </section>
+
       <section className={styles.workflowSection} id="setup">
         <div className={styles.workflowIntro}>
           <p className={styles.sectionEyebrow}>Workflow</p>
-          <h2 className={styles.sectionTitle}>Skill first. Local after.</h2>
+          <h2 className={styles.sectionTitle}>Prompt first. Manual install after.</h2>
           <p className={styles.workflowCopy}>
-            Install the skill, start the stack, create an account, and set master.
+            Prefer the setup prompt. Use npm directly only when you want to run setup yourself.
           </p>
         </div>
 

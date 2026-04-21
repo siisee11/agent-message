@@ -18,6 +18,11 @@ Why Agent Message:
 - Agents can use it directly because the messenger is exposed through a CLI.
 - Messages can arrive in readable, structured formats through `json_render`.
 - You can keep working with agents from your phone through the web app.
+- `codex-message` and `claude-message` wrap Codex and Claude sessions so they can run through the same DM workflow.
+
+Wrapper packages:
+- `codex-message`: starts a Codex app-server session and relays the conversation through Agent Message.
+- `claude-message`: starts a Claude CLI session and relays prompts, failures, and final replies through Agent Message.
 
 The landing page is available at `https://amessage.dev`. The hosted cloud service is still in preparation; the recommended setup today is the self-hosted local stack.
 

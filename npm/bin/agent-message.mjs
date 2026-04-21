@@ -2,7 +2,7 @@
 
 import { spawn, spawnSync } from 'node:child_process'
 import { generateKeyPairSync } from 'node:crypto'
-import { closeSync, existsSync, mkdirSync, openSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
+import { closeSync, existsSync, mkdirSync, openSync, readFileSync, renameSync, rmSync, writeFileSync } from 'node:fs'
 import { access, constants } from 'node:fs/promises'
 import os from 'node:os'
 import { dirname, join, resolve } from 'node:path'
@@ -369,6 +369,7 @@ async function startStack(options) {
       await waitForLogMessage(paths.tunnelLog, 'Registered tunnel connection', 'named tunnel')
     }
     writeStackMetadata(paths.stackMetadataPath, options)
+    configureCliForLocalStack(options)
   } catch (error) {
     await stopStack(options, { quiet: true })
     throw error
@@ -377,6 +378,7 @@ async function startStack(options) {
   console.log('Agent Message is up.')
   console.log(`API:  http://${options.apiHost}:${options.apiPort}`)
   console.log(`Web:  http://${options.webHost}:${options.webPort}`)
+  console.log(`CLI config: ${defaultCliConfigPath()} -> http://${options.apiHost}:${options.apiPort}`)
   console.log(`Logs: ${paths.serverLog} ${paths.gatewayLog}`)
   console.log(`Web Push: ${paths.webPushConfigPath}`)
   if (options.withTunnel) {
@@ -597,6 +599,71 @@ function writeStackMetadata(path, options) {
     webPort: options.webPort,
   }
   writeFileSync(path, `${JSON.stringify(metadata, null, 2)}\n`)
+}
+
+function defaultCliConfigPath() {
+  return join(os.homedir(), '.agent-message', 'config')
+}
+
+function configureCliForLocalStack(options) {
+  const configPath = defaultCliConfigPath()
+  const serverURL = `http://${options.apiHost}:${options.apiPort}`
+  const config = readCliConfig(configPath)
+
+  config.server_url = serverURL
+
+  const activeProfile = typeof config.active_profile === 'string' ? config.active_profile.trim() : ''
+  if (activeProfile) {
+    if (!config.profiles || typeof config.profiles !== 'object' || Array.isArray(config.profiles)) {
+      config.profiles = {}
+    }
+    const profile = config.profiles[activeProfile]
+    if (!profile || typeof profile !== 'object' || Array.isArray(profile)) {
+      config.profiles[activeProfile] = {
+        username: activeProfile,
+        server_url: serverURL,
+        token: typeof config.token === 'string' ? config.token : '',
+        last_read_conversation_id: typeof config.last_read_conversation_id === 'string'
+          ? config.last_read_conversation_id
+          : '',
+        read_sessions: config.read_sessions && typeof config.read_sessions === 'object' && !Array.isArray(config.read_sessions)
+          ? config.read_sessions
+          : {},
+      }
+    } else {
+      profile.server_url = serverURL
+      if (typeof profile.username !== 'string' || profile.username.trim() === '') {
+        profile.username = activeProfile
+      }
+    }
+  }
+
+  writeCliConfig(configPath, config)
+  return serverURL
+}
+
+function readCliConfig(path) {
+  if (!existsSync(path)) {
+    return {}
+  }
+
+  const raw = readFileSync(path, 'utf8')
+  if (!raw.trim()) {
+    return {}
+  }
+
+  const parsed = JSON.parse(raw)
+  if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) {
+    throw new Error(`CLI config must be a JSON object: ${path}`)
+  }
+  return parsed
+}
+
+function writeCliConfig(path, config) {
+  mkdirSync(dirname(path), { recursive: true, mode: 0o700 })
+  const tmpPath = `${path}.tmp`
+  writeFileSync(tmpPath, `${JSON.stringify(config, null, 2)}\n`, { mode: 0o600 })
+  renameSync(tmpPath, path)
 }
 
 function spawnDetached(command, args, env, logFile) {

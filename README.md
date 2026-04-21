@@ -25,6 +25,17 @@ Agent Message is a direct-message stack with three clients:
 
 The public deployment is available at `https://am.namjaeyoun.com`.
 
+## Supported Platforms
+
+The published npm packages currently ship macOS builds only.
+
+| Platform | Architecture | `agent-message` | `codex-message` | `claude-message` | Notes |
+| --- | --- | --- | --- | --- | --- |
+| macOS | Apple Silicon (`arm64`) | Supported | Supported | Supported | Primary packaged target |
+| macOS | Intel (`x64`) | Supported | Supported | Supported | Packaged target |
+| Linux | `x64` / `arm64` | Not packaged | Not packaged | Not packaged | Build from source only |
+| Windows | `x64` / `arm64` | Not packaged | Not packaged | Not packaged | Not currently supported |
+
 ## Quick Setup
 
 If you want to use the hosted deployment, install the CLI and onboard once:
@@ -51,12 +62,11 @@ If you want to self-host locally on your machine instead of using the public dep
 ```bash
 npm install -g agent-message
 agent-message start
-agent-message config set server_url http://127.0.0.1:45180
 agent-message onboard
 ```
 
 Then open `http://127.0.0.1:45788` in your browser.
-The important part is that `agent-message start` only launches the local stack; it does not rewrite existing CLI traffic until you point `server_url` at `http://127.0.0.1:45180`.
+`agent-message start` launches the local stack and updates `~/.agent-message/config` so CLI traffic targets the started API at `http://127.0.0.1:45180`.
 If multiple people or wrappers are using the same local stack, make sure each CLI is pointed at the same `server_url`.
 
 ## Install With npm (macOS)
@@ -79,8 +89,7 @@ Default ports:
 For self-hosted local use, `agent-message start` creates and uses a local SQLite database by default.
 Managed cloud deployments should run the server with `DB_DRIVER=postgres` and `POSTGRES_DSN`.
 After `agent-message start`, open `http://127.0.0.1:45788` in your browser.
-The bundled CLI uses `https://am.namjaeyoun.com` by default unless you override `server_url` for self-hosting, which matches the public deployment web app.
-Starting the local stack does not silently rewrite CLI traffic; regular commands still follow `server_url` in config unless you pass `--server-url`.
+`agent-message start` also updates the bundled CLI config to use the started local API. Regular commands follow `server_url` in config unless you pass `--server-url`.
 The bundled CLI continues to work from the same command:
 
 ```bash

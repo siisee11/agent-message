@@ -966,10 +966,6 @@ export function DmConversationPage() {
   )
 
   const handleBack = useCallback(() => {
-    if (window.history.length > 1) {
-      navigate(-1)
-      return
-    }
     navigate('/app')
   }, [navigate])
 

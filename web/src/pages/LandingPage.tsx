@@ -7,42 +7,39 @@ import styles from './LandingPage.module.css'
 
 const FEATURE_ITEMS = [
   {
-    title: 'Same flow, terminal to browser',
-    description:
-      'Send direct messages, approvals, and structured status updates from the CLI, then pick them up in the web app without changing tools.',
+    title: 'Self-host first',
+    description: 'Run the local API and web app with one command.',
   },
   {
-    title: 'Built for agent workflows',
-    description:
-      'Use one-off sends, watch live conversations, or render richer JSON layouts for handoffs, summaries, and approvals.',
+    title: 'Agent-ready',
+    description: 'Send updates, approvals, and json_render cards from scripts or wrappers.',
   },
   {
-    title: 'Hosted or self-hosted',
-    description:
-      'Point the CLI at the public deployment, or start the full local stack on your own machine with a single command.',
+    title: 'Cloud coming soon',
+    description: 'Hosted accounts are not open yet. Use self-host for now.',
   },
 ]
 
 const GUIDE_ITEMS = [
   {
-    title: 'Quick setup',
-    description: 'Install the CLI, onboard once, and start sending messages immediately.',
-    command: 'agent-message onboard',
+    title: 'Install skill',
+    description: 'Teach the agent the CLI flow first.',
+    command: 'npx skills add https://github.com/siisee11/agent-message --skill agent-message-cli -g -y',
   },
   {
-    title: 'Structured updates',
-    description: 'Deliver readable `json_render` payloads from wrappers and coding agents.',
-    command: 'agent-message send jay ... --kind json_render',
-  },
-  {
-    title: 'Local stack',
-    description: 'Run API and web locally when you want a private, production-like environment.',
+    title: 'Start local stack',
+    description: 'Launch the local API and web app.',
     command: 'agent-message start',
   },
   {
-    title: 'Conversation handoff',
-    description: 'Open a DM by username and keep the thread moving across agents and humans.',
-    command: 'agent-message open jay',
+    title: 'Create account',
+    description: 'Ask for account-id, then use temporary password 0000.',
+    command: 'agent-message register <account-id> 0000',
+  },
+  {
+    title: 'Set master',
+    description: 'Pick the default recipient for agent reports.',
+    command: 'agent-message config set master jay',
   },
 ]
 
@@ -58,19 +55,19 @@ function TerminalWindow() {
         <p className={styles.terminalPath}>~/agent-message · main</p>
         <div className={styles.terminalPromptRow}>
           <span className={styles.terminalPrompt}>&gt;</span>
-          <code className={styles.terminalCommand}>agent-message onboard</code>
+          <code className={styles.terminalCommand}>agent-message start</code>
         </div>
-        <p className={styles.terminalOutput}>registered @agent-dbe8652f88c1</p>
+        <p className={styles.terminalOutput}>local stack ready on 127.0.0.1:45788</p>
         <div className={styles.terminalPromptRow}>
           <span className={styles.terminalPrompt}>&gt;</span>
-          <code className={styles.terminalCommand}>agent-message send jay "build passed"</code>
+          <code className={styles.terminalCommand}>agent-message register alice 0000</code>
         </div>
-        <p className={styles.terminalOutput}>sent msg_01j...</p>
+        <p className={styles.terminalOutput}>registered alice</p>
         <div className={styles.terminalPromptRow}>
           <span className={styles.terminalPrompt}>&gt;</span>
-          <code className={styles.terminalCommand}>agent-message watch jay</code>
+          <code className={styles.terminalCommand}>agent-message config set master jay</code>
         </div>
-        <p className={styles.terminalMuted}>live thread, approvals, and status in one place</p>
+        <p className={styles.terminalMuted}>self-hosted messages, approvals, and status in one place</p>
       </div>
     </div>
   )
@@ -85,8 +82,8 @@ export function LandingPage() {
     themeColor,
   })
 
-  const primaryHref = isAuthenticated ? '/app' : '/login'
-  const primaryLabel = isAuthenticated ? 'Open App' : 'Sign In'
+  const primaryHref = isAuthenticated ? '/app' : '#setup'
+  const primaryLabel = isAuthenticated ? 'Open App' : 'Local Setup'
   const secondaryLabel = status === 'loading' ? 'Checking session' : 'See Setup'
 
   return (
@@ -100,25 +97,31 @@ export function LandingPage() {
         </Link>
 
         <div className={styles.navActions}>
-          <Link className={styles.navLink} to={primaryHref}>
-            {primaryLabel}
-          </Link>
+          <a className={styles.navLink} href="https://github.com/siisee11/agent-message">
+            GitHub
+          </a>
         </div>
       </header>
 
       <section className={styles.hero}>
         <div className={styles.heroCopy}>
-          <p className={styles.eyebrow}>CLI / Web / Realtime Messaging</p>
-          <h1 className={styles.title}>Move agent threads from CLI to web.</h1>
+          <p className={styles.eyebrow}>Self-hosted agent messaging</p>
+          <h1 className={styles.title}>Run agent threads locally.</h1>
           <p className={styles.description}>
-            Agent Message is a direct-message stack for coding agents and humans. Send progress updates,
-            approvals, and structured JSON renders from scripts, wrappers, or the browser.
+            Start the web app and API with one command. Send progress updates, approvals, and structured
+            JSON renders from the CLI, wrappers, or the browser.
           </p>
 
           <div className={styles.actionRow}>
-            <Link className={styles.primaryAction} to={primaryHref}>
-              {primaryLabel}
-            </Link>
+            {primaryHref.startsWith('#') ? (
+              <a className={styles.primaryAction} href={primaryHref}>
+                {primaryLabel}
+              </a>
+            ) : (
+              <Link className={styles.primaryAction} to={primaryHref}>
+                {primaryLabel}
+              </Link>
+            )}
             <a className={styles.secondaryAction} href="#setup">
               {secondaryLabel}
             </a>
@@ -130,7 +133,7 @@ export function LandingPage() {
           </div>
 
           <p className={styles.installHint}>
-            Use the hosted deployment, or run your own local stack with `agent-message start`.
+            Cloud service is coming soon. Self-host today with `agent-message start`.
           </p>
         </div>
 
@@ -141,19 +144,19 @@ export function LandingPage() {
             <div className={styles.visualCaption}>
               <p className={styles.visualCaptionLabel}>Example Outputs</p>
               <p className={styles.visualCaptionBody}>
-                Two message patterns the web app can render directly from CLI sends.
+                Message patterns rendered directly from CLI sends.
               </p>
             </div>
             <div className={styles.statusPanel}>
               <div className={styles.statusCard}>
                 <p className={styles.statusLabel}>JSON Render</p>
-                <p className={styles.statusTitle}>Readable delivery for agent reports</p>
-                <p className={styles.statusBody}>Send concise cards, stacks, badges, and progress blocks directly from the CLI.</p>
+                <p className={styles.statusTitle}>Readable agent reports</p>
+                <p className={styles.statusBody}>Send cards, badges, and progress blocks from the CLI.</p>
               </div>
               <div className={styles.statusCard}>
                 <p className={styles.statusLabel}>Watch Presence</p>
-                <p className={styles.statusTitle}>Know when the other side is live</p>
-                <p className={styles.statusBody}>Follow ongoing work with realtime status, push notifications, and DM context.</p>
+                <p className={styles.statusTitle}>Know who is live</p>
+                <p className={styles.statusBody}>Follow work with realtime status and DM context.</p>
               </div>
             </div>
           </div>
@@ -163,7 +166,7 @@ export function LandingPage() {
       <section className={styles.featureSection}>
         <div className={styles.sectionHeader}>
           <p className={styles.sectionEyebrow}>Why Agent Message</p>
-          <h2 className={styles.sectionTitle}>One messaging surface for wrappers, agents, and people.</h2>
+          <h2 className={styles.sectionTitle}>Self-hosted messaging for agents and people.</h2>
         </div>
         <div className={styles.featureGrid}>
           {FEATURE_ITEMS.map((item) => (
@@ -178,10 +181,9 @@ export function LandingPage() {
       <section className={styles.workflowSection} id="setup">
         <div className={styles.workflowIntro}>
           <p className={styles.sectionEyebrow}>Workflow</p>
-          <h2 className={styles.sectionTitle}>Ship updates with the same commands in any environment.</h2>
+          <h2 className={styles.sectionTitle}>Install the skill, then start local.</h2>
           <p className={styles.workflowCopy}>
-            Start with CLI onboarding, hand messages to the web app when you need richer context, and
-            keep automation readable with consistent commands and message threads.
+            Use the skill, local stack, account setup, and master setting before wrappers send reports.
           </p>
         </div>
 
@@ -200,12 +202,18 @@ export function LandingPage() {
         <div className={styles.ctaPanel}>
           <div>
             <p className={styles.sectionEyebrow}>Start Now</p>
-            <h2 className={styles.sectionTitle}>Open the app, sign in, and keep the thread alive.</h2>
+            <h2 className={styles.sectionTitle}>Start local and send the first update.</h2>
           </div>
           <div className={styles.ctaActions}>
-            <Link className={styles.primaryAction} to={primaryHref}>
-              {primaryLabel}
-            </Link>
+            {primaryHref.startsWith('#') ? (
+              <a className={styles.primaryAction} href={primaryHref}>
+                {primaryLabel}
+              </a>
+            ) : (
+              <Link className={styles.primaryAction} to={primaryHref}>
+                {primaryLabel}
+              </Link>
+            )}
             <a className={styles.secondaryAction} href="https://github.com/siisee11/agent-message">
               GitHub
             </a>

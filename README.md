@@ -14,7 +14,7 @@ Agent Message is a direct-message stack with three clients:
 - Web app (`web/`)
 - CLI (`cli/`)
 
-The public deployment is available at `https://amessage.dev`.
+The landing page is available at `https://amessage.dev`. The hosted cloud service is still in preparation; the recommended setup today is the self-hosted local stack.
 
 ## Supported Platforms
 
@@ -34,41 +34,49 @@ Paste into Claude Code or Codex:
 ```bash
 Set up https://github.com/siisee11/agent-message for me.
 
-Read `install.md` first to install and connect this repo to my real browser. After it is installed and onboarded, send welcome message to user using agent-message cli.
+Install the agent-message skill first:
+
+npx skills add https://github.com/siisee11/agent-message --skill agent-message-cli -g -y
+
+Then read `install.md` and follow the self-host setup flow. Ask me for the account-id before registering, use 0000 only as the temporary initial password, remind me to change it immediately, set the master recipient, and send me a welcome message with agent-message when setup is complete.
 ```
 
 ## Quick Setup
 
-If you want to use the hosted deployment, install the CLI and onboard once:
+Cloud service accounts are not available yet. Use the self-hosted local stack for now.
+
+Install the agent skill first so Codex or Claude Code understands the `agent-message` CLI:
 
 ```bash
-npm install -g agent-message
-agent-message onboard
-agent-message upgrade
+npx skills add https://github.com/siisee11/agent-message --skill agent-message-cli -g -y
 ```
 
-This creates or logs into your account, saves the CLI profile in `~/.agent-message/config`, and sets your username as the global `master` recipient.
-During onboarding, the CLI also offers to install the `agent-message-cli` skill globally for Codex and Claude Code with `npx skills add https://github.com/siisee11/agent-message --skill agent-message-cli -a codex -a claude-code -g -y`.
-Authentication now uses `account_id`; the public `username` initially defaults to the same value and can be changed later with `agent-message username set <username>`.
-After that, you can use either the web app at `https://am.namjaeyoun.com` or the CLI:
-
-```bash
-agent-message ls
-agent-message open bob
-agent-message send bob "hello"
-```
-
-If you want to self-host locally on your machine instead of using the public deployment:
+Install the packaged CLI and start the local stack:
 
 ```bash
 npm install -g agent-message
 agent-message start
-agent-message onboard
+agent-message status
 ```
 
-Then open `http://127.0.0.1:45788` in your browser.
+Then create or log into a local account. Ask the user for the `account-id` before registering. Use `0000` only as the temporary setup password:
+
+```bash
+agent-message register <account-id> 0000
+# or, if the account already exists:
+agent-message login <account-id> 0000
+```
+
+Open `http://127.0.0.1:45788` in your browser and change the password immediately from the Profile page.
 `agent-message start` launches the local stack and updates `~/.agent-message/config` so CLI traffic targets the started API at `http://127.0.0.1:45180`.
-If multiple people or wrappers are using the same local stack, make sure each CLI is pointed at the same `server_url`.
+
+Set the public display name and default recipient for agent status reports:
+
+```bash
+agent-message username set <username>
+agent-message config set master <recipient-username>
+agent-message whoami
+```
 
 ## Install With npm (macOS)
 
@@ -88,15 +96,14 @@ Default ports:
 - Web: `127.0.0.1:45788`
 
 For self-hosted local use, `agent-message start` creates and uses a local SQLite database by default.
-Managed cloud deployments should run the server with `DB_DRIVER=postgres` and `POSTGRES_DSN`.
+The hosted cloud service is still in preparation. Future managed cloud deployments should run the server with `DB_DRIVER=postgres` and `POSTGRES_DSN`.
 After `agent-message start`, open `http://127.0.0.1:45788` in your browser.
 `agent-message start` also updates the bundled CLI config to use the started local API. Regular commands follow `server_url` in config unless you pass `--server-url`.
 The bundled CLI continues to work from the same command:
 
 ```bash
-agent-message onboard
-agent-message register alice secret123
-agent-message login alice secret123
+agent-message register alice 0000
+agent-message login alice 0000
 agent-message username set jay-ui-bot
 agent-message config set master jay
 agent-message upgrade
@@ -205,7 +212,7 @@ If Postgres starts with `Database directory appears to contain a database` and t
 
 ## Home Server Container Deploy
 
-For a home Mac server, you can run the managed-cloud stack entirely with containers. The `gateway` image builds `web/dist` during `docker compose build`, so you do not need to run `npm run build` on the host first.
+For a home Mac server, you can run the self-hosted stack entirely with containers. The `gateway` image builds `web/dist` during `docker compose build`, so you do not need to run `npm run build` on the host first.
 
 1. Copy the example env file and fill in your values:
 
@@ -365,7 +372,7 @@ Prerequisites:
 
 Typical setup for a Codex user:
 
-1. Set up `agent-message` first with either the hosted deployment or a local stack from the Quick Setup section above.
+1. Set up `agent-message` first with the self-hosted local stack from the Quick Setup section above.
 2. Set `agent-message` `master` to the person who should receive wrapper messages, or pass `--to` explicitly.
 3. Start the wrapper.
 
@@ -446,7 +453,7 @@ claude-message --bg --to jay --model sonnet --permission-mode accept-edits
 
 Typical setup for a Claude user:
 
-1. Set up `agent-message` first with either the hosted deployment or a local stack from the Quick Setup section above.
+1. Set up `agent-message` first with the self-hosted local stack from the Quick Setup section above.
 2. Start the wrapper and point it at the person who will send requests over DM.
 3. Have that person reply in the generated DM thread in the web app or CLI.
 
@@ -487,13 +494,12 @@ Notes:
 
 ## CLI Quickstart
 
-Run from `cli/`. By default the CLI talks to `https://am.namjaeyoun.com`. For self-hosting, pass `--server-url` or set `server_url` in config.
+Run from `cli/`. For self-hosting, start the local stack first with `agent-message start`, or point the source CLI at your local API with `--server-url` or `config set server_url`.
 
 ```bash
 cd cli
-go run . onboard
-go run . register alice secret123
-go run . login alice secret123
+go run . --server-url http://localhost:8080 register alice 0000
+go run . --server-url http://localhost:8080 login alice 0000
 go run . username set jay-ui-bot
 go run . profile list
 go run . profile switch alice
@@ -524,7 +530,7 @@ go run . watch bob
 
 CLI config is stored at `~/.agent-message/config` by default.
 Each successful `login` or `register` also saves a named profile, and `go run . profile switch <username>` swaps the active account locally.
-`go run . onboard` is the cloud-friendly shortcut: it interactively asks for `account_id`/password, logs in if the account exists, creates it if it does not, and sets the resulting public `username` as `master`.
+`go run . onboard` is interactive and intended for human use. Agent setup should follow `install.md` instead: install the skill, install npm package, start the local stack, ask for `account-id`, then use `register` or `login`.
 `go run . username set <username>` changes the public name shown in chats, and `go run . username clear` falls back to the `account_id`.
 For bots, wrappers, or task-specific accounts, choose a username that is related to the chat topic or role so recipients can understand the conversation context at a glance.
 For a self-hosted server, set `server_url` once with `go run . config set server_url http://localhost:8080` or use `--server-url` per command.

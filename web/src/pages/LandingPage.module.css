@@ -129,8 +129,9 @@
 .hero {
   min-height: calc(100dvh - 160px);
   display: grid;
-  grid-template-columns: minmax(0, 1fr);
+  grid-template-columns: minmax(0, 1fr) minmax(280px, 360px);
   align-content: center;
+  align-items: center;
   gap: 48px;
   margin-bottom: clamp(72px, 12vw, 128px);
 }
@@ -233,9 +234,97 @@
   word-break: break-word;
 }
 
+.phonePreview {
+  width: min(100%, 360px);
+  aspect-ratio: 9 / 19.5;
+  justify-self: end;
+  align-self: center;
+  padding: 12px;
+  border: 1px solid var(--landing-border-strong);
+  background: transparent;
+}
+
+.phoneScreen {
+  width: 100%;
+  height: 100%;
+  border: 1px solid var(--landing-border);
+  background: var(--landing-surface);
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr);
+  overflow: hidden;
+}
+
+.phoneTopBar {
+  min-height: 44px;
+  padding: 12px;
+  border-bottom: 1px solid var(--landing-border);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  color: var(--landing-text-tertiary);
+  font-family: var(--font-display);
+  font-size: 12px;
+  letter-spacing: 1px;
+  line-height: 1.5;
+}
+
+.phoneThread {
+  min-height: 0;
+  padding: 24px 16px;
+  display: grid;
+  align-content: start;
+  gap: 16px;
+}
+
+.phoneMessage,
+.phoneCard {
+  padding: 16px;
+  border: 1px solid var(--landing-border);
+  background: transparent;
+  display: grid;
+  gap: 8px;
+}
+
+.phoneCard {
+  background: var(--landing-surface);
+}
+
+.phoneLabel {
+  color: var(--landing-text-tertiary);
+  font-family: var(--font-display);
+  font-size: 12px;
+  letter-spacing: 1px;
+  line-height: 1.5;
+  text-transform: uppercase;
+}
+
+.phoneMessage p,
+.phoneCard p {
+  margin: 0;
+  color: var(--landing-foreground);
+  font-family: var(--font-body);
+  font-size: 16px;
+  line-height: 1.5;
+}
+
+.phoneProgress {
+  height: 8px;
+  border: 1px solid var(--landing-border-strong);
+  background: transparent;
+}
+
+.phoneProgress span {
+  display: block;
+  width: 72%;
+  height: 100%;
+  background: var(--landing-foreground);
+}
+
 .heroVisual {
   position: relative;
   min-width: 0;
+  grid-column: 1 / -1;
 }
 
 .visualBackdrop {
@@ -463,6 +552,15 @@
 }
 
 @media (max-width: 1120px) {
+  .hero {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .phonePreview {
+    justify-self: start;
+    width: min(100%, 320px);
+  }
+
   .visualBackdrop {
     grid-template-columns: 1fr;
   }

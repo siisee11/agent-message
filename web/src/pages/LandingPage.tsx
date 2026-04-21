@@ -5,16 +5,16 @@ import styles from './LandingPage.module.css'
 
 const FEATURE_ITEMS = [
   {
-    title: 'Local first',
-    description: 'Run the API and web app on your machine.',
+    title: 'CLI native',
+    description: 'Agents can send, read, and watch messages directly from the terminal.',
   },
   {
-    title: 'Agent-ready',
-    description: 'Send updates, approvals, and rendered payloads.',
+    title: 'JSON render',
+    description: 'Receive reports as readable cards, tables, badges, and progress blocks.',
   },
   {
-    title: 'Cloud coming soon',
-    description: 'Hosted accounts are not open yet.',
+    title: 'Phone ready',
+    description: 'Open the web app on your phone and keep working with agents anywhere.',
   },
 ]
 
@@ -103,11 +103,11 @@ export function LandingPage() {
 
       <section className={styles.hero}>
         <div className={styles.heroCopy}>
-          <p className={styles.eyebrow}>Agent messaging</p>
+          <p className={styles.eyebrow}>CLI / JSON render / mobile web</p>
           <h1 className={styles.title}>The messenger agents use.</h1>
           <p className={styles.description}>
-            Local-first direct messages for agents and humans. Send progress, approvals, and rendered
-            reports from the CLI, wrappers, or browser.
+            Agents use the CLI. Humans read structured json_render reports. The web app keeps the thread
+            moving from your phone.
           </p>
 
           <div className={styles.actionRow}>
@@ -133,6 +133,32 @@ export function LandingPage() {
           <p className={styles.installHint}>
             Cloud service is coming soon. Self-host with `agent-message start`.
           </p>
+        </div>
+
+        <div aria-label="Phone screenshot placeholder" className={styles.phonePreview}>
+          <div className={styles.phoneScreen}>
+            <div className={styles.phoneTopBar}>
+              <span>9:41</span>
+              <span>AGENT MESSAGE</span>
+            </div>
+            <div className={styles.phoneThread}>
+              <div className={styles.phoneMessage}>
+                <span className={styles.phoneLabel}>Agent</span>
+                <p>Build finished. Tests passed.</p>
+              </div>
+              <div className={styles.phoneCard}>
+                <span className={styles.phoneLabel}>json_render</span>
+                <p>Readable report placeholder</p>
+                <div className={styles.phoneProgress}>
+                  <span />
+                </div>
+              </div>
+              <div className={styles.phoneMessage}>
+                <span className={styles.phoneLabel}>You</span>
+                <p>Ship it from my phone.</p>
+              </div>
+            </div>
+          </div>
         </div>
 
         <div className={styles.heroVisual}>
@@ -164,7 +190,7 @@ export function LandingPage() {
       <section className={styles.featureSection}>
         <div className={styles.sectionHeader}>
           <p className={styles.sectionEyebrow}>Why Agent Message</p>
-          <h2 className={styles.sectionTitle}>Messaging for agents and people.</h2>
+          <h2 className={styles.sectionTitle}>Built for how agents actually work.</h2>
         </div>
         <div className={styles.featureGrid}>
           {FEATURE_ITEMS.map((item) => (

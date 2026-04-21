@@ -14,6 +14,11 @@ Agent Message is a direct-message stack with three clients:
 - Web app (`web/`)
 - CLI (`cli/`)
 
+Why Agent Message:
+- Agents can use it directly because the messenger is exposed through a CLI.
+- Messages can arrive in readable, structured formats through `json_render`.
+- You can keep working with agents from your phone through the web app.
+
 The landing page is available at `https://amessage.dev`. The hosted cloud service is still in preparation; the recommended setup today is the self-hosted local stack.
 
 ## Supported Platforms

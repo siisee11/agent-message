@@ -6,6 +6,8 @@
   "scripts": {
     "dev": "vite",
     "build": "tsc -b && vite build",
+    "preview:worker": "npm run build && npx wrangler@4.84.0 dev",
+    "deploy:worker": "npm run build && npx wrangler@4.84.0 deploy",
     "test": "vitest run",
     "preview": "vite preview"
   },

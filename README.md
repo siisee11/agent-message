@@ -269,6 +269,28 @@ cd web
 npm run build
 ```
 
+## Cloudflare Workers Web Deploy
+
+The current React web app can be deployed to Cloudflare Workers as static assets. This is intended for the public web surface first; the API-backed cloud service can be attached later.
+
+```bash
+cd web
+npm ci
+npm run deploy:worker
+```
+
+The Worker serves `web/dist` with SPA fallback enabled, so routes like `/login`, `/app`, and `/dm/:conversationId` resolve to the React app. Requests under `/api/*` and `/static/uploads/*` run through `web/worker/index.js` first.
+
+Until the cloud API is ready, API requests return `503` from the Worker. When an API origin exists, set `API_ORIGIN` on the Worker and redeploy:
+
+```bash
+cd web
+npx wrangler secret put API_ORIGIN
+npm run deploy:worker
+```
+
+For example, `API_ORIGIN=https://api.amessage.dev` makes the existing web app keep using same-origin `/api/...` calls while the Worker proxies them to the API service. Assign `amessage.dev` as the Worker custom domain in Cloudflare after the first deploy.
+
 ## Local Lifecycle Commands
 
 From a checked-out repo, use the same lifecycle command as the packaged app, but add `--dev` to build from the local source tree before launch:

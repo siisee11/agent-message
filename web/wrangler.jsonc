@@ -4,12 +4,6 @@
   "main": "./worker/index.js",
   "compatibility_date": "2026-04-21",
   "workers_dev": true,
-  "routes": [
-    {
-      "pattern": "amessage.dev/*",
-      "zone_name": "amessage.dev"
-    }
-  ],
   "assets": {
     "directory": "./dist",
     "binding": "ASSETS",

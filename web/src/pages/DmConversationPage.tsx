@@ -97,8 +97,11 @@ type PendingTurnMessageDetails = {
   message: Pick<Message, 'id' | 'sender_id' | 'deleted'>
 }
 
-const ASCII_WORKING_FRAMES = ['[=   ]', '[==  ]', '[=== ]', '[ ===]', '[  ==]', '[   =]'] as const
-const ASCII_CONNECTING_FRAMES = ['[.  ]', '[.. ]', '[...]', '[ ..]', '[  .]'] as const
+const ASCII_STATUS_ANIMATION = {
+  // Matches ref/unicode-animations/src/braille.ts spinners.braille.
+  frames: ['⠋', '⠙', '⠹', '⠸', '⠼', '⠴', '⠦', '⠧', '⠇', '⠏'],
+  interval: 80,
+} as const
 const ASCII_OFFLINE_FRAME = '[ x ]'
 
 function resolveErrorMessage(error: unknown, fallback: string): string {
@@ -279,22 +282,18 @@ function useAsciiStatusFrame(tone: PendingTurnTone): string {
 
     const intervalId = window.setInterval(() => {
       setFrameIndex((current) => current + 1)
-    }, 160)
+    }, ASCII_STATUS_ANIMATION.interval)
 
     return () => {
       window.clearInterval(intervalId)
     }
   }, [tone])
 
-  if (tone === 'working') {
-    return ASCII_WORKING_FRAMES[frameIndex % ASCII_WORKING_FRAMES.length]
+  if (tone === 'offline') {
+    return ASCII_OFFLINE_FRAME
   }
 
-  if (tone === 'connecting') {
-    return ASCII_CONNECTING_FRAMES[frameIndex % ASCII_CONNECTING_FRAMES.length]
-  }
-
-  return ASCII_OFFLINE_FRAME
+  return ASCII_STATUS_ANIMATION.frames[frameIndex % ASCII_STATUS_ANIMATION.frames.length]
 }
 
 function groupReactionsByEmoji(

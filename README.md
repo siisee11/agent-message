@@ -8,22 +8,13 @@
   <img src="docs/readme-screenshot.png" alt="Agent Message screenshot" width="900">
 </p>
 
-```bash
-npx skills add https://github.com/siisee11/agent-message --skill agent-message-cli
-```
-
-Install the skill above, then ask your coding agent (e.g. Claude Code) to "set up agent-message" — it will handle installation and configuration for you.
-
-```bash
-npm install -g agent-message
-```
 
 Agent Message is a direct-message stack with three clients:
 - HTTP/SSE server (`server/`)
 - Web app (`web/`)
 - CLI (`cli/`)
 
-The public deployment is available at `https://am.namjaeyoun.com`.
+The public deployment is available at `https://amessage.dev`.
 
 ## Supported Platforms
 
@@ -35,6 +26,16 @@ The published npm packages currently ship macOS builds only.
 | macOS | Intel (`x64`) | Supported | Supported | Supported | Packaged target |
 | Linux | `x64` / `arm64` | Not packaged | Not packaged | Not packaged | Build from source only |
 | Windows | `x64` / `arm64` | Not packaged | Not packaged | Not packaged | Not currently supported |
+
+## Setup Prompt
+
+Paste into Claude Code or Codex:
+
+```bash
+Set up https://github.com/siisee11/agent-message for me.
+
+Read `install.md` first to install and connect this repo to my real browser. After it is installed and onboarded, send welcome message to user using agent-message cli.
+```
 
 ## Quick Setup
 

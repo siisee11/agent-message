@@ -4,6 +4,8 @@
 
 # Agent Message
 
+[한국어](README.ko.md) | [简体中文](README.zh-CN.md) | [繁體中文](README.zh-TW.md) | [日本語](README.ja.md)
+
 <p align="center">
   <img src="docs/readme-screenshot.png" alt="Agent Message screenshot" width="900">
 </p>
@@ -44,11 +46,7 @@ Paste into Claude Code or Codex:
 ```bash
 Set up https://github.com/siisee11/agent-message for me.
 
-Install the agent-message skill first:
-
-npx skills add https://github.com/siisee11/agent-message --skill agent-message-cli -g -y
-
-Then read `install.md` and follow the self-host setup flow. Ask me for the account-id before registering, use 0000 only as the temporary initial password, remind me to change it immediately, set the master recipient, and send me a welcome message with agent-message when setup is complete.
+Read `install.md` and follow the self-host setup flow. Ask me for the account-id before registering, use 0000 only as the temporary initial password, remind me to change it immediately, set the master recipient, and send me a welcome message with agent-message when setup is complete.
 ```
 
 ## Quick Setup

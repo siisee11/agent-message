@@ -61,11 +61,7 @@ const LANDING_SURFACES: Record<LandingMode, string> = {
 
 const SETUP_PROMPT = `Set up https://github.com/siisee11/agent-message for me.
 
-Install the agent-message skill first:
-
-npx skills add https://github.com/siisee11/agent-message --skill agent-message-cli -g -y
-
-Then read \`install.md\` and follow the self-host setup flow. Ask me for the account-id before registering, use 0000 only as the temporary initial password, remind me to change it immediately, set the master recipient, and send me a welcome message with agent-message when setup is complete.`
+Read \`install.md\` and follow the self-host setup flow. Ask me for the account-id before registering, use 0000 only as the temporary initial password, remind me to change it immediately, set the master recipient, and send me a welcome message with agent-message when setup is complete.`
 
 export function LandingPage() {
   const { isAuthenticated } = useAuth()

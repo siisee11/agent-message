@@ -8,8 +8,11 @@
   --landing-border-strong: rgba(255, 255, 255, 0.2);
   --landing-surface: rgba(255, 255, 255, 0.03);
   --landing-surface-hover: rgba(255, 255, 255, 0.08);
+  --landing-selection-background: rgba(255, 255, 255, 0.92);
+  --landing-selection-foreground: #1f2228;
 
   position: relative;
+  color-scheme: dark;
   min-height: 100vh;
   min-height: 100dvh;
   overflow-x: hidden;
@@ -19,6 +22,37 @@
     max(48px, calc(env(safe-area-inset-bottom) + 48px));
   background: var(--landing-background);
   color: var(--landing-foreground);
+  transition:
+    background-color 180ms ease,
+    color 180ms ease;
+}
+
+.lightPage {
+  --landing-background: #f5f6f8;
+  --landing-foreground: #1f2228;
+  --landing-text-secondary: rgba(31, 34, 40, 0.72);
+  --landing-text-tertiary: rgba(31, 34, 40, 0.56);
+  --landing-text-quaternary: rgba(31, 34, 40, 0.36);
+  --landing-border: rgba(31, 34, 40, 0.12);
+  --landing-border-strong: rgba(31, 34, 40, 0.28);
+  --landing-surface: rgba(31, 34, 40, 0.035);
+  --landing-surface-hover: rgba(31, 34, 40, 0.08);
+  --landing-selection-background: rgba(31, 34, 40, 0.92);
+  --landing-selection-foreground: #f5f6f8;
+
+  color-scheme: light;
+}
+
+.page ::selection {
+  background: var(--landing-selection-background);
+  color: var(--landing-selection-foreground);
+  text-shadow: none;
+}
+
+.page ::-moz-selection {
+  background: var(--landing-selection-background);
+  color: var(--landing-selection-foreground);
+  text-shadow: none;
 }
 
 .aurora,
@@ -29,12 +63,13 @@
 
 .nav,
 .hero,
+.desktopPreviewSection,
 .featureSection,
 .workflowSection,
 .ctaSection {
   position: relative;
   z-index: 1;
-  width: min(100%, 1200px);
+  width: min(100%, 1400px);
   margin: 0 auto;
 }
 
@@ -75,8 +110,42 @@
   display: flex;
   align-items: center;
   justify-content: flex-end;
-  gap: 24px;
+  gap: 12px;
   flex-wrap: wrap;
+}
+
+.themeToggleButton {
+  width: 44px;
+  height: 44px;
+  padding: 0;
+  border: 1px solid var(--landing-border-strong);
+  border-radius: 0;
+  background: transparent;
+  color: var(--landing-foreground);
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition:
+    background-color 140ms ease,
+    border-color 140ms ease,
+    color 140ms ease;
+}
+
+.themeToggleButton:hover {
+  background: var(--landing-foreground);
+  border-color: var(--landing-foreground);
+  color: var(--landing-background);
+}
+
+.themeToggleIcon {
+  width: 20px;
+  height: 20px;
+  fill: none;
+  stroke: currentColor;
+  stroke-linecap: square;
+  stroke-linejoin: miter;
+  stroke-width: 1.8;
 }
 
 .navLink,
@@ -128,15 +197,17 @@
 
 .hero {
   min-height: calc(100dvh - 160px);
-  display: grid;
-  grid-template-columns: minmax(0, 0.78fr) minmax(320px, 360px);
+  display: flex;
+  flex-wrap: wrap;
   align-content: center;
-  align-items: center;
-  gap: clamp(48px, 8vw, 96px);
+  align-items: flex-start;
+  column-gap: clamp(48px, 8vw, 96px);
+  row-gap: 24px;
   margin-bottom: clamp(72px, 12vw, 128px);
 }
 
 .heroCopy {
+  flex: 1 1 560px;
   display: grid;
   grid-template-columns: minmax(0, 1fr);
   gap: 24px;
@@ -171,10 +242,7 @@
 .description,
 .workflowCopy,
 .featureDescription,
-.guideDescription,
-.statusBody,
-.installHint,
-.visualCaptionBody {
+.installHint {
   margin: 0;
   color: var(--landing-text-secondary);
   font-family: var(--font-body);
@@ -186,15 +254,25 @@
   max-width: 600px;
 }
 
-.actionRow {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  flex-wrap: wrap;
+.setupBlock {
+  flex: 1 0 100%;
+  min-width: 0;
+  display: grid;
+  gap: 16px;
+}
+
+.setupTitle {
+  margin: clamp(24px, 4vw, 40px) 0 0;
+  color: var(--landing-foreground);
+  font-family: var(--font-body);
+  font-size: clamp(30px, 4vw, 48px);
+  font-weight: 400;
+  line-height: 1.2;
+  letter-spacing: 0;
 }
 
 .installCard {
-  width: min(100%, 600px);
+  width: 100%;
   min-width: 0;
   padding: 24px;
   border: 1px solid var(--landing-border);
@@ -205,25 +283,50 @@
 }
 
 .installCard:hover,
-.terminalWindow:hover,
-.statusCard:hover,
 .featureCard:hover,
 .guideCard:hover,
 .ctaPanel:hover {
   border-color: var(--landing-border-strong);
 }
 
-.installLabel {
-  color: var(--landing-text-tertiary);
-  font-family: var(--font-body);
+.installHeader {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 16px;
+  min-width: 0;
+}
+
+.copyPromptButton {
+  min-height: 36px;
+  padding: 8px 14px;
+  border: 1px solid var(--landing-border-strong);
+  border-radius: 0;
+  background: transparent;
+  color: var(--landing-foreground);
+  cursor: pointer;
+  flex: 0 0 auto;
+  font-family: var(--font-display);
   font-size: 12px;
+  font-weight: 400;
+  letter-spacing: 1px;
   line-height: 1.5;
+  text-transform: uppercase;
+  transition:
+    background-color 140ms ease,
+    border-color 140ms ease,
+    color 140ms ease;
+}
+
+.copyPromptButton:hover {
+  background: var(--landing-foreground);
+  border-color: var(--landing-foreground);
+  color: var(--landing-background);
 }
 
 .installCommand,
 .guideCommand,
-.terminalCommand,
-.terminalPath {
+.terminalCommand {
   font-family: var(--font-display);
 }
 
@@ -235,10 +338,14 @@
   word-break: break-word;
 }
 
-.phonePreview {
+.phoneShowcase {
+  flex: 0 0 min(100%, 360px);
   width: min(100%, 360px);
+}
+
+.phonePreview {
+  width: 100%;
   aspect-ratio: 9 / 19.5;
-  justify-self: end;
   align-self: center;
   padding: 12px;
   border: 1px solid var(--landing-border-strong);
@@ -250,196 +357,16 @@
   height: 100%;
   border: 1px solid var(--landing-border);
   background: var(--landing-surface);
-  display: grid;
-  grid-template-rows: auto minmax(0, 1fr);
   overflow: hidden;
 }
 
-.phoneTopBar {
-  min-height: 44px;
-  padding: 12px;
-  border-bottom: 1px solid var(--landing-border);
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 8px;
-  color: var(--landing-text-tertiary);
-  font-family: var(--font-display);
-  font-size: 12px;
-  letter-spacing: 1px;
-  line-height: 1.5;
-}
-
-.phoneThread {
-  min-height: 0;
-  padding: 24px 16px;
-  display: grid;
-  align-content: start;
-  gap: 16px;
-}
-
-.phoneMessage,
-.phoneCard {
-  padding: 16px;
-  border: 1px solid var(--landing-border);
-  background: transparent;
-  display: grid;
-  gap: 8px;
-}
-
-.phoneCard {
-  background: var(--landing-surface);
-}
-
-.phoneLabel {
-  color: var(--landing-text-tertiary);
-  font-family: var(--font-display);
-  font-size: 12px;
-  letter-spacing: 1px;
-  line-height: 1.5;
-  text-transform: uppercase;
-}
-
-.phoneMessage p,
-.phoneCard p {
-  margin: 0;
-  color: var(--landing-foreground);
-  font-family: var(--font-body);
-  font-size: 16px;
-  line-height: 1.5;
-}
-
-.phoneProgress {
-  height: 8px;
-  border: 1px solid var(--landing-border-strong);
-  background: transparent;
-}
-
-.phoneProgress span {
+.phoneScreenshot {
   display: block;
-  width: 72%;
+  width: 100%;
   height: 100%;
-  background: var(--landing-foreground);
+  object-fit: cover;
 }
 
-.heroVisual {
-  position: relative;
-  min-width: 0;
-  grid-column: 1 / -1;
-}
-
-.visualBackdrop {
-  position: relative;
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(280px, 420px);
-  align-items: stretch;
-  gap: 24px;
-  min-width: 0;
-}
-
-.terminalWindow {
-  position: relative;
-  width: 100%;
-  min-width: 0;
-  border: 1px solid var(--landing-border);
-  border-radius: 0;
-  background: var(--landing-surface);
-  justify-self: start;
-  z-index: 1;
-}
-
-.visualCaption {
-  display: grid;
-  gap: 8px;
-  align-content: start;
-  padding: 24px;
-  border: 1px solid var(--landing-border);
-  background: transparent;
-}
-
-.visualCaptionLabel {
-  margin: 0;
-  color: var(--landing-foreground);
-  font-family: var(--font-display);
-  font-size: 12px;
-  letter-spacing: 1px;
-  line-height: 1.5;
-  text-transform: uppercase;
-}
-
-.windowChrome {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 12px 16px;
-  border-bottom: 1px solid var(--landing-border);
-}
-
-.windowDot {
-  width: 8px;
-  height: 8px;
-  border: 1px solid var(--landing-border-strong);
-  border-radius: 0;
-  background: transparent;
-}
-
-.terminalBody {
-  padding: 24px;
-  display: grid;
-  gap: 8px;
-}
-
-.terminalPath,
-.terminalOutput,
-.terminalMuted {
-  margin: 0;
-}
-
-.terminalPath,
-.terminalMuted {
-  color: var(--landing-text-tertiary);
-  font-size: 14px;
-  line-height: 1.5;
-}
-
-.terminalPromptRow {
-  display: grid;
-  grid-template-columns: auto minmax(0, 1fr);
-  gap: 8px;
-  align-items: start;
-}
-
-.terminalPrompt {
-  color: var(--landing-text-tertiary);
-  font-family: var(--font-display);
-}
-
-.terminalCommand {
-  color: var(--landing-foreground);
-  font-size: 14px;
-  line-height: 1.5;
-  white-space: pre-wrap;
-  word-break: break-word;
-}
-
-.terminalOutput {
-  color: var(--landing-text-secondary);
-  font-size: 14px;
-  line-height: 1.5;
-}
-
-.statusPanel {
-  position: relative;
-  width: 100%;
-  min-width: 0;
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 24px;
-  z-index: 1;
-  grid-column: 1 / -1;
-}
-
-.statusCard,
 .featureCard,
 .guideCard,
 .ctaPanel {
@@ -448,13 +375,18 @@
   background: var(--landing-surface);
 }
 
-.statusCard {
-  padding: 24px;
-  display: grid;
-  gap: 8px;
+.desktopPreviewSection {
+  margin-bottom: clamp(72px, 10vw, 112px);
 }
 
-.statusLabel,
+.desktopPreviewImage {
+  display: block;
+  width: 100%;
+  height: auto;
+  border: 1px solid var(--landing-border-strong);
+  background: var(--landing-surface);
+}
+
 .featureTitle,
 .guideTitle {
   margin: 0;
@@ -464,15 +396,6 @@
   letter-spacing: 1px;
   line-height: 1.5;
   text-transform: uppercase;
-}
-
-.statusTitle {
-  margin: 0;
-  color: var(--landing-foreground);
-  font-family: var(--font-body);
-  font-size: 22px;
-  font-weight: 400;
-  line-height: 1.2;
 }
 
 .sectionHeader,
@@ -518,8 +441,65 @@
   gap: 8px;
 }
 
+.guideHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  min-width: 0;
+}
+
+.guideTitleGroup {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+}
+
+.guideIcon {
+  width: 32px;
+  height: 32px;
+  flex: 0 0 auto;
+  object-fit: contain;
+}
+
+.guideCopyButton {
+  width: 36px;
+  height: 36px;
+  padding: 0;
+  border: 1px solid var(--landing-border-strong);
+  border-radius: 0;
+  background: transparent;
+  color: var(--landing-foreground);
+  cursor: pointer;
+  flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition:
+    background-color 140ms ease,
+    border-color 140ms ease,
+    color 140ms ease;
+}
+
+.guideCopyButton:hover {
+  background: var(--landing-foreground);
+  border-color: var(--landing-foreground);
+  color: var(--landing-background);
+}
+
+.guideCopyIcon {
+  width: 17px;
+  height: 17px;
+  fill: none;
+  stroke: currentColor;
+  stroke-linecap: square;
+  stroke-linejoin: miter;
+  stroke-width: 1.8;
+}
+
 .guideGrid {
-  grid-template-columns: repeat(4, minmax(0, 1fr));
+  grid-template-columns: repeat(2, minmax(0, 1fr));
 }
 
 .guideCommand {
@@ -555,16 +535,18 @@
 
 @media (max-width: 1120px) {
   .hero {
-    grid-template-columns: minmax(0, 1fr);
+    flex-direction: column;
+    align-items: flex-start;
   }
 
-  .phonePreview {
-    justify-self: start;
+  .phoneShowcase {
+    flex-basis: auto;
     width: min(100%, 320px);
   }
 
-  .visualBackdrop {
-    grid-template-columns: 1fr;
+  .setupBlock {
+    flex-basis: auto;
+    width: 100%;
   }
 
   .featureGrid {
@@ -592,7 +574,7 @@
 
   .hero {
     min-height: auto;
-    gap: 48px;
+    row-gap: 48px;
     margin-bottom: 72px;
   }
 
@@ -608,17 +590,12 @@
     width: 100%;
   }
 
-  .actionRow,
+  .themeToggleButton {
+    flex: 0 0 44px;
+  }
+
   .ctaActions {
     width: 100%;
-  }
-
-  .visualCaption {
-    padding: 24px;
-  }
-
-  .statusPanel {
-    grid-template-columns: 1fr;
   }
 
   .featureGrid,

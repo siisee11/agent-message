@@ -307,7 +307,7 @@ To stop both processes:
 agent-message stop --dev
 ```
 
-If you also want to start or stop the named tunnel that serves `https://agent.namjaeyoun.com`, use:
+If you also want to start or stop a configured named tunnel, use:
 
 ```bash
 agent-message start --dev --with-tunnel

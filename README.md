@@ -94,6 +94,7 @@ agent-message start
 agent-message status
 agent-message stop
 agent-message upgrade
+agent-message uninstall
 ```
 
 Default ports:
@@ -104,6 +105,7 @@ For self-hosted local use, `agent-message start` creates and uses a local SQLite
 The hosted cloud service is still in preparation. Future managed cloud deployments should run the server with `DB_DRIVER=postgres` and `POSTGRES_DSN`.
 After `agent-message start`, open `http://127.0.0.1:45788` in your browser.
 `agent-message start` also updates the bundled CLI config to use the started local API. Regular commands follow `server_url` in config unless you pass `--server-url`.
+`agent-message uninstall` stops the local stack and removes the global npm package. It preserves `~/.agent-message` by default so local accounts, SQLite data, uploads, logs, and CLI profiles are not deleted accidentally. To remove that runtime data too, run `agent-message uninstall --purge`.
 The bundled CLI continues to work from the same command:
 
 ```bash

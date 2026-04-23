@@ -95,6 +95,7 @@ agent-message start
 agent-message status
 agent-message stop
 agent-message upgrade
+agent-message uninstall
 ```
 
 기본 포트:
@@ -102,6 +103,7 @@ agent-message upgrade
 - Web: `127.0.0.1:45788`
 
 self-hosted local 사용 시 `agent-message start`는 기본적으로 로컬 SQLite 데이터베이스를 생성해 사용합니다. 클라우드 서비스는 아직 준비 중입니다. 향후 managed cloud 배포는 `DB_DRIVER=postgres`와 `POSTGRES_DSN`으로 서버를 실행해야 합니다.
+`agent-message uninstall`은 로컬 스택을 멈추고 글로벌 npm 패키지를 제거합니다. 기본적으로 `~/.agent-message`는 보존하므로 로컬 계정, SQLite 데이터, 업로드, 로그, CLI 프로필이 실수로 삭제되지 않습니다. 런타임 데이터까지 삭제하려면 `agent-message uninstall --purge`를 실행하세요.
 
 일반 CLI 명령은 같은 `agent-message` 명령에서 계속 사용할 수 있습니다.
 

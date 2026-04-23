@@ -75,3 +75,17 @@ agent-message config get server_url
 agent-message config get master
 agent-message whoami
 ```
+
+## Uninstall
+
+To remove Agent Message later, stop the local stack and uninstall the global npm package:
+
+```bash
+agent-message uninstall
+```
+
+This keeps `~/.agent-message` by default. To also delete local accounts, SQLite data, uploads, logs, and CLI profiles:
+
+```bash
+agent-message uninstall --purge
+```

@@ -34,6 +34,7 @@ const tunnelName = 'agent-namjaeyoun-com'
 
 const lifecycleCommands = new Set(['start', 'stop', 'status'])
 const upgradeCommand = 'upgrade'
+const uninstallCommand = 'uninstall'
 const packageJsonPath = resolve(packageRoot, 'package.json')
 const bundledCliFallbackCommands = [
   ['catalog', 'Inspect the server json-render catalog metadata'],
@@ -79,6 +80,12 @@ async function main() {
     return
   }
 
+  if (command === uninstallCommand) {
+    const options = await parseUninstallOptions(rest)
+    await uninstallPackage(options)
+    return
+  }
+
   if (lifecycleCommands.has(command)) {
     const options = await parseLifecycleOptions(rest)
     if (!options.dev) {
@@ -107,6 +114,7 @@ async function printRootUsage({ stream }) {
   agent-message stop [--dev] [--with-tunnel] [--runtime-dir <dir>]
   agent-message status [--dev] [--runtime-dir <dir>] [--api-host <host>] [--api-port <port>] [--web-host <host>] [--web-port <port>]
   agent-message upgrade
+  agent-message uninstall [--runtime-dir <dir>] [--purge]
 \n`)
 
   const bundledHelp = await renderBundledCliHelp()
@@ -160,8 +168,12 @@ Flags:
 }
 
 function runGlobalUpgrade(packages) {
+  process.exit(runGlobalNpm(['install', '-g', ...packages]))
+}
+
+function runGlobalNpm(args) {
   const npmCommand = process.platform === 'win32' ? 'npm.cmd' : 'npm'
-  const result = spawnSync(npmCommand, ['install', '-g', ...packages], {
+  const result = spawnSync(npmCommand, args, {
     stdio: 'inherit',
     cwd: process.cwd(),
     env: process.env,
@@ -173,10 +185,10 @@ function runGlobalUpgrade(packages) {
 
   if (result.signal) {
     process.kill(process.pid, result.signal)
-    return
+    return 1
   }
 
-  process.exit(result.status ?? 1)
+  return result.status ?? 1
 }
 
 function printVersion(path) {
@@ -188,7 +200,7 @@ async function parseLifecycleOptions(args) {
   const options = {
     dev: false,
     withTunnel: false,
-    runtimeDir: join(os.homedir(), '.agent-message'),
+    runtimeDir: defaultRuntimeDir(),
     apiHost: DEFAULT_API_HOST,
     apiPort: DEFAULT_API_PORT,
     webHost: DEFAULT_WEB_HOST,
@@ -235,6 +247,41 @@ async function parseLifecycleOptions(args) {
   }
 
   return options
+}
+
+async function parseUninstallOptions(args) {
+  const options = {
+    runtimeDir: defaultRuntimeDir(),
+    purge: false,
+  }
+
+  for (let index = 0; index < args.length; index += 1) {
+    const arg = args[index]
+    if (arg === '--help' || arg === '-h') {
+      await printRootUsage({ stream: process.stdout })
+      process.exit(0)
+    }
+    if (arg === '--runtime-dir') {
+      options.runtimeDir = requireOptionValue(args, ++index, arg)
+      continue
+    }
+    if (arg === '--purge' || arg === '--delete-data') {
+      options.purge = true
+      continue
+    }
+    if (arg === '--keep-data') {
+      options.purge = false
+      continue
+    }
+
+    throw new Error(`unknown option: ${arg}`)
+  }
+
+  return options
+}
+
+function defaultRuntimeDir() {
+  return join(os.homedir(), '.agent-message')
 }
 
 function requireOptionValue(args, index, flag) {
@@ -501,6 +548,34 @@ async function stopStack(options, { quiet }) {
       console.log('Agent Message is not running.')
     }
   }
+}
+
+async function uninstallPackage(options) {
+  await stopStack(options, { quiet: true })
+
+  const status = runGlobalNpm(['uninstall', '-g', 'agent-message'])
+  if (status !== 0) {
+    process.exit(status)
+  }
+
+  if (options.purge) {
+    removeRuntimeDir(options.runtimeDir)
+    console.log(`Removed Agent Message runtime data: ${resolve(options.runtimeDir)}`)
+  } else {
+    console.log(`Agent Message package removed. Local data preserved at ${resolve(options.runtimeDir)}`)
+  }
+}
+
+function removeRuntimeDir(runtimeDir) {
+  const target = resolve(runtimeDir)
+  const home = resolve(os.homedir())
+  const root = resolve('/')
+
+  if (target === root || target === home || target === resolve(process.cwd()) || target === packageRoot) {
+    throw new Error(`refusing to purge unsafe runtime dir: ${target}`)
+  }
+
+  rmSync(target, { recursive: true, force: true })
 }
 
 async function printStatus(options) {

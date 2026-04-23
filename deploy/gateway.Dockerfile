@@ -7,6 +7,7 @@ COPY web/package.json web/package-lock.json ./
 RUN npm ci
 
 COPY web/. ./
+ENV VITE_AGENT_MESSAGE_SELFHOST=1
 RUN npm run build
 
 FROM node:20-alpine

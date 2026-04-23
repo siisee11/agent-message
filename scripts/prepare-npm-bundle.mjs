@@ -50,6 +50,10 @@ run('node', ['./scripts/generate-message-json-render-catalog-prompt.mjs'], {
 
 run('npm', ['run', 'build'], {
   cwd: join(rootDir, 'web'),
+  env: {
+    ...process.env,
+    VITE_AGENT_MESSAGE_SELFHOST: '1',
+  },
 })
 
 cpSync(join(rootDir, 'web', 'dist'), webDistDir, { recursive: true })

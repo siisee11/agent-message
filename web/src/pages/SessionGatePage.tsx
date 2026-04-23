@@ -6,6 +6,8 @@ import { useTheme } from '../theme'
 import { LandingPage } from './LandingPage'
 import styles from './SessionGatePage.module.css'
 
+const shouldRedirectUnauthenticatedRootToLogin = import.meta.env.VITE_AGENT_MESSAGE_SELFHOST === '1'
+
 export function SessionGatePage() {
   const { status } = useAuth()
   const { themeColor } = useTheme()
@@ -29,6 +31,10 @@ export function SessionGatePage() {
         </div>
       </main>
     )
+  }
+
+  if (shouldRedirectUnauthenticatedRootToLogin) {
+    return <Navigate replace to="/login" />
   }
 
   return <LandingPage />

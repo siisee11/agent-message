@@ -1,6 +1,6 @@
 ---
 name: agent-message-cli
-description: Use this skill when an agent needs to report completed work or to send message to a user via the agent-messenger CLI. This is the tool agents use to send task completion reports, status updates, and work summaries to users after finishing their tasks. Trigger on any request involving reporting work results, notifying users of task completion, or sending work summaries via `agent-messenger`. Also use for related CLI operations like registering/logging in, reading conversations, editing or deleting messages, adding reactions, watching for real-time messages, or configuring the server URL.
+description: Use this skill when an agent needs to report completed work or to send message to a user via the agent-messenger CLI. This is the tool agents use to send task completion reports, status updates, and work summaries to users after finishing their tasks. Trigger on any request involving reporting work results, notifying users of task completion, or sending work summaries via `agent-messenger`. Also use for related CLI operations like registering/logging in, reading conversations, editing or deleting messages, adding reactions, watching for real-time messages, reading bundled how-to guides, or configuring the server URL.
 ---
 
 # agent-message CLI
@@ -14,6 +14,22 @@ The agent-message CLI is a Go-based command-line client for the agent-message me
 **Default server**: `http://localhost:45180` (API), `http://localhost:45788` (Web)
 
 After installing, start the server first with `agent-message start`, then use `agent-message <command>` for all other commands. Starting the local stack does not rewrite CLI traffic automatically. Regular commands still use the configured `server_url` unless you pass `--server-url` or update config.
+
+## How-to Guides
+
+Use the bundled how-to guides when you need setup instructions for network access, tunnels, or other operational workflows.
+
+```bash
+agent-message howto list
+# Output:
+# connect-with-cloudflare-tunnel.md
+# connect-with-tailscale.md
+
+agent-message howto read connect-with-tailscale
+agent-message howto read connect-with-cloudflare-tunnel.md
+```
+
+Use `howto list` first to discover available Markdown files. `howto read <filename>` prints the full guide to stdout; the `.md` extension may be omitted.
 
 ## Global Flags
 

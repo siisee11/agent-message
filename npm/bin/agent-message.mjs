@@ -618,7 +618,13 @@ function buildDevLaunchSpec(paths) {
     runForeground('npm', ['ci'], { cwd: sourceWebDir })
   }
   runForeground('node', ['./scripts/generate-message-json-render-catalog-prompt.mjs'], { cwd: packageRoot })
-  runForeground('npm', ['run', 'build'], { cwd: sourceWebDir })
+  runForeground('npm', ['run', 'build'], {
+    cwd: sourceWebDir,
+    env: {
+      ...process.env,
+      VITE_AGENT_MESSAGE_SELFHOST: '1',
+    },
+  })
 
   const serverBinaryPath = join(paths.binDir, 'agent-message-server')
   runForeground('go', ['build', '-o', serverBinaryPath, '.'], { cwd: sourceServerDir })
@@ -768,10 +774,10 @@ function spawnDetached(command, args, env, logFile) {
   }
 }
 
-function runForeground(command, args, { cwd }) {
+function runForeground(command, args, { cwd, env = process.env }) {
   const result = spawnSync(command, args, {
     cwd,
-    env: process.env,
+    env,
     stdio: 'inherit',
   })
 

@@ -193,40 +193,14 @@ WEB_PUSH_SUBJECT=mailto:you@example.com \
 go run .
 ```
 
-### Local production-like stack (Server + PostgreSQL)
+## Self-host Container Deploy
 
-```bash
-make stack-up
-```
-
-This starts:
-- `postgres` on `localhost:5432`
-- `server` on `localhost:8080` with:
-  - `DB_DRIVER=postgres`
-  - `POSTGRES_DSN=postgres://agent:agent@postgres:5432/agent_message?sslmode=disable`
-
-To stop and remove containers:
-
-```bash
-docker compose down
-```
-
-To also remove persisted DB/uploads volumes:
-
-```bash
-docker compose down -v
-```
-
-If Postgres starts with `Database directory appears to contain a database` and the server logs `password authentication failed for user "agent"`, the persisted `postgres_data` volume was initialized with different credentials. Remove the persisted volumes with `docker compose down -v`, then start the stack again.
-
-## Home Server Container Deploy
-
-For a home Mac server, you can run the self-hosted stack entirely with containers. The `gateway` image builds `web/dist` during `docker compose build`, so you do not need to run `npm run build` on the host first.
+For a self-hosted Mac server, you can run the stack entirely with containers. The `gateway` image builds `web/dist` during `docker compose build`, so you do not need to run `npm run build` on the host first.
 
 1. Copy the example env file and fill in your values:
 
 ```bash
-cp .env.home.example .env.home
+cp .env.selfhost.example .env.selfhost
 ```
 
 Required values:
@@ -234,7 +208,7 @@ Required values:
 - `POSTGRES_PASSWORD`
 - `CLOUDFLARE_TUNNEL_TOKEN`
 
-Web push keys are optional in `.env.home`.
+Web push keys are optional in `.env.selfhost`.
 - If `WEB_PUSH_VAPID_PUBLIC_KEY` / `WEB_PUSH_VAPID_PRIVATE_KEY` are blank, the server container generates them on first boot and stores them in the `web_push_data` volume.
 - If `WEB_PUSH_SUBJECT` is blank, it defaults to `https://<APP_HOSTNAME>`.
 - On startup, the server container normalizes ownership for the `uploads` and `web_push_data` volumes before dropping privileges to the unprivileged `app` user.
@@ -248,11 +222,17 @@ make publish
 3. Check status:
 
 ```bash
-docker compose --env-file .env.home -f docker-compose.home.yml ps
-docker compose --env-file .env.home -f docker-compose.home.yml logs -f
+docker compose --env-file .env.selfhost -f docker-compose.selfhost.yml ps
+docker compose --env-file .env.selfhost -f docker-compose.selfhost.yml logs -f
 ```
 
-The home-server stack includes:
+4. Stop the stack:
+
+```bash
+make unpublish
+```
+
+The self-host stack includes:
 - `postgres`
 - `server`
 - `gateway`

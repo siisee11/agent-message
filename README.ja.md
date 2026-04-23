@@ -195,22 +195,16 @@ cd server
 go run .
 ```
 
-PostgreSQL を含むローカル production-like stack:
-
-```bash
-make stack-up
-docker compose down
-```
-
-## Home Server Container Deploy
+## Self-host Container Deploy
 
 家庭用 Mac サーバーでは、self-hosted stack 全体をコンテナで実行できます。
 
 ```bash
-cp .env.home.example .env.home
+cp .env.selfhost.example .env.selfhost
 make publish
-docker compose --env-file .env.home -f docker-compose.home.yml ps
-docker compose --env-file .env.home -f docker-compose.home.yml logs -f
+docker compose --env-file .env.selfhost -f docker-compose.selfhost.yml ps
+docker compose --env-file .env.selfhost -f docker-compose.selfhost.yml logs -f
+make unpublish
 ```
 
 必須値:

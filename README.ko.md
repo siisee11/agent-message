@@ -186,7 +186,7 @@ agent-message stop --dev
 필요 조건:
 - Go `1.26+`
 - Node.js `18+` 및 npm
-- Docker + Docker Compose (PostgreSQL compose 흐름용)
+- Docker + Docker Compose (self-host container 흐름용)
 
 ## 서버 빠른 시작
 
@@ -197,22 +197,16 @@ cd server
 go run .
 ```
 
-PostgreSQL을 포함한 로컬 production-like stack:
-
-```bash
-make stack-up
-docker compose down
-```
-
-## Home Server Container Deploy
+## Self-host Container Deploy
 
 홈 Mac 서버에서는 컨테이너만으로 self-hosted stack을 실행할 수 있습니다.
 
 ```bash
-cp .env.home.example .env.home
+cp .env.selfhost.example .env.selfhost
 make publish
-docker compose --env-file .env.home -f docker-compose.home.yml ps
-docker compose --env-file .env.home -f docker-compose.home.yml logs -f
+docker compose --env-file .env.selfhost -f docker-compose.selfhost.yml ps
+docker compose --env-file .env.selfhost -f docker-compose.selfhost.yml logs -f
+make unpublish
 ```
 
 필수 값:

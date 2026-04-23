@@ -127,8 +127,8 @@ Referenced but missing (noted once):
     - unsupported multipart attachment type on message send.
   - Validation run: `cd server && go test ./...` (pass).
 - Completed M5 (Docker Compose for server + PostgreSQL):
-  - Added root compose stack for local production-like runs:
-    - `docker-compose.yml`
+  - Added compose stack for containerized runs:
+    - `docker-compose.selfhost.yml`
   - Added container build definition for server service:
     - `server/Dockerfile`
   - Compose wiring includes:

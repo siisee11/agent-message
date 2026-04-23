@@ -1,4 +1,4 @@
-.PHONY: cli-build cli-test cli-clean claude-message-build claude-message-test claude-message-clean npm-auth-check stack-up publish release publish-agent-message publish-codex-message publish-claude-message
+.PHONY: cli-build cli-test cli-clean claude-message-build claude-message-test claude-message-clean npm-auth-check publish unpublish release publish-agent-message publish-codex-message publish-claude-message
 
 CLI_DIR := cli
 CLI_BINARY := agent-message
@@ -42,11 +42,11 @@ claude-message-clean:
 npm-auth-check:
 	$(NPM_PUBLISH_AUTH_ENV) npm whoami >/dev/null
 
-stack-up:
-	docker compose up --build
-
 publish:
-	docker compose -f docker-compose.home.yml up -d --build
+	docker compose --env-file .env.selfhost -f docker-compose.selfhost.yml up -d --build
+
+unpublish:
+	docker compose --env-file .env.selfhost -f docker-compose.selfhost.yml down
 
 release: npm-auth-check publish-agent-message publish-codex-message publish-claude-message
 

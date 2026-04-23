@@ -195,22 +195,16 @@ cd server
 go run .
 ```
 
-包含 PostgreSQL 的本地 production-like stack：
-
-```bash
-make stack-up
-docker compose down
-```
-
-## Home Server Container Deploy
+## Self-host Container Deploy
 
 在家用 Mac 服务器上，可以完全用容器运行 self-hosted stack。
 
 ```bash
-cp .env.home.example .env.home
+cp .env.selfhost.example .env.selfhost
 make publish
-docker compose --env-file .env.home -f docker-compose.home.yml ps
-docker compose --env-file .env.home -f docker-compose.home.yml logs -f
+docker compose --env-file .env.selfhost -f docker-compose.selfhost.yml ps
+docker compose --env-file .env.selfhost -f docker-compose.selfhost.yml logs -f
+make unpublish
 ```
 
 必填值：

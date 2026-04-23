@@ -87,6 +87,7 @@ func NewRootCommand() *cobra.Command {
 	cmd.AddCommand(
 		newSchemaCommand(rt, func() *cobra.Command { return root }),
 		newCatalogCommand(rt),
+		newHowtoCommand(rt),
 		newConfigCommand(rt),
 		newProfileCommand(rt),
 		newOnboardCommand(rt),

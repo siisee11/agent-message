@@ -25,6 +25,7 @@ const bundleRoot = resolve(packageRoot, 'npm', 'runtime')
 const bundleBinDir = join(bundleRoot, 'bin')
 const bundleGatewayPath = join(bundleRoot, 'agent_gateway.mjs')
 const bundleWebDistDir = join(bundleRoot, 'web-dist')
+const howtoDir = join(packageRoot, 'howto')
 const sourceServerDir = resolve(packageRoot, 'server')
 const sourceWebDir = resolve(packageRoot, 'web')
 const sourceGatewayPath = resolve(packageRoot, 'deploy', 'agent_gateway.mjs')
@@ -41,6 +42,7 @@ const bundledCliFallbackCommands = [
   ['config', 'Inspect and update local CLI configuration'],
   ['delete', 'Delete a message by explicit message ID or by index from the last read'],
   ['edit', 'Edit a message by explicit message ID or by index from the last read'],
+  ['howto', 'Read bundled how-to guides'],
   ['login', 'Log in with username and password'],
   ['logout', 'Log out and clear local token'],
   ['ls', 'List your direct-message conversations'],
@@ -651,7 +653,10 @@ function delegateToBundledCli(args) {
   const cliBinary = resolveBinaryPath('agent-message-cli')
   const result = spawnSync(cliBinary, args, {
     stdio: 'inherit',
-    env: process.env,
+    env: {
+      ...process.env,
+      AGENT_MESSAGE_HOWTO_DIR: howtoDir,
+    },
   })
 
   if (result.error) {

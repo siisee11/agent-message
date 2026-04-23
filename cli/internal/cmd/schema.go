@@ -416,6 +416,31 @@ func schemaRegistry() map[string]commandSchemaDescriptor {
 				"agent-message catalog prompt --json",
 			},
 		},
+		"agent-message howto": {
+			Notes: []string{
+				"How-to guides are Markdown files bundled with the CLI package.",
+			},
+		},
+		"agent-message howto list": {
+			OutputFormats: []string{"text", "json"},
+			Examples: []string{
+				"agent-message howto list",
+				"agent-message howto list --json",
+			},
+		},
+		"agent-message howto read": {
+			Arguments: map[string]parameterMetadata{
+				"filename": {
+					Description: "How-to Markdown file name from `agent-message howto list`; the .md extension may be omitted",
+					Constraints: []string{"must be a file name, not a path", "must not contain dot segments"},
+				},
+			},
+			OutputFormats: []string{"text", "json"},
+			Examples: []string{
+				"agent-message howto read connect-with-tailscale.md",
+				"agent-message howto read connect-with-cloudflare-tunnel",
+			},
+		},
 		"agent-message config": {},
 		"agent-message config path": {
 			OutputFormats: []string{"text", "json"},

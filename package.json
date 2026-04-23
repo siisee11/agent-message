@@ -1,6 +1,6 @@
 {
   "name": "agent-message",
-  "version": "0.6.24",
+  "version": "0.6.25",
   "description": "Agent Message CLI and local stack launcher for macOS",
   "type": "module",
   "bin": {
@@ -10,6 +10,7 @@
     "README.md",
     "agent-message-logo.png",
     "agent-message-logo.svg",
+    "howto",
     "npm/bin/agent-message.mjs",
     "npm/runtime"
   ],

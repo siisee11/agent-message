@@ -12,16 +12,35 @@ Use this file only for first-time agent setup. Keep the flow limited to skill in
 Install the `agent-message-cli` skill first so the current coding agent knows the CLI commands:
 
 ```bash
-npx skills add https://github.com/siisee11/agent-message --skill agent-message-cli -g -y
+npx skills add https://github.com/siisee11/agent-message --skill agent-message-cli -a codex -a claude-code -g -y
 ```
 
-## 2. Install the npm package
+## 2. Install the npm packages
 
-Install the packaged CLI and local stack launcher:
+Always install the packaged CLI and local stack launcher. Before installing, check whether the user's computer has Codex or Claude Code available, and install the matching wrapper package too:
 
 ```bash
-npm install -g agent-message
+packages=(agent-message)
+
+if command -v codex >/dev/null 2>&1; then
+  packages+=(codex-message)
+fi
+
+if command -v claude-code >/dev/null 2>&1 || \
+  command -v claude >/dev/null 2>&1 || \
+  npm list -g @anthropic-ai/claude-code --depth=0 >/dev/null 2>&1; then
+  packages+=(claude-message)
+fi
+
+npm install -g "${packages[@]}"
 ```
+
+Install behavior:
+- `agent-message` is always installed.
+- `codex-message` is installed only when the `codex` CLI is present.
+- `claude-message` is installed when `claude-code`, `claude`, or the global `@anthropic-ai/claude-code` npm package is present.
+
+## 3. Start the local stack
 
 Start the self-hosted local stack:
 
@@ -32,7 +51,7 @@ agent-message status
 
 `agent-message start` updates `~/.agent-message/config` so CLI commands target the started local API.
 
-## 3. Set up the account
+## 4. Set up the account
 
 Ask the user for the `account-id` before registering. The account ID is used for authentication and must be `3-32` characters using only letters, numbers, `.`, `_`, or `-`.
 
@@ -54,7 +73,7 @@ Important: `0000` is only a temporary setup password. Tell the user they must ch
 http://127.0.0.1:45788
 ```
 
-## 4. Set up CLI configuration
+## 5. Set up CLI configuration
 
 If the user wants a public display name different from `account-id`, set it:
 

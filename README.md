@@ -58,11 +58,13 @@ Use the setup prompt above when an agent is installing Agent Message for you.
 Or install manually with npm:
 
 ```bash
-npx skills add https://github.com/siisee11/agent-message --skill agent-message-cli -g -y
+npx skills add https://github.com/siisee11/agent-message --skill agent-message-cli -a codex -a claude-code -g -y
 npm install -g agent-message
 agent-message start
 agent-message status
 ```
+
+See `install.md` for the agent setup flow that conditionally installs `codex-message` when `codex` is present and `claude-message` when Claude Code is present.
 
 Then create or log into a local account. Ask the user for the `account-id` before registering. Use `0000` only as the temporary setup password:
 

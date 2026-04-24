@@ -594,7 +594,11 @@
 @media (max-width: 480px) {
   .shell {
     gap: 0.75rem;
-    padding: 0;
+    padding:
+      max(1rem, calc(env(safe-area-inset-top) + 1rem))
+      env(safe-area-inset-right)
+      0
+      env(safe-area-inset-left);
   }
 
   .header,

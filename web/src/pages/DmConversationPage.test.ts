@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import {
+  resolveConversationShortcutIndex,
   resolvePendingTurnMessageId,
   resolvePendingTurnStatus,
   shouldStickToBottomOnMessageAppend,
@@ -75,5 +76,37 @@ describe('dm conversation pending turn helpers', () => {
       label: 'updates interrupted',
       tone: 'offline',
     })
+  })
+})
+
+describe('dm conversation keyboard shortcuts', () => {
+  function shortcutEvent(overrides: Partial<KeyboardEvent>): KeyboardEvent {
+    return {
+      altKey: false,
+      ctrlKey: false,
+      defaultPrevented: false,
+      isComposing: false,
+      key: '1',
+      metaKey: true,
+      shiftKey: false,
+      ...overrides,
+    } as KeyboardEvent
+  }
+
+  it('maps command number shortcuts to zero-based conversation indexes', () => {
+    expect(resolveConversationShortcutIndex(shortcutEvent({ key: '1' }))).toBe(0)
+    expect(resolveConversationShortcutIndex(shortcutEvent({ key: '9' }))).toBe(8)
+  })
+
+  it('ignores non-command and modified shortcuts', () => {
+    expect(resolveConversationShortcutIndex(shortcutEvent({ metaKey: false }))).toBeNull()
+    expect(resolveConversationShortcutIndex(shortcutEvent({ altKey: true }))).toBeNull()
+    expect(resolveConversationShortcutIndex(shortcutEvent({ shiftKey: true }))).toBeNull()
+    expect(resolveConversationShortcutIndex(shortcutEvent({ key: '0' }))).toBeNull()
+  })
+
+  it('ignores consumed and composing keyboard events', () => {
+    expect(resolveConversationShortcutIndex(shortcutEvent({ defaultPrevented: true }))).toBeNull()
+    expect(resolveConversationShortcutIndex(shortcutEvent({ isComposing: true }))).toBeNull()
   })
 })

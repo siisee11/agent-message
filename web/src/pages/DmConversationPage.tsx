@@ -45,6 +45,7 @@ import styles from './DmConversationPage.module.css'
 
 const MESSAGE_PAGE_SIZE = 20
 const TIMELINE_PULL_TRIGGER_PX = 32
+const DESKTOP_CONVERSATION_SHORTCUT_MEDIA = '(min-width: 1200px)'
 const TIMESTAMP_FORMATTER = new Intl.DateTimeFormat('en-US', {
   month: 'short',
   day: 'numeric',
@@ -269,6 +270,30 @@ export function resolvePendingTurnStatus(
     label: 'starting turn',
     tone: 'connecting',
   }
+}
+
+export function resolveConversationShortcutIndex(
+  event: Pick<
+    KeyboardEvent,
+    'altKey' | 'ctrlKey' | 'defaultPrevented' | 'isComposing' | 'key' | 'metaKey' | 'shiftKey'
+  >,
+): number | null {
+  if (
+    event.defaultPrevented ||
+    event.isComposing ||
+    !event.metaKey ||
+    event.altKey ||
+    event.ctrlKey ||
+    event.shiftKey
+  ) {
+    return null
+  }
+
+  if (!/^[1-9]$/.test(event.key)) {
+    return null
+  }
+
+  return Number(event.key) - 1
 }
 
 function useAsciiStatusFrame(tone: PendingTurnTone): string {
@@ -787,6 +812,34 @@ export function DmConversationPage() {
       window.removeEventListener('keydown', handleWindowKeyDown)
     }
   }, [actionMenu])
+
+  useEffect(() => {
+    if (typeof window === 'undefined' || conversations.length === 0) {
+      return
+    }
+
+    const handleConversationShortcut = (event: KeyboardEvent) => {
+      const shortcutIndex = resolveConversationShortcutIndex(event)
+      if (shortcutIndex === null || !window.matchMedia(DESKTOP_CONVERSATION_SHORTCUT_MEDIA).matches) {
+        return
+      }
+
+      const targetConversationId = conversations[shortcutIndex]?.conversation.id
+      if (!targetConversationId) {
+        return
+      }
+
+      event.preventDefault()
+      if (targetConversationId !== conversationId) {
+        void navigate(`/dm/${targetConversationId}`)
+      }
+    }
+
+    window.addEventListener('keydown', handleConversationShortcut)
+    return () => {
+      window.removeEventListener('keydown', handleConversationShortcut)
+    }
+  }, [conversationId, conversations, navigate])
 
   useEffect(() => {
     if (!actionMenuMessage) {

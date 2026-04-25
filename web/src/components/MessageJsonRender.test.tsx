@@ -178,6 +178,33 @@ describe('MessageJsonRender', () => {
     expect(html).toContain('<a href="https://example.com">links</a>')
   })
 
+  it('renders json images as zoomable controls', () => {
+    const html = ReactDOMServer.renderToStaticMarkup(
+      <MessageJsonRender
+        spec={{
+          root: 'image-1',
+          elements: {
+            'image-1': {
+              type: 'Image',
+              props: {
+                alt: 'Generated diagram',
+                height: 800,
+                src: '/static/uploads/diagram.png',
+                width: 1200,
+              },
+            },
+          },
+        }}
+      />,
+    )
+
+    expect(html).toContain('Zoom image: Generated diagram')
+    expect(html).toContain('src="/static/uploads/diagram.png"')
+    expect(html).toContain('alt="Generated diagram"')
+    expect(html).toContain('width="1200"')
+    expect(html).toContain('height="800"')
+  })
+
   it('renders json tables inside a dedicated scroll container', () => {
     const html = ReactDOMServer.renderToStaticMarkup(
       <MessageJsonRender

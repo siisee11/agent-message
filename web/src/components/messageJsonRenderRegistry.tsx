@@ -5,6 +5,7 @@ import { MessageApprovalCard } from './MessageApprovalCard'
 import { MessageAskQuestion } from './MessageAskQuestion'
 import { MessageCommitLog } from './MessageCommitLog'
 import { MessageBarGraph, MessageLineGraph } from './MessageGraph'
+import { MessageImage } from './MessageImage'
 import { MessageMarkdown } from './MessageMarkdown'
 import { MessageTable } from './MessageTable'
 import { messageJsonRenderCatalog } from './messageJsonRenderCatalog'
@@ -21,7 +22,7 @@ export const { registry: messageJsonRenderRegistry } = defineRegistry(messageJso
     GitCommitLog: MessageCommitLog,
     Grid: shadcnComponents.Grid,
     Heading: shadcnComponents.Heading,
-    Image: shadcnComponents.Image,
+    Image: MessageImage,
     LineGraph: MessageLineGraph,
     Markdown: MessageMarkdown,
     Progress: shadcnComponents.Progress,

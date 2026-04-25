@@ -62,7 +62,7 @@ if (process.argv.includes('--bg')) {
     printBackgroundHelp('codex-message')
     process.exit(0)
   }
-  runInBackground({
+  await runInBackground({
     appName: 'codex-message',
     binaryPath,
     forwardedArgs: backgroundArgs,
@@ -275,7 +275,7 @@ function printBackgroundHelp(appName) {
   console.log(`  ${appName} kill <session-id|pid|all>`)
 }
 
-function runInBackground({ appName, binaryPath, forwardedArgs, argv0 }) {
+async function runInBackground({ appName, binaryPath, forwardedArgs, argv0 }) {
   const wrapperDir = join(homedir(), '.agent-message', 'wrappers', appName)
   mkdirSync(wrapperDir, { recursive: true })
 
@@ -293,11 +293,29 @@ function runInBackground({ appName, binaryPath, forwardedArgs, argv0 }) {
       env: process.env,
       stdio: ['ignore', stdoutFd, stderrFd],
     })
-    child.unref()
-
     if (!Number.isInteger(child.pid) || child.pid <= 0) {
       throw new Error(`failed to launch background process: ${binaryPath}`)
     }
+
+    const startup = await waitForBackgroundStartup(child, logFile)
+    if (!startup.ok) {
+      if (startup.timedOut && isProcessAlive(child.pid)) {
+        child.kill('SIGTERM')
+      }
+      rmSync(metadataFile, { force: true })
+      console.error(`Failed to start ${appName} in background.`)
+      if (startup.reason) {
+        console.error(startup.reason)
+      }
+      if (startup.logExcerpt) {
+        console.error('')
+        console.error('Recent log output:')
+        console.error(startup.logExcerpt)
+      }
+      process.exit(startup.exitCode ?? 1)
+    }
+
+    child.unref()
 
     writeFileSync(
       metadataFile,
@@ -324,6 +342,90 @@ function runInBackground({ appName, binaryPath, forwardedArgs, argv0 }) {
   } finally {
     closeSync(stdoutFd)
     closeSync(stderrFd)
+  }
+}
+
+function waitForBackgroundStartup(child, logFile) {
+  const timeoutMs = 60_000
+  const pollMs = 250
+  const successText = 'Startup message sent'
+  const startedAt = Date.now()
+  let exitStatus = null
+  let exitSignal = null
+  let spawnError = null
+
+  child.on('error', (error) => {
+    spawnError = error
+  })
+  child.on('exit', (status, signal) => {
+    exitStatus = status
+    exitSignal = signal
+  })
+
+  return new Promise((resolvePromise) => {
+    const timer = setInterval(() => {
+      const logText = readTextFileIfExists(logFile)
+      if (logText.includes(successText)) {
+        clearInterval(timer)
+        resolvePromise({ ok: true })
+        return
+      }
+
+      if (spawnError) {
+        clearInterval(timer)
+        resolvePromise({
+          ok: false,
+          exitCode: 1,
+          reason: spawnError.message,
+          logExcerpt: tailLines(logText, 20),
+        })
+        return
+      }
+
+      if (exitStatus !== null || exitSignal !== null) {
+        clearInterval(timer)
+        resolvePromise({
+          ok: false,
+          exitCode: exitStatus ?? 1,
+          reason: `background process exited before startup completed${exitSignal ? ` (signal ${exitSignal})` : ''}`,
+          logExcerpt: tailLines(logText, 20),
+        })
+        return
+      }
+
+      if (Date.now() - startedAt >= timeoutMs) {
+        clearInterval(timer)
+        resolvePromise({
+          ok: false,
+          timedOut: true,
+          exitCode: 1,
+          reason: `timed out waiting for startup message confirmation after ${Math.round(timeoutMs / 1000)}s`,
+          logExcerpt: tailLines(logText, 20),
+        })
+      }
+    }, pollMs)
+  })
+}
+
+function readTextFileIfExists(path) {
+  try {
+    return readFileSync(path, 'utf8')
+  } catch {
+    return ''
+  }
+}
+
+function tailLines(text, limit) {
+  const lines = text.trim().split(/\r?\n/).filter(Boolean)
+  return lines.slice(-limit).join('\n')
+}
+
+function isProcessAlive(pid) {
+  try {
+    process.kill(pid, 0)
+    return true
+  } catch {
+    return false
   }
 }
 

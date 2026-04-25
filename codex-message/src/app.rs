@@ -33,6 +33,7 @@ Operational requirements from the codex-message wrapper:
     )
 }
 const WATCH_RETRY_DELAYS_SECS: [u64; 3] = [1, 2, 5];
+const STARTUP_MESSAGE_RETRY_DELAYS_SECS: [u64; 3] = [1, 2, 5];
 
 fn resolve_hostname() -> String {
     for key in ["HOSTNAME", "HOST", "COMPUTERNAME"] {
@@ -146,10 +147,9 @@ impl Runtime {
 
         let hostname = resolve_hostname();
         let startup_text = startup_text(&chat_id, &username, &password, &config.cwd, &hostname);
-        let startup_message_id = agent_client
-            .send_text_message(&to_username, &startup_text)
-            .await
-            .context("send startup message")?;
+        let startup_message_id =
+            send_startup_message_with_retry(&agent_client, &logger, &to_username, &startup_text)
+                .await?;
         let conversation_title = session_title(&config.cwd, "Codex");
         agent_client
             .set_conversation_title(&to_username, &conversation_title)
@@ -761,6 +761,49 @@ impl Runtime {
     }
 }
 
+async fn send_startup_message_with_retry(
+    agent_client: &AgentMessageClient,
+    logger: &LogUi,
+    to_username: &str,
+    startup_text: &str,
+) -> Result<String> {
+    for attempt_index in 0..=STARTUP_MESSAGE_RETRY_DELAYS_SECS.len() {
+        match agent_client
+            .send_text_message(to_username, startup_text)
+            .await
+            .context("send startup message")
+        {
+            Ok(message_id) => return Ok(message_id),
+            Err(error) => {
+                let Some(delay_secs) = STARTUP_MESSAGE_RETRY_DELAYS_SECS.get(attempt_index) else {
+                    return Err(error);
+                };
+                if !is_retryable_startup_message_error(&error) {
+                    return Err(error);
+                }
+                logger.warning(
+                    "Startup message send failed; retrying",
+                    [
+                        format!("Attempt: {}", attempt_index + 1),
+                        format!("Retry in: {delay_secs}s"),
+                        format!("Error: {error:#}"),
+                    ],
+                );
+                tokio::time::sleep(Duration::from_secs(*delay_secs)).await;
+            }
+        }
+    }
+
+    unreachable!("startup message retry loop always returns");
+}
+
+fn is_retryable_startup_message_error(error: &anyhow::Error) -> bool {
+    let rendered = format!("{error:#}").to_ascii_lowercase();
+    rendered.contains("failed to start conversation")
+        || rendered.contains("api request failed (500)")
+        || rendered.contains("status 500")
+}
+
 #[derive(Debug)]
 struct TurnOutcome {
     turn_id: String,
@@ -1142,6 +1185,16 @@ mod tests {
         assert_eq!(watch_retry_delay(1), Duration::from_secs(2));
         assert_eq!(watch_retry_delay(2), Duration::from_secs(5));
         assert_eq!(watch_retry_delay(10), Duration::from_secs(5));
+    }
+
+    #[test]
+    fn startup_message_retry_detects_transient_conversation_failures() {
+        assert!(is_retryable_startup_message_error(&anyhow!(
+            "agent-message command failed: api request failed (500): failed to start conversation"
+        )));
+        assert!(!is_retryable_startup_message_error(&anyhow!(
+            "agent-message command failed: user not found"
+        )));
     }
 
     #[test]

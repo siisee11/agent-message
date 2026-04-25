@@ -33,7 +33,7 @@ const sourceWebDistDir = resolve(sourceWebDir, 'dist')
 const tunnelConfigPath = resolve(packageRoot, 'deploy', 'agent_tunnel_config.yml')
 const tunnelName = 'agent-namjaeyoun-com'
 
-const lifecycleCommands = new Set(['start', 'stop', 'status'])
+const lifecycleCommands = new Set(['start', 'restart', 'stop', 'status'])
 const upgradeCommand = 'upgrade'
 const uninstallCommand = 'uninstall'
 const packageJsonPath = resolve(packageRoot, 'package.json')
@@ -90,13 +90,20 @@ async function main() {
   }
 
   if (lifecycleCommands.has(command)) {
-    const options = await parseLifecycleOptions(rest)
+    let options = await parseLifecycleOptions(rest)
+    if (command === 'restart') {
+      options = resolveRestartOptions(options)
+    }
     if (!options.dev) {
       await ensureBundleReady()
     }
 
     if (command === 'start') {
       await startStack(options)
+      return
+    }
+    if (command === 'restart') {
+      await restartStack(options)
       return
     }
     if (command === 'stop') {
@@ -114,6 +121,7 @@ async function main() {
 async function printRootUsage({ stream }) {
   stream.write(`Usage:
   agent-message start [--dev] [--with-tunnel] [--runtime-dir <dir>] [--api-host <host>] [--api-port <port>] [--web-host <host>] [--web-port <port>]
+  agent-message restart [--dev] [--with-tunnel] [--runtime-dir <dir>] [--api-host <host>] [--api-port <port>] [--web-host <host>] [--web-port <port>]
   agent-message stop [--dev] [--with-tunnel] [--runtime-dir <dir>]
   agent-message status [--dev] [--runtime-dir <dir>] [--api-host <host>] [--api-port <port>] [--web-host <host>] [--web-port <port>]
   agent-message upgrade
@@ -200,6 +208,7 @@ function printVersion(path) {
 }
 
 async function parseLifecycleOptions(args) {
+  const explicit = new Set()
   const options = {
     dev: false,
     withTunnel: false,
@@ -219,36 +228,47 @@ async function parseLifecycleOptions(args) {
 
     if (arg === '--dev') {
       options.dev = true
+      explicit.add('dev')
       continue
     }
     if (arg === '--with-tunnel' || arg === '--all') {
       options.withTunnel = true
+      explicit.add('withTunnel')
       continue
     }
     if (arg === '--runtime-dir') {
       options.runtimeDir = requireOptionValue(args, ++index, arg)
+      explicit.add('runtimeDir')
       continue
     }
     if (arg === '--api-host') {
       options.apiHost = requireOptionValue(args, ++index, arg)
+      explicit.add('apiHost')
       continue
     }
     if (arg === '--web-host') {
       options.webHost = requireOptionValue(args, ++index, arg)
+      explicit.add('webHost')
       continue
     }
     if (arg === '--api-port') {
       options.apiPort = parsePort(requireOptionValue(args, ++index, arg), arg)
+      explicit.add('apiPort')
       continue
     }
     if (arg === '--web-port') {
       options.webPort = parsePort(requireOptionValue(args, ++index, arg), arg)
+      explicit.add('webPort')
       continue
     }
 
     throw new Error(`unknown option: ${arg}`)
   }
 
+  Object.defineProperty(options, 'explicit', {
+    enumerable: false,
+    value: explicit,
+  })
   return options
 }
 
@@ -435,6 +455,10 @@ async function startStack(options) {
     console.log(`Tunnel: https://agent.namjaeyoun.com`)
     console.log(`Tunnel log: ${paths.tunnelLog}`)
   }
+}
+
+async function restartStack(options) {
+  await startStack(options)
 }
 
 function ensureWebPushConfig(paths, options) {
@@ -680,12 +704,65 @@ function delegateToBundledCli(args) {
 
 function writeStackMetadata(path, options) {
   const metadata = {
+    dev: options.dev,
+    withTunnel: options.withTunnel,
     apiHost: options.apiHost,
     apiPort: options.apiPort,
     webHost: options.webHost,
     webPort: options.webPort,
   }
   writeFileSync(path, `${JSON.stringify(metadata, null, 2)}\n`)
+}
+
+function readStackMetadata(path) {
+  if (!existsSync(path)) {
+    return null
+  }
+
+  try {
+    const parsed = JSON.parse(readFileSync(path, 'utf8'))
+    if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) {
+      return null
+    }
+
+    const metadata = {}
+    if (typeof parsed.dev === 'boolean') {
+      metadata.dev = parsed.dev
+    }
+    if (typeof parsed.withTunnel === 'boolean') {
+      metadata.withTunnel = parsed.withTunnel
+    }
+    if (typeof parsed.apiHost === 'string' && parsed.apiHost.trim() !== '') {
+      metadata.apiHost = parsed.apiHost.trim()
+    }
+    if (typeof parsed.webHost === 'string' && parsed.webHost.trim() !== '') {
+      metadata.webHost = parsed.webHost.trim()
+    }
+    if (Number.isInteger(parsed.apiPort) && parsed.apiPort > 0 && parsed.apiPort <= 65535) {
+      metadata.apiPort = parsed.apiPort
+    }
+    if (Number.isInteger(parsed.webPort) && parsed.webPort > 0 && parsed.webPort <= 65535) {
+      metadata.webPort = parsed.webPort
+    }
+    return metadata
+  } catch {
+    return null
+  }
+}
+
+function resolveRestartOptions(options) {
+  const metadata = readStackMetadata(runtimePaths(options.runtimeDir).stackMetadataPath)
+  if (!metadata) {
+    return options
+  }
+
+  const explicit = options.explicit ?? new Set()
+  for (const key of ['dev', 'withTunnel', 'apiHost', 'apiPort', 'webHost', 'webPort']) {
+    if (!explicit.has(key) && Object.prototype.hasOwnProperty.call(metadata, key)) {
+      options[key] = metadata[key]
+    }
+  }
+  return options
 }
 
 function defaultCliConfigPath() {

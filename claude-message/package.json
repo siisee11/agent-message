@@ -1,6 +1,6 @@
 {
   "name": "claude-message",
-  "version": "0.6.28",
+  "version": "0.6.29",
   "description": "Claude wrapper for agent-message on macOS",
   "type": "module",
   "bin": {

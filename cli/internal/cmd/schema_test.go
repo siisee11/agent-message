@@ -10,12 +10,13 @@ func TestBuildSchemaDocumentCoversFullCommandTree(t *testing.T) {
 		t.Fatalf("buildSchemaDocument: %v", err)
 	}
 
-	if got, want := len(document.Commands), 37; got != want {
+	if got, want := len(document.Commands), 38; got != want {
 		t.Fatalf("command count mismatch: got %d want %d", got, want)
 	}
 	assertHasCommandPath(t, document, "agent-message")
 	assertHasCommandPath(t, document, "agent-message schema")
 	assertHasCommandPath(t, document, "agent-message send")
+	assertHasCommandPath(t, document, "agent-message upload")
 	assertHasCommandPath(t, document, "agent-message config set")
 	assertHasCommandPath(t, document, "agent-message howto")
 	assertHasCommandPath(t, document, "agent-message howto list")

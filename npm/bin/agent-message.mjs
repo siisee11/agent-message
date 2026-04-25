@@ -55,6 +55,7 @@ const bundledCliFallbackCommands = [
   ['schema', 'Print machine-readable command schemas resolved from the current CLI binary'],
   ['send', 'Send a message to a user or your configured master'],
   ['unreact', 'Remove a reaction by explicit message ID or by index from the last read'],
+  ['upload', 'Upload a file and print its static URL'],
   ['wait', 'Wait for the next message in a conversation'],
   ['watch', 'Watch incoming messages in real time'],
   ['whoami', 'Print the currently authenticated user'],

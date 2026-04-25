@@ -55,7 +55,7 @@ func newSendMessageCommand(rt *Runtime) *cobra.Command {
 				return err
 			}
 			if resolved.AttachmentPath != "" {
-				return runSendAttachmentMessage(rt, resolved.Username, resolved.Text, resolved.AttachmentPath)
+				return runSendAttachmentMessage(rt, resolved.Username, resolved.Text, resolved.Kind, resolved.AttachmentPath)
 			}
 			return runSendMessageWithRequest(rt, resolved.Username, resolved.Request)
 		},
@@ -89,6 +89,7 @@ type sendMessageOptions struct {
 type resolvedSendMessageInput struct {
 	Username       string
 	Text           string
+	Kind           string
 	AttachmentPath string
 	Request        api.SendMessageRequest
 }
@@ -121,6 +122,7 @@ func resolveSendMessageInput(cfg config.Config, stdin io.Reader, options sendMes
 		return resolvedSendMessageInput{
 			Username:       username,
 			Text:           text,
+			Kind:           resolvedKind,
 			AttachmentPath: trimmedAttachmentPath,
 		}, nil
 	}
@@ -303,10 +305,10 @@ func runSendMessage(rt *Runtime, username, text, kind, attachmentPath string) er
 		if trimmedKind == "" {
 			trimmedKind = "text"
 		}
-		if trimmedKind != "text" {
-			return errors.New("attachments are only supported with kind text")
+		if trimmedKind != "text" && trimmedKind != "json_render" {
+			return errors.New("kind must be text or json_render")
 		}
-		return runSendAttachmentMessage(rt, username, text, attachmentPath)
+		return runSendAttachmentMessage(rt, username, text, trimmedKind, attachmentPath)
 	}
 	request, err := buildSendMessageRequest(text, kind)
 	if err != nil {
@@ -315,7 +317,7 @@ func runSendMessage(rt *Runtime, username, text, kind, attachmentPath string) er
 	return runSendMessageWithRequest(rt, username, request)
 }
 
-func runSendAttachmentMessage(rt *Runtime, username, text, attachmentPath string) error {
+func runSendAttachmentMessage(rt *Runtime, username, text, kind, attachmentPath string) error {
 	if err := ensureRuntime(rt); err != nil {
 		return err
 	}
@@ -326,6 +328,9 @@ func runSendAttachmentMessage(rt *Runtime, username, text, attachmentPath string
 	trimmedAttachmentPath := strings.TrimSpace(attachmentPath)
 	if trimmedAttachmentPath == "" {
 		return errors.New("attachment path is required")
+	}
+	if kind == "" {
+		kind = "text"
 	}
 
 	conversationID, err := resolveConversationIDByUsername(context.Background(), rt, username)
@@ -338,8 +343,21 @@ func runSendAttachmentMessage(rt *Runtime, username, text, attachmentPath string
 	if trimmedText != "" {
 		content = &trimmedText
 	}
+
+	var jsonRenderSpec json.RawMessage
+	if kind == "json_render" {
+		spec, err := parseInlineJSONObject(text)
+		if err != nil {
+			return err
+		}
+		jsonRenderSpec = spec
+		content = nil
+	}
+
 	message, err := rt.Client.SendAttachmentMessage(context.Background(), conversationID, api.SendAttachmentMessageRequest{
 		Content:        content,
+		Kind:           kind,
+		JSONRenderSpec: jsonRenderSpec,
 		AttachmentPath: trimmedAttachmentPath,
 	})
 	if err != nil {

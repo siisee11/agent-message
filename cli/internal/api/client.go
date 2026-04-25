@@ -303,7 +303,13 @@ type SendMessageRequest struct {
 
 type SendAttachmentMessageRequest struct {
 	Content        *string
+	Kind           string
+	JSONRenderSpec json.RawMessage
 	AttachmentPath string
+}
+
+type UploadResponse struct {
+	URL string `json:"url"`
 }
 
 func (c *Client) SendMessage(ctx context.Context, conversationID string, input SendMessageRequest) (Message, error) {
@@ -357,6 +363,16 @@ func (c *Client) SendAttachmentMessage(ctx context.Context, conversationID strin
 			}
 		}
 	}
+	if strings.TrimSpace(input.Kind) != "" {
+		if err := writer.WriteField("kind", strings.TrimSpace(input.Kind)); err != nil {
+			return Message{}, fmt.Errorf("write multipart kind field: %w", err)
+		}
+	}
+	if len(input.JSONRenderSpec) > 0 {
+		if err := writer.WriteField("json_render_spec", string(input.JSONRenderSpec)); err != nil {
+			return Message{}, fmt.Errorf("write multipart json_render_spec field: %w", err)
+		}
+	}
 
 	part, err := writer.CreatePart(buildAttachmentPartHeader(filepath.Base(attachmentPath), detectAttachmentContentType(file, attachmentPath)))
 	if err != nil {
@@ -402,9 +418,86 @@ func (c *Client) SendAttachmentMessage(ctx context.Context, conversationID strin
 	return out, nil
 }
 
+func (c *Client) UploadFile(ctx context.Context, attachmentPath string) (UploadResponse, error) {
+	if c.baseURL == nil {
+		return UploadResponse{}, errors.New("server URL is not configured")
+	}
+
+	normalizedPath, err := validateAttachmentPath(attachmentPath)
+	if err != nil {
+		return UploadResponse{}, err
+	}
+
+	file, err := os.Open(normalizedPath)
+	if err != nil {
+		return UploadResponse{}, fmt.Errorf("open upload file: %w", err)
+	}
+	defer file.Close()
+
+	info, err := file.Stat()
+	if err != nil {
+		return UploadResponse{}, fmt.Errorf("stat upload file: %w", err)
+	}
+	if info.IsDir() {
+		return UploadResponse{}, errors.New("upload path must be a file")
+	}
+
+	var body bytes.Buffer
+	writer := multipart.NewWriter(&body)
+	part, err := writer.CreatePart(buildUploadPartHeader(filepath.Base(normalizedPath), detectAttachmentContentType(file, normalizedPath)))
+	if err != nil {
+		return UploadResponse{}, fmt.Errorf("create multipart upload field: %w", err)
+	}
+	if _, err := io.Copy(part, file); err != nil {
+		return UploadResponse{}, fmt.Errorf("write multipart upload field: %w", err)
+	}
+	if err := writer.Close(); err != nil {
+		return UploadResponse{}, fmt.Errorf("close multipart writer: %w", err)
+	}
+
+	u := *c.baseURL
+	u.Path = strings.TrimSuffix(c.baseURL.Path, "/") + "/api/upload"
+
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, u.String(), &body)
+	if err != nil {
+		return UploadResponse{}, fmt.Errorf("build request: %w", err)
+	}
+	req.Header.Set("Content-Type", writer.FormDataContentType())
+	if c.token != "" {
+		req.Header.Set("Authorization", "Bearer "+c.token)
+	}
+
+	resp, err := c.httpClient.Do(req)
+	if err != nil {
+		return UploadResponse{}, fmt.Errorf("perform request: %w", err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode < 200 || resp.StatusCode > 299 {
+		var payload errorPayload
+		if decodeErr := json.NewDecoder(resp.Body).Decode(&payload); decodeErr != nil {
+			payload.Error = strings.TrimSpace(resp.Status)
+		}
+		return UploadResponse{}, &APIError{StatusCode: resp.StatusCode, Message: strings.TrimSpace(payload.Error)}
+	}
+
+	var out UploadResponse
+	if err := json.NewDecoder(resp.Body).Decode(&out); err != nil {
+		return UploadResponse{}, fmt.Errorf("decode response body: %w", err)
+	}
+	return out, nil
+}
+
 func buildAttachmentPartHeader(filename, contentType string) textproto.MIMEHeader {
 	header := make(textproto.MIMEHeader)
 	header.Set("Content-Disposition", fmt.Sprintf(`form-data; name="attachment"; filename="%s"`, escapeMultipartFilename(filename)))
+	header.Set("Content-Type", contentType)
+	return header
+}
+
+func buildUploadPartHeader(filename, contentType string) textproto.MIMEHeader {
+	header := make(textproto.MIMEHeader)
+	header.Set("Content-Disposition", fmt.Sprintf(`form-data; name="file"; filename="%s"`, escapeMultipartFilename(filename)))
 	header.Set("Content-Type", contentType)
 	return header
 }

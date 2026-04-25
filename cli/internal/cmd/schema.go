@@ -686,6 +686,50 @@ func schemaRegistry() map[string]commandSchemaDescriptor {
 				"agent-message open --payload '{\"username\":\"bob\"}'",
 			},
 		},
+		"agent-message upload": {
+			Arguments: map[string]parameterMetadata{
+				"path": {Description: "Path to the file to upload", Constraints: []string{"file must exist", "file must be at most 20 MB", "file type must be supported by the server"}},
+			},
+			Prerequisites: []string{"logged_in"},
+			InputModes: []commandInputMode{
+				{
+					Name:        "file_upload",
+					Description: "Upload one file to the server and print the returned /static/uploads/... URL",
+					Conditions:  []string{"requires `<path>`"},
+					RequestShape: &schemaValueShape{
+						Type:        "object",
+						Description: "Multipart form fields accepted by POST /api/upload",
+						Properties: map[string]schemaValueShape{
+							"file": stringShape("File path resolved locally and uploaded as multipart data"),
+						},
+						Required: []string{"file"},
+					},
+				},
+			},
+			RequestShapes: []commandRequestShape{
+				{
+					Name:        "upload_multipart_body",
+					ContentType: "multipart/form-data",
+					Description: "Multipart form body sent to POST /api/upload",
+					Shape: schemaValueShape{
+						Type: "object",
+						Properties: map[string]schemaValueShape{
+							"file": stringShape("File path resolved locally and uploaded as multipart data"),
+						},
+						Required: []string{"file"},
+					},
+				},
+			},
+			OutputFormats: []string{"text", "json"},
+			Examples: []string{
+				"agent-message upload ./image.png",
+				"agent-message upload ./image.png --json",
+			},
+			Notes: []string{
+				"Use the returned URL as Image.props.src in json_render specs.",
+				"Local filesystem paths such as /Users/... are not browser-accessible in json_render.",
+			},
+		},
 		"agent-message send": {
 			Arguments: map[string]parameterMetadata{
 				"username":            {Description: "Optional recipient username when `--to` is omitted and no master is configured", Pattern: `^[A-Za-z0-9._-]{3,32}$`, Constraints: []string{"resolved against `--to`, `master`, and positional rules"}},
@@ -694,7 +738,7 @@ func schemaRegistry() map[string]commandSchemaDescriptor {
 			Flags: map[string]parameterMetadata{
 				"to":               {Description: "Override recipient username", Pattern: `^[A-Za-z0-9._-]{3,32}$`},
 				"kind":             {Description: "Message kind to send", Enum: []string{"text", "json_render"}},
-				"attach":           {Description: "Path to a file or image to attach to a text message", Constraints: []string{"attachments are only supported with kind `text`", "path must not contain control characters"}},
+				"attach":           {Description: "Path to a file or image to attach to a text or json_render message", Constraints: []string{"path must not contain control characters"}},
 				"text":             {Description: "Explicit text content source"},
 				"json-render":      {Description: "Explicit inline json_render payload"},
 				"json-render-file": {Description: "Read a json_render payload from a file path"},
@@ -711,7 +755,7 @@ func schemaRegistry() map[string]commandSchemaDescriptor {
 					Conditions: []string{
 						"kind resolves to `text`",
 						"exactly one explicit content source may be selected among positional content, --text, and --stdin",
-						"--attach is allowed only in this mode",
+						"--attach may also be used to send this as multipart/form-data",
 					},
 					RequestShape: shapePtr(requestObjectShape("Text message request", map[string]schemaValueShape{
 						"content": stringShape("Non-empty text message body", withMinLength(1)),
@@ -723,7 +767,7 @@ func schemaRegistry() map[string]commandSchemaDescriptor {
 					Conditions: []string{
 						"kind resolves to `json_render`",
 						"content must come from an inline object, --json-render, --json-render-file, or --stdin",
-						"attachments are not supported in this mode",
+						"--attach may also be used to send this as multipart/form-data",
 					},
 					RequestShape: shapePtr(requestObjectShape("json_render send request", map[string]schemaValueShape{
 						"kind":             enumShape("Message kind", "json_render"),
@@ -739,17 +783,19 @@ func schemaRegistry() map[string]commandSchemaDescriptor {
 				},
 				{
 					Name:        "attachment_message",
-					Description: "Send a multipart/form-data request with an attachment and optional text",
+					Description: "Send a multipart/form-data request with an attachment and optional text or json_render payload",
 					Conditions: []string{
 						"--attach is set",
-						"kind must resolve to `text`",
+						"kind resolves to `text` or `json_render`",
 					},
 					RequestShape: &schemaValueShape{
 						Type:        "object",
 						Description: "Multipart form fields accepted by the attachment endpoint",
 						Properties: map[string]schemaValueShape{
-							"content":    stringShape("Optional text content that accompanies the attachment"),
-							"attachment": stringShape("File path resolved locally and uploaded as multipart data"),
+							"content":          stringShape("Optional text content that accompanies a text attachment message"),
+							"kind":             enumShape("Message kind", "text", "json_render"),
+							"json_render_spec": objectShape("Nested renderer payload object for json_render attachment messages", nil),
+							"attachment":       stringShape("File path resolved locally and uploaded as multipart data"),
 						},
 						Required: []string{"attachment"},
 					},
@@ -808,8 +854,10 @@ func schemaRegistry() map[string]commandSchemaDescriptor {
 					Shape: schemaValueShape{
 						Type: "object",
 						Properties: map[string]schemaValueShape{
-							"content":    stringShape("Optional text field"),
-							"attachment": stringShape("Attachment path on disk"),
+							"content":          stringShape("Optional text field"),
+							"kind":             enumShape("Message kind", "text", "json_render"),
+							"json_render_spec": objectShape("Nested renderer payload object for json_render attachment messages", nil),
+							"attachment":       stringShape("Attachment path on disk"),
 						},
 						Required: []string{"attachment"},
 					},
@@ -821,6 +869,7 @@ func schemaRegistry() map[string]commandSchemaDescriptor {
 				"agent-message send --to jay --text \"hello\"",
 				"agent-message send jay '{\"root\":\"r1\",\"elements\":{}}' --kind json_render",
 				"agent-message send jay --attach ./screenshot.png --text \"latest build\"",
+				"agent-message send jay --kind json_render --json-render-file ./card.json --attach ./screenshot.png",
 				"agent-message send --to jay --payload '{\"kind\":\"json_render\",\"json_render_spec\":{\"root\":\"r1\",\"elements\":{}}}'",
 			},
 			Notes: []string{

@@ -187,6 +187,43 @@ agent-message send alice '{
 
 The web client renders the spec visually; the CLI shows `[json-render]` as a placeholder when reading these messages back.
 
+### Upload a file for json_render Image components
+Use `agent-message upload <path>` when a json_render message needs to display an image generated or saved on local disk.
+Do not put local filesystem paths such as `/Users/.../image.png` into `Image.props.src`; browsers cannot read those paths.
+
+```bash
+IMAGE_URL="$(agent-message upload ./image.png)"
+```
+
+The command returns a web-accessible path such as:
+
+```text
+/static/uploads/550e8400-e29b-41d4-a716-446655440000.png
+```
+
+Use that returned path in the json_render `Image` component:
+
+```json
+{
+  "root": "main",
+  "elements": {
+    "main": { "type": "Image", "props": { "src": "/static/uploads/550e8400-e29b-41d4-a716-446655440000.png", "alt": "Generated diagram" } }
+  }
+}
+```
+
+Then send the json_render payload:
+
+```bash
+agent-message send alice --kind json_render --json-render-file ./card.json
+```
+
+For image-bearing json_render reports, the preferred workflow is:
+1. Generate or save the image locally.
+2. Run `agent-message upload <image-path>`.
+3. Put the returned `/static/uploads/...` path into `Image.props.src`.
+4. Send the json_render message.
+
 ### Print the authoritative json_render catalog prompt
 Use this when an agent needs the exact `catalog.prompt()` output generated from the server's current catalog.
 

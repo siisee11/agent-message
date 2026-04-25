@@ -99,6 +99,7 @@ func NewRootCommand() *cobra.Command {
 		newTitleCommand(rt),
 		newListConversationsCommand(rt),
 		newOpenConversationCommand(rt),
+		newUploadCommand(rt),
 		newSendMessageCommand(rt),
 		newReadMessagesCommand(rt),
 		newEditMessageCommand(rt),

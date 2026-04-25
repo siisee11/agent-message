@@ -188,6 +188,54 @@ func TestMessagesEndpoints(t *testing.T) {
 		}
 	})
 
+	t.Run("send json_render multipart message with attachment", func(t *testing.T) {
+		var body bytes.Buffer
+		writer := multipart.NewWriter(&body)
+		if err := writer.WriteField("kind", "json_render"); err != nil {
+			t.Fatalf("write kind field: %v", err)
+		}
+		if err := writer.WriteField("json_render_spec", `{"root":"stack-1","elements":{"stack-1":{"type":"Stack"}}}`); err != nil {
+			t.Fatalf("write json_render_spec field: %v", err)
+		}
+		part, err := writer.CreateFormFile("attachment", "diagram.png")
+		if err != nil {
+			t.Fatalf("create multipart file part: %v", err)
+		}
+		if _, err := part.Write([]byte("png-bytes")); err != nil {
+			t.Fatalf("write multipart attachment: %v", err)
+		}
+		if err := writer.Close(); err != nil {
+			t.Fatalf("close multipart writer: %v", err)
+		}
+
+		req := httptest.NewRequest(http.MethodPost, "/api/conversations/"+conversationID+"/messages", &body)
+		req.Header.Set("Authorization", "Bearer "+alice.Token)
+		req.Header.Set("Content-Type", writer.FormDataContentType())
+		resp := httptest.NewRecorder()
+		router.ServeHTTP(resp, req)
+
+		if resp.Code != http.StatusCreated {
+			t.Fatalf("expected %d, got %d body=%s", http.StatusCreated, resp.Code, resp.Body.String())
+		}
+
+		var message models.Message
+		if err := json.NewDecoder(resp.Body).Decode(&message); err != nil {
+			t.Fatalf("decode json_render multipart message: %v", err)
+		}
+		if message.Kind != models.MessageKindJSONRender {
+			t.Fatalf("expected json_render kind, got %q", message.Kind)
+		}
+		if string(message.JSONRenderSpec) == "" {
+			t.Fatalf("expected json_render_spec in response, got %+v", message)
+		}
+		if message.AttachmentURL == nil || message.AttachmentType == nil {
+			t.Fatalf("expected attachment fallback fields, got %+v", message)
+		}
+		if *message.AttachmentType != models.AttachmentTypeFile {
+			t.Fatalf("expected attachment type file from test png payload, got %q", *message.AttachmentType)
+		}
+	})
+
 	t.Run("reject unsupported content type", func(t *testing.T) {
 		req := httptest.NewRequest(http.MethodPost, "/api/conversations/"+conversationID+"/messages", bytes.NewBufferString("hello"))
 		req.Header.Set("Authorization", "Bearer "+alice.Token)

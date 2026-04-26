@@ -156,6 +156,58 @@ describe('MessageJsonRender', () => {
     expect(html).toContain('This wrapper normalizes DM workflow before the final send.')
   })
 
+  it('renders images with a responsive clickable preview', () => {
+    const html = ReactDOMServer.renderToStaticMarkup(
+      <MessageJsonRender
+        spec={{
+          root: 'image-1',
+          elements: {
+            'image-1': {
+              type: 'Image',
+              props: {
+                alt: 'Dashboard screenshot',
+                height: 900,
+                src: 'https://example.test/dashboard.png',
+                width: 1600,
+              },
+            },
+          },
+        }}
+      />,
+    )
+
+    expect(html).toContain('<button')
+    expect(html).toContain('Open image: Dashboard screenshot')
+    expect(html).toMatch(/class="[^"]*imagePreview/)
+    expect(html).toContain('src="https://example.test/dashboard.png"')
+    expect(html).toContain('width="1600"')
+    expect(html).toContain('height="900"')
+  })
+
+  it('renders image placeholders without opening controls when src is omitted', () => {
+    const html = ReactDOMServer.renderToStaticMarkup(
+      <MessageJsonRender
+        spec={{
+          root: 'image-1',
+          elements: {
+            'image-1': {
+              type: 'Image',
+              props: {
+                alt: 'Missing chart',
+                height: 300,
+                width: 400,
+              },
+            },
+          },
+        }}
+      />,
+    )
+
+    expect(html).toContain('Missing chart')
+    expect(html).toMatch(/class="[^"]*imagePlaceholder/)
+    expect(html).not.toContain('<button')
+  })
+
   it('renders markdown content through the markdown component', () => {
     const html = ReactDOMServer.renderToStaticMarkup(
       <MessageJsonRender
@@ -198,7 +250,8 @@ describe('MessageJsonRender', () => {
       />,
     )
 
-    expect(html).toContain('Zoom image: Generated diagram')
+    expect(html).toContain('Open image: Generated diagram')
+    expect(html).toMatch(/class="[^"]*imagePreview/)
     expect(html).toContain('src="/static/uploads/diagram.png"')
     expect(html).toContain('alt="Generated diagram"')
     expect(html).toContain('width="1200"')

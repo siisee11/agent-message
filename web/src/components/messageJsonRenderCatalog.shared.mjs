@@ -39,6 +39,13 @@ const askQuestionItemSchema = z.object({
   question: z.string(),
 })
 
+const mediaPropsSchema = z.object({
+  alt: z.string(),
+  height: z.number().optional(),
+  src: z.string().optional(),
+  width: z.number().optional(),
+})
+
 export const messageJsonRenderCatalog = defineCatalog(schema, {
   components: {
     ApprovalCard: {
@@ -86,6 +93,10 @@ export const messageJsonRenderCatalog = defineCatalog(schema, {
       }),
     },
     Card: shadcnComponentDefinitions.Card,
+    Gif: {
+      description: 'Animated GIF component. Renders a GIF image when src is provided, otherwise a placeholder.',
+      props: mediaPropsSchema,
+    },
     GitCommitLog: {
       description: 'Visual git commit timeline with refs, authors, and stat badges',
       props: z.object({

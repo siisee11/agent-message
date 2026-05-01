@@ -4,6 +4,7 @@ import { MessageAlert } from './MessageAlert'
 import { MessageApprovalCard } from './MessageApprovalCard'
 import { MessageAskQuestion } from './MessageAskQuestion'
 import { MessageCommitLog } from './MessageCommitLog'
+import { MessageGif } from './MessageGif'
 import { MessageBarGraph, MessageLineGraph } from './MessageGraph'
 import { MessageImage } from './MessageImage'
 import { MessageMarkdown } from './MessageMarkdown'
@@ -19,6 +20,7 @@ export const { registry: messageJsonRenderRegistry } = defineRegistry(messageJso
     Badge: shadcnComponents.Badge,
     BarGraph: MessageBarGraph,
     Card: shadcnComponents.Card,
+    Gif: MessageGif,
     GitCommitLog: MessageCommitLog,
     Grid: shadcnComponents.Grid,
     Heading: shadcnComponents.Heading,

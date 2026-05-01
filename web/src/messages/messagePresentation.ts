@@ -212,6 +212,7 @@ function summarizeElement(element: BareUIElement): { primary?: string; secondary
       }
     case 'Avatar':
       return { fallback: readStringProp(props, 'name') ?? undefined }
+    case 'Gif':
     case 'Image':
       return { fallback: readStringProp(props, 'alt') ?? undefined }
     case 'Badge':

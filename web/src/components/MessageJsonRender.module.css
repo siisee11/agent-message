@@ -227,6 +227,23 @@
   transform-origin: center center;
 }
 
+.gifButton {
+  cursor: pointer;
+}
+
+.gifPreview,
+.gifLightboxImage {
+  image-rendering: auto;
+}
+
+.gifLightbox {
+  background: rgba(0, 0, 0, 0.86);
+}
+
+.gifPlaceholder {
+  font-family: var(--font-display);
+}
+
 .root :global([data-slot='card-title']),
 .root :global([data-slot='card-description']),
 .root :global(p),

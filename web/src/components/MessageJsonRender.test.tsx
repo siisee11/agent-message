@@ -208,6 +208,35 @@ describe('MessageJsonRender', () => {
     expect(html).not.toContain('<button')
   })
 
+  it('renders animated GIFs as playable media controls', () => {
+    const html = ReactDOMServer.renderToStaticMarkup(
+      <MessageJsonRender
+        spec={{
+          root: 'gif-1',
+          elements: {
+            'gif-1': {
+              type: 'Gif',
+              props: {
+                alt: 'Loading animation',
+                height: 360,
+                src: 'https://example.test/loading.gif',
+                width: 480,
+              },
+            },
+          },
+        }}
+      />,
+    )
+
+    expect(html).toContain('<button')
+    expect(html).toContain('Open GIF: Loading animation')
+    expect(html).toMatch(/class="[^"]*gifPreview/)
+    expect(html).toContain('src="https://example.test/loading.gif"')
+    expect(html).toContain('alt="Loading animation"')
+    expect(html).toContain('width="480"')
+    expect(html).toContain('height="360"')
+  })
+
   it('renders markdown content through the markdown component', () => {
     const html = ReactDOMServer.renderToStaticMarkup(
       <MessageJsonRender

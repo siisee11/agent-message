@@ -462,6 +462,12 @@ fn validate_component_props(
             expect_optional_enum_prop(props, "gap", path, &["sm", "md", "lg", "xl"], issues);
             expect_optional_string_prop(props, "className", path, issues);
         }
+        "Gif" => {
+            expect_optional_string_prop(props, "src", path, issues);
+            expect_required_string_prop(props, "alt", path, issues);
+            expect_optional_number_prop(props, "width", path, issues);
+            expect_optional_number_prop(props, "height", path, issues);
+        }
         "Heading" => {
             expect_required_string_prop(props, "text", path, issues);
             expect_optional_enum_prop(props, "level", path, &["h1", "h2", "h3", "h4"], issues);
@@ -892,6 +898,26 @@ mod tests {
                     "type": "Text",
                     "props": {
                         "text": { "$template": "Hello, ${/name}!" }
+                    }
+                }
+            }
+        }));
+
+        assert!(issues.is_empty(), "{issues:?}");
+    }
+
+    #[test]
+    fn accepts_gif_component() {
+        let issues = validate_json_render_spec(&json!({
+            "root": "gif",
+            "elements": {
+                "gif": {
+                    "type": "Gif",
+                    "props": {
+                        "src": "https://example.test/animation.gif",
+                        "alt": "Animated status",
+                        "width": 480,
+                        "height": 360
                     }
                 }
             }

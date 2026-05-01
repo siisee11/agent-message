@@ -726,7 +726,7 @@ func schemaRegistry() map[string]commandSchemaDescriptor {
 				"agent-message upload ./image.png --json",
 			},
 			Notes: []string{
-				"Use the returned URL as Image.props.src in json_render specs.",
+				"Use the returned URL as Image.props.src or Gif.props.src in json_render specs.",
 				"Local filesystem paths such as /Users/... are not browser-accessible in json_render.",
 			},
 		},

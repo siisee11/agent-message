@@ -156,7 +156,7 @@ export function ChatShellPage() {
       queryClient.removeQueries({ queryKey: ['messages', deletedConversationId] })
       await queryClient.invalidateQueries({ queryKey: ['conversations'] })
       if (activeConversationId === deletedConversationId) {
-        void navigate('/app', { replace: true })
+        void navigate('/chats', { replace: true })
       }
     },
     onError: (error: unknown) => {

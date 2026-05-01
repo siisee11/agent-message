@@ -123,7 +123,7 @@ export function ProfilePage() {
       navigate(-1)
       return
     }
-    navigate('/app')
+    navigate('/chats')
   }
 
   function handlePasswordSubmit(event: React.FormEvent<HTMLFormElement>): void {

@@ -35,7 +35,7 @@ export function LoginPage() {
     const state = location.state as LocationState | null
     const candidate = state?.from?.pathname
     if (!candidate || candidate === '/' || candidate === '/login') {
-      return '/app'
+      return '/chats'
     }
     return candidate
   }, [location.state])

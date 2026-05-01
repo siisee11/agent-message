@@ -18,7 +18,7 @@ export function SessionGatePage() {
   })
 
   if (status === 'authenticated') {
-    return <Navigate replace to="/app" />
+    return <Navigate replace to="/chats" />
   }
 
   if (status === 'loading') {

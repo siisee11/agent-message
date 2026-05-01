@@ -75,7 +75,7 @@ export function LandingPage() {
     themeColor: LANDING_SURFACES[landingMode],
   })
 
-  const primaryHref = isAuthenticated ? '/app' : '#setup'
+  const primaryHref = isAuthenticated ? '/chats' : '#setup'
   const primaryLabel = isAuthenticated ? 'Open App' : 'Local Setup'
   const activePhoneScreenshots = PHONE_SCREENSHOTS[landingMode]
   const activePhoneScreenshot = activePhoneScreenshots[activePhoneFrame % activePhoneScreenshots.length]
@@ -172,6 +172,9 @@ export function LandingPage() {
           <a className={styles.navLink} href="https://github.com/siisee11/agent-message">
             GitHub
           </a>
+          <Link className={styles.navLink} to="/login">
+            Sign In
+          </Link>
         </div>
       </header>
 

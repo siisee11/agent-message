@@ -1019,7 +1019,7 @@ export function DmConversationPage() {
   )
 
   const handleBack = useCallback(() => {
-    navigate('/app')
+    navigate('/chats')
   }, [navigate])
 
   if (!conversationId) {

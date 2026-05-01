@@ -275,7 +275,7 @@ npm ci
 npm run deploy:worker
 ```
 
-The Worker serves `web/dist` with SPA fallback enabled, so routes like `/login`, `/app`, and `/dm/:conversationId` resolve to the React app. Requests under `/api/*` and `/static/uploads/*` run through `web/worker/index.js` first.
+The Worker serves `web/dist` with SPA fallback enabled, so routes like `/login`, `/chats`, and `/dm/:conversationId` resolve to the React app. Requests under `/api/*` and `/static/uploads/*` run through `web/worker/index.js` first.
 
 Until the cloud API is ready, API requests return `503` from the Worker. When an API origin exists, set `API_ORIGIN` on the Worker and redeploy:
 
